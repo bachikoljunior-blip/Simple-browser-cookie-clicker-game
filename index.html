@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>クッキーゲーム</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      background: #1d130d;
+      color: #fff3df;
+      font-family: system-ui, -apple-system, sans-serif;
+      text-align: center;
+      padding: 8px;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .game {
+      max-width: 430px;
+      margin: auto;
+    }
+
+    .top,
+    .tabPage {
+      background: #332318;
+      border-radius: 14px;
+      padding: 10px;
+      margin: 8px 0;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    }
+
+    h1 {
+      font-size: 22px;
+      margin: 4px 0 8px;
+    }
+
+    h2 {
+      font-size: 16px;
+      margin: 6px 0;
+    }
+
+    .cookieCount {
+      font-size: 34px;
+      font-weight: 900;
+      margin: 4px 0;
+    }
+
+    #cookie {
+      width: 150px;
+      height: 150px;
+      font-size: 82px;
+      border-radius: 50%;
+      border: none;
+      background: #8b4a22;
+      box-shadow: inset -8px -10px 18px rgba(0,0,0,0.35), 0 10px 20px rgba(0,0,0,0.35);
+      touch-action: manipulation;
+    }
+
+    #cookie:active {
+      transform: scale(0.94);
+      filter: brightness(1.15);
+    }
+
+    #floatArea {
+      position: relative;
+      height: 0;
+    }
+
+    .float {
+      position: absolute;
+      left: 50%;
+      top: -105px;
+      transform: translateX(-50%);
+      font-size: 18px;
+      font-weight: 900;
+      color: #ffd38a;
+      pointer-events: none;
+      animation: rise 0.55s ease-out forwards;
+    }
+
+    @keyframes rise {
+      to {
+        opacity: 0;
+        transform: translate(-50%, -46px);
+      }
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+
+    .stats div {
+      background: #24170f;
+      border-radius: 9px;
+      padding: 7px 4px;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      background: #1d130d;
+      padding: 4px 0;
+      z-index: 5;
+    }
+
+    .tab,
+    .mode,
+    .item {
+      border: none;
+      border-radius: 10px;
+      background: #4a3020;
+      color: #fff3df;
+      padding: 9px;
+      font-size: 14px;
+      touch-action: manipulation;
+    }
+
+    .tab.active,
+    .mode.active {
+      background: #a7672c;
+      font-weight: 800;
+    }
+
+    .tabPage {
+      display: none;
+    }
+
+    .tabPage.active {
+      display: block;
+    }
+
+    .modes {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .mode {
+      width: 80px;
+    }
+
+    .item {
+      display: block;
+      width: 100%;
+      margin: 7px 0;
+      text-align: left;
+      background: #5a3822;
+    }
+
+    .item.canBuy {
+      background: #7a4a24;
+      box-shadow: 0 0 0 2px rgba(255,210,130,0.22);
+    }
+
+    .item.locked {
+      opacity: 0.55;
+    }
+
+    .item.done {
+      background: #31502c;
+    }
+
+    .desc {
+      color: #dbc6aa;
+      font-size: 12px;
+      margin-top: 3px;
+    }
+
+    .price {
+      color: #ffd38a;
+      font-weight: 900;
+    }
+
+    #message {
+      min-height: 20px;
+      margin-top: 6px;
+      color: #9cffb2;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    #goldenCookie {
+      display: none;
+      width: 100%;
+      border: none;
+      border-radius: 10px;
+      padding: 10px;
+      margin-top: 8px;
+      background: #d69b22;
+      color: #21160f;
+      font-weight: 900;
+    }
+
+    .danger {
+      background: #6b2525;
+    }
+  </style>
+</head>
+
+<body>
+
+<main class="game">
+  <section class="top">
+    <h1>クッキーゲーム</h1>
+
+    <div class="cookieCount">
+      <span id="cookies">0</span>
+    </div>
+
+    <button id="cookie">🍪</button>
+    <div id="floatArea"></div>
+
+    <button id="goldenCookie">🌟 金のクッキー 🌟</button>
+
+    <div class="stats">
+      <div>タップ <b id="power">1</b></div>
+      <div>毎秒 <b id="cps">0</b></div>
+      <div>ランク <b id="rank">初心者</b></div>
+    </div>
+
+    <div id="message"></div>
+  </section>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="shopTab">強化</button>
+    <button class="tab" data-tab="boostTab">ブースト</button>
+    <button class="tab" data-tab="researchTab">研究</button>
+    <button class="tab" data-tab="missionTab">任務</button>
+    <button class="tab" data-tab="achievementTab">実績</button>
+    <button class="tab" data-tab="prestigeTab">転生</button>
+  </nav>
+
+  <section id="shopTab" class="tabPage active">
+    <h2>購入モード</h2>
+    <div class="modes">
+      <button class="mode active" data-mode="1">1個</button>
+      <button class="mode" data-mode="10">10個</button>
+      <button class="mode" data-mode="max">最大</button>
+    </div>
+    <div id="shop"></div>
+  </section>
+
+  <section id="boostTab" class="tabPage">
+    <button id="clickBoost" class="item">20秒間タップ3倍：500</button>
+    <button id="cpsBoost" class="item">30秒間自動生産2倍：1000</button>
+    <div id="boostStatus"></div>
+  </section>
+
+  <section id="researchTab" class="tabPage">
+    <div id="research"></div>
+  </section>
+
+  <section id="missionTab" class="tabPage">
+    <div id="missions"></div>
+  </section>
+
+  <section id="achievementTab" class="tabPage">
+    <div id="achievements"></div>
+  </section>
+
+  <section id="prestigeTab" class="tabPage">
+    <p>今回100万クッキー以上で転生可能。進行リセットの代わりに永久倍率が上がる。</p>
+    <div>転生ポイント: <b id="prestige">0</b></div>
+    <div>永久倍率: <b id="prestigeBonus">1.00</b>倍</div>
+    <button id="prestigeBtn" class="item">転生する</button>
+    <button id="resetBtn" class="item danger">完全リセット</button>
+  </section>
+</main>
+
+<script>
+const saveKey = "cookie_game_compact_v1";
+
+const UPGRADES = [
+  { id: "finger", name: "強い指", type: "click", value: 1, base: 15, growth: 1.25, desc: "1タップ +1" },
+  { id: "grandma", name: "おばあちゃん", type: "cps", value: 1, base: 50, growth: 1.25, desc: "毎秒 +1" },
+  { id: "oven", name: "オーブン", type: "cps", value: 5, base: 250, growth: 1.28, desc: "毎秒 +5" },
+  { id: "factory", name: "工場", type: "cps", value: 25, base: 1500, growth: 1.3, desc: "毎秒 +25" },
+  { id: "bank", name: "クッキー銀行", type: "cps", value: 150, base: 10000, growth: 1.32, desc: "毎秒 +150" },
+  { id: "portal", name: "異世界クッキー炉", type: "cps", value: 1000, base: 100000, growth: 1.35, desc: "毎秒 +1000" }
+];
+
+const RESEARCH = [
+  { id: "click20", name: "指の研究", cost: 2000, desc: "タップ生産 +20%" },
+  { id: "auto20", name: "自動化研究", cost: 5000, desc: "自動生産 +20%" },
+  { id: "cheap", name: "仕入れ最適化", cost: 15000, desc: "アップグレード価格 -10%" },
+  { id: "golden", name: "金色反応炉", cost: 50000, desc: "金のクッキー出現が少し早くなる" }
+];
+
+const ACHIEVEMENTS = [
+  { id: "firstClick", name: "初クリック", desc: "1回クリック", cond: () => state.totalClicks >= 1 },
+  { id: "hundred", name: "小さな一歩", desc: "総クッキー100", cond: () => state.totalCookies >= 100 },
+  { id: "tenK", name: "職人", desc: "総クッキー1万", cond: () => state.totalCookies >= 10000 },
+  { id: "million", name: "クッキー王", desc: "総クッキー100万", cond: () => state.totalCookies >= 1000000 },
+  { id: "grandma10", name: "大家族", desc: "おばあちゃん10人", cond: () => state.upgrades.grandma >= 10 },
+  { id: "cps100", name: "自動生産者", desc: "毎秒100", cond: () => baseCps() >= 100 }
+];
+
+const MISSIONS = [
+  { id: "click100", name: "100回クリック", reward: 500, cond: () => state.totalClicks >= 100 },
+  { id: "grandma5", name: "おばあちゃん5人", reward: 1000, cond: () => state.upgrades.grandma >= 5 },
+  { id: "cps50", name: "毎秒50到達", reward: 3000, cond: () => baseCps() >= 50 },
+  { id: "factory3", name: "工場3つ", reward: 10000, cond: () => state.upgrades.factory >= 3 },
+  { id: "run100k", name: "今回10万", reward: 25000, cond: () => state.runCookies >= 100000 }
+];
+
+let state = freshState();
+let buyMode = "1";
+let audioCtx = null;
+let boosts = { clickUntil: 0, cpsUntil: 0 };
+let activeTab = "shopTab";
+
+function freshState() {
+  const upgrades = {};
+  const research = {};
+  const achievements = {};
+  const missions = {};
+
+  UPGRADES.forEach(u => upgrades[u.id] = 0);
+  RESEARCH.forEach(r => research[r.id] = false);
+  ACHIEVEMENTS.forEach(a => achievements[a.id] = false);
+  MISSIONS.forEach(m => missions[m.id] = false);
+
+  return {
+    cookies: 0,
+    totalCookies: 0,
+    runCookies: 0,
+    totalClicks: 0,
+    prestige: 0,
+    upgrades,
+    research,
+    achievements,
+    missions,
+    lastSave: Date.now()
+  };
+}
+
+function ensureState() {
+  const base = freshState();
+  state.upgrades = { ...base.upgrades, ...(state.upgrades || {}) };
+  state.research = { ...base.research, ...(state.research || {}) };
+  state.achievements = { ...base.achievements, ...(state.achievements || {}) };
+  state.missions = { ...base.missions, ...(state.missions || {}) };
+  state.cookies = Number(state.cookies) || 0;
+  state.totalCookies = Number(state.totalCookies) || 0;
+  state.runCookies = Number(state.runCookies) || 0;
+  state.totalClicks = Number(state.totalClicks) || 0;
+  state.prestige = Number(state.prestige) || 0;
+  state.lastSave = Number(state.lastSave) || Date.now();
+}
+
+function $(id) {
+  return document.getElementById(id);
+}
+
+function fmt(n) {
+  n = Math.floor(n);
+  if (n < 1000) return String(n);
+  if (n < 1000000) return (n / 1000).toFixed(1).replace(".0", "") + "K";
+  if (n < 1000000000) return (n / 1000000).toFixed(1).replace(".0", "") + "M";
+  if (n < 1000000000000) return (n / 1000000000).toFixed(1).replace(".0", "") + "B";
+  return (n / 1000000000000).toFixed(1).replace(".0", "") + "T";
+}
+
+function prestigeMultiplier() {
+  return 1 + state.prestige * 0.1;
+}
+
+function clickBoostMultiplier() {
+  return Date.now() < boosts.clickUntil ? 3 : 1;
+}
+
+function cpsBoostMultiplier() {
+  return Date.now() < boosts.cpsUntil ? 2 : 1;
+}
+
+function upgradeDiscount() {
+  return state.research.cheap ? 0.9 : 1;
+}
+
+function costOf(u) {
+  return Math.floor(u.base * Math.pow(u.growth, state.upgrades[u.id]) * upgradeDiscount());
+}
+
+function baseClickPower() {
+  let v = 1;
+  UPGRADES.forEach(u => {
+    if (u.type === "click") v += state.upgrades[u.id] * u.value;
+  });
+  if (state.research.click20) v *= 1.2;
+  return v * prestigeMultiplier();
+}
+
+function currentClickPower() {
+  return baseClickPower() * clickBoostMultiplier();
+}
+
+function baseCps() {
+  let v = 0;
+  UPGRADES.forEach(u => {
+    if (u.type === "cps") v += state.upgrades[u.id] * u.value;
+  });
+  if (state.research.auto20) v *= 1.2;
+  return v * prestigeMultiplier();
+}
+
+function currentCps() {
+  return baseCps() * cpsBoostMultiplier();
+}
+
+function earn(amount) {
+  if (amount <= 0) return;
+  state.cookies += amount;
+  state.totalCookies += amount;
+  state.runCookies += amount;
+}
+
+function spend(amount) {
+  if (state.cookies < amount) return false;
+  state.cookies -= amount;
+  return true;
+}
+
+function playSound(kind) {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!audioCtx) audioCtx = new AudioContext();
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.frequency.value = kind === "cookie" ? 600 : kind === "golden" ? 850 : 280;
+    osc.type = "sine";
+
+    gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.055);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.055);
+  } catch (e) {}
+}
+
+function showMessage(text) {
+  $("message").textContent = text;
+  clearTimeout(showMessage.timer);
+  showMessage.timer = setTimeout(() => $("message").textContent = "", 1200);
+}
+
+function showFloat(text) {
+  const div = document.createElement("div");
+  div.className = "float";
+  div.textContent = text;
+  $("floatArea").appendChild(div);
+  setTimeout(() => div.remove(), 600);
+}
+
+function updateTopOnly() {
+  $("cookies").textContent = fmt(state.cookies);
+  $("power").textContent = fmt(currentClickPower());
+  $("cps").textContent = fmt(currentCps());
+  $("rank").textContent = rankName();
+  $("prestige").textContent = state.prestige;
+  $("prestigeBonus").textContent = prestigeMultiplier().toFixed(2);
+}
+
+function tapCookie(e) {
+  e.preventDefault();
+
+  const gain = currentClickPower();
+  earn(gain);
+  state.totalClicks += 1;
+
+  playSound("cookie");
+  showFloat("+" + fmt(gain));
+  checkAchievements();
+
+  updateTopOnly();
+}
+
+$("cookie").addEventListener("pointerdown", tapCookie);
+
+function buyUpgrade(id) {
+  const u = UPGRADES.find(x => x.id === id);
+  const target = buyMode === "max" ? Infinity : Number(buyMode);
+  let bought = 0;
+
+  while (bought < target) {
+    const cost = costOf(u);
+    if (state.cookies < cost) break;
+
+    state.cookies -= cost;
+    state.upgrades[id] += 1;
+    bought += 1;
+
+    if (bought > 5000) break;
+  }
+
+  if (bought > 0) {
+    playSound("upgrade");
+    showMessage(`${u.name} ×${bought}`);
+    checkAchievements();
+    saveGame();
+    renderActiveTab();
+    updateTopOnly();
+  }
+}
+
+function buyResearch(id) {
+  const r = RESEARCH.find(x => x.id === id);
+  if (state.research[id]) return;
+  if (!spend(r.cost)) return;
+
+  state.research[id] = true;
+  playSound("upgrade");
+  showMessage(`${r.name} 解放`);
+  checkAchievements();
+  saveGame();
+  renderActiveTab();
+  updateTopOnly();
+}
+
+function claimMission(id) {
+  const m = MISSIONS.find(x => x.id === id);
+  if (state.missions[id]) return;
+  if (!m.cond()) return;
+
+  state.missions[id] = true;
+  earn(m.reward);
+
+  playSound("upgrade");
+  showMessage(`報酬 +${fmt(m.reward)}`);
+  saveGame();
+  renderActiveTab();
+  updateTopOnly();
+}
+
+function renderShop() {
+  const box = $("shop");
+  box.innerHTML = "";
+
+  UPGRADES.forEach(u => {
+    const cost = costOf(u);
+    const btn = document.createElement("button");
+    btn.className = "item";
+    if (state.cookies >= cost) btn.classList.add("canBuy");
+
+    btn.innerHTML = `
+      <b>${u.name}</b>
+      <div class="price">${fmt(cost)} クッキー</div>
+      <div class="desc">${u.desc} / 所持 ${state.upgrades[u.id]}</div>
+    `;
+
+    btn.addEventListener("pointerdown", e => {
+      e.preventDefault();
+      buyUpgrade(u.id);
+    });
+
+    box.appendChild(btn);
+  });
+}
+
+function renderResearch() {
+  const box = $("research");
+  box.innerHTML = "";
+
+  RESEARCH.forEach(r => {
+    const btn = document.createElement("button");
+    btn.className = "item";
+    if (!state.research[r.id] && state.cookies >= r.cost) btn.classList.add("canBuy");
+    if (state.research[r.id]) btn.classList.add("done");
+
+    btn.innerHTML = `
+      <b>${r.name}</b>
+      <div class="price">${state.research[r.id] ? "解放済み" : fmt(r.cost) + " クッキー"}</div>
+      <div class="desc">${r.desc}</div>
+    `;
+
+    btn.addEventListener("pointerdown", e => {
+      e.preventDefault();
+      buyResearch(r.id);
+    });
+
+    box.appendChild(btn);
+  });
+}
+
+function renderMissions() {
+  const box = $("missions");
+  box.innerHTML = "";
+
+  MISSIONS.forEach(m => {
+    const done = m.cond();
+    const claimed = state.missions[m.id];
+
+    const btn = document.createElement("button");
+    btn.className = "item";
+    if (done && !claimed) btn.classList.add("canBuy");
+    if (claimed) btn.classList.add("done");
+
+    btn.innerHTML = `
+      <b>${claimed ? "✅" : done ? "🎁" : "⬛"} ${m.name}</b>
+      <div class="price">報酬 ${fmt(m.reward)}</div>
+      <div class="desc">${claimed ? "受け取り済み" : done ? "タップで受け取り" : "未達成"}</div>
+    `;
+
+    btn.addEventListener("pointerdown", e => {
+      e.preventDefault();
+      claimMission(m.id);
+    });
+
+    box.appendChild(btn);
+  });
+}
+
+function renderAchievements() {
+  const box = $("achievements");
+  box.innerHTML = "";
+
+  ACHIEVEMENTS.forEach(a => {
+    const unlocked = state.achievements[a.id];
+
+    const div = document.createElement("div");
+    div.className = "item " + (unlocked ? "done" : "locked");
+
+    div.innerHTML = `
+      <b>${unlocked ? "✅" : "⬛"} ${a.name}</b>
+      <div class="desc">${a.desc}</div>
+    `;
+
+    box.appendChild(div);
+  });
+}
+
+function renderBoosts() {
+  const now = Date.now();
+  const clickLeft = Math.max(0, Math.ceil((boosts.clickUntil - now) / 1000));
+  const cpsLeft = Math.max(0, Math.ceil((boosts.cpsUntil - now) / 1000));
+
+  $("clickBoost").classList.toggle("canBuy", state.cookies >= 500 && clickLeft === 0);
+  $("cpsBoost").classList.toggle("canBuy", state.cookies >= 1000 && cpsLeft === 0);
+
+  $("boostStatus").textContent =
+    `タップ3倍: ${clickLeft ? clickLeft + "秒" : "なし"} / 自動2倍: ${cpsLeft ? cpsLeft + "秒" : "なし"}`;
+}
+
+function renderPrestige() {
+  $("prestigeBtn").disabled = state.runCookies < 1000000;
+}
+
+function renderActiveTab() {
+  if (activeTab === "shopTab") renderShop();
+  if (activeTab === "boostTab") renderBoosts();
+  if (activeTab === "researchTab") renderResearch();
+  if (activeTab === "missionTab") renderMissions();
+  if (activeTab === "achievementTab") renderAchievements();
+  if (activeTab === "prestigeTab") renderPrestige();
+}
+
+function renderAllTabs() {
+  renderShop();
+  renderBoosts();
+  renderResearch();
+  renderMissions();
+  renderAchievements();
+  renderPrestige();
+}
+
+function rankName() {
+  const t = state.totalCookies;
+  if (t >= 1000000000) return "神";
+  if (t >= 10000000) return "王";
+  if (t >= 1000000) return "大企業";
+  if (t >= 100000) return "経営者";
+  if (t >= 10000) return "職人";
+  if (t >= 1000) return "見習い";
+  return "初心者";
+}
+
+function checkAchievements() {
+  ACHIEVEMENTS.forEach(a => {
+    if (!state.achievements[a.id] && a.cond()) {
+      state.achievements[a.id] = true;
+      showMessage(`実績解除: ${a.name}`);
+    }
+  });
+}
+
+function activateClickBoost() {
+  if (Date.now() < boosts.clickUntil) return;
+  if (!spend(500)) return;
+
+  boosts.clickUntil = Date.now() + 20000;
+  playSound("upgrade");
+  showMessage("タップ3倍");
+  updateTopOnly();
+  renderActiveTab();
+}
+
+function activateCpsBoost() {
+  if (Date.now() < boosts.cpsUntil) return;
+  if (!spend(1000)) return;
+
+  boosts.cpsUntil = Date.now() + 30000;
+  playSound("upgrade");
+  showMessage("自動2倍");
+  updateTopOnly();
+  renderActiveTab();
+}
+
+$("clickBoost").addEventListener("pointerdown", e => {
+  e.preventDefault();
+  activateClickBoost();
+});
+
+$("cpsBoost").addEventListener("pointerdown", e => {
+  e.preventDefault();
+  activateCpsBoost();
+});
+
+document.querySelectorAll(".mode").forEach(btn => {
+  btn.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    buyMode = btn.dataset.mode;
+    document.querySelectorAll(".mode").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+  });
+});
+
+document.querySelectorAll(".tab").forEach(btn => {
+  btn.addEventListener("pointerdown", e => {
+    e.preventDefault();
+
+    activeTab = btn.dataset.tab;
+
+    document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tabPage").forEach(p => p.classList.remove("active"));
+
+    btn.classList.add("active");
+    $(activeTab).classList.add("active");
+
+    renderActiveTab();
+  });
+});
+
+function prestigeReset() {
+  if (state.runCookies < 1000000) return;
+
+  const gain = Math.max(1, Math.floor(Math.sqrt(state.runCookies / 1000000)));
+  const keepTotal = state.totalCookies;
+  const keepClicks = state.totalClicks;
+  const keepPrestige = state.prestige + gain;
+  const keepAchievements = state.achievements;
+
+  state = freshState();
+  state.totalCookies = keepTotal;
+  state.totalClicks = keepClicks;
+  state.prestige = keepPrestige;
+  state.achievements = keepAchievements;
+
+  playSound("upgrade");
+  showMessage(`転生 +${gain}`);
+  saveGame();
+  updateTopOnly();
+  renderAllTabs();
+}
+
+$("prestigeBtn").addEventListener("pointerdown", e => {
+  e.preventDefault();
+  prestigeReset();
+});
+
+$("resetBtn").addEventListener("pointerdown", e => {
+  e.preventDefault();
+  if (!confirm("完全にリセットする？")) return;
+
+  localStorage.removeItem(saveKey);
+  state = freshState();
+  boosts.clickUntil = 0;
+  boosts.cpsUntil = 0;
+  updateTopOnly();
+  renderAllTabs();
+});
+
+function saveGame() {
+  state.lastSave = Date.now();
+  localStorage.setItem(saveKey, JSON.stringify(state));
+}
+
+function loadGame() {
+  const raw = localStorage.getItem(saveKey);
+  if (!raw) return;
+
+  try {
+    state = JSON.parse(raw);
+    ensureState();
+
+    const now = Date.now();
+    const seconds = Math.min(Math.max(0, now - state.lastSave) / 1000, 60 * 60 * 8);
+    const offlineGain = baseCps() * seconds;
+
+    if (offlineGain > 0) {
+      earn(offlineGain);
+      showMessage(`放置 +${fmt(offlineGain)}`);
+    }
+  } catch (e) {
+    state = freshState();
+  }
+}
+
+function scheduleGoldenCookie() {
+  const min = state.research.golden ? 10000 : 18000;
+  const max = state.research.golden ? 28000 : 45000;
+  setTimeout(showGoldenCookie, min + Math.random() * (max - min));
+}
+
+function showGoldenCookie() {
+  const btn = $("goldenCookie");
+  btn.style.display = "block";
+
+  const hideTimer = setTimeout(() => {
+    btn.style.display = "none";
+    scheduleGoldenCookie();
+  }, 8000);
+
+  btn.onpointerdown = function (e) {
+    e.preventDefault();
+    clearTimeout(hideTimer);
+    btn.style.display = "none";
+
+    const r = Math.random();
+
+    if (r < 0.34) {
+      const gain = Math.max(100, currentCps() * 60, currentClickPower() * 50);
+      earn(gain);
+      showMessage(`金 +${fmt(gain)}`);
+    } else if (r < 0.67) {
+      boosts.clickUntil = Date.now() + 30000;
+      showMessage("金: タップ3倍");
+    } else {
+      boosts.cpsUntil = Date.now() + 60000;
+      showMessage("金: 自動2倍");
+    }
+
+    playSound("golden");
+    checkAchievements();
+    saveGame();
+    updateTopOnly();
+    renderActiveTab();
+    scheduleGoldenCookie();
+  };
+}
+
+loadGame();
+ensureState();
+updateTopOnly();
+renderAllTabs();
+scheduleGoldenCookie();
+
+setInterval(() => {
+  earn(currentCps() / 20);
+  updateTopOnly();
+}, 50);
+
+setInterval(() => {
+  checkAchievements();
+  renderActiveTab();
+}, 1000);
+
+setInterval(saveGame, 5000);
+</script>
+
+</body>
+</html>
