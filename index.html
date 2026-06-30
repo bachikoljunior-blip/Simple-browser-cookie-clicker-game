@@ -55,7 +55,7 @@
     #cookie {
       width: 150px;
       height: 150px;
-      font-size: 82px;
+      font-size: 76px;
       border-radius: 50%;
       border: none;
       background: #8b4a22;
@@ -66,6 +66,30 @@
     #cookie:active {
       transform: scale(0.94);
       filter: brightness(1.15);
+    }
+
+    #cookie.goldenPower {
+      background: #d69b22;
+      box-shadow:
+        0 0 24px rgba(255, 215, 80, 0.9),
+        inset -8px -10px 18px rgba(0,0,0,0.28),
+        0 10px 20px rgba(0,0,0,0.35);
+    }
+
+    #cookie.clickPower {
+      background: #b85a24;
+      box-shadow:
+        0 0 22px rgba(255, 120, 50, 0.8),
+        inset -8px -10px 18px rgba(0,0,0,0.35),
+        0 10px 20px rgba(0,0,0,0.35);
+    }
+
+    #cookie.autoPower {
+      background: #6a4fc4;
+      box-shadow:
+        0 0 22px rgba(130, 120, 255, 0.8),
+        inset -8px -10px 18px rgba(0,0,0,0.35),
+        0 10px 20px rgba(0,0,0,0.35);
     }
 
     #floatArea {
@@ -126,7 +150,7 @@
       color: #fff3df;
       padding: 9px;
       font-size: 14px;
-      touch-action: manipulation;
+      touch-action: pan-y;
     }
 
     .tab.active,
@@ -196,18 +220,29 @@
 
     #goldenCookie {
       display: none;
-      width: 100%;
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      width: calc(100% - 24px);
+      max-width: 380px;
       border: none;
-      border-radius: 10px;
-      padding: 10px;
-      margin-top: 8px;
+      border-radius: 999px;
+      padding: 14px;
       background: #d69b22;
       color: #21160f;
       font-weight: 900;
+      z-index: 999;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      touch-action: pan-y;
     }
 
     .danger {
       background: #6b2525;
+    }
+
+    button:disabled {
+      opacity: 0.45;
     }
   </style>
 </head>
@@ -283,7 +318,7 @@
 </main>
 
 <script>
-const saveKey = "cookie_game_compact_v1";
+const saveKey = "cookie_game_compact_v2";
 
 const UPGRADES = [
   { id: "finger", name: "強い指", type: "click", value: 1, base: 15, growth: 1.25, desc: "1タップ +1" },
@@ -291,7 +326,14 @@ const UPGRADES = [
   { id: "oven", name: "オーブン", type: "cps", value: 5, base: 250, growth: 1.28, desc: "毎秒 +5" },
   { id: "factory", name: "工場", type: "cps", value: 25, base: 1500, growth: 1.3, desc: "毎秒 +25" },
   { id: "bank", name: "クッキー銀行", type: "cps", value: 150, base: 10000, growth: 1.32, desc: "毎秒 +150" },
-  { id: "portal", name: "異世界クッキー炉", type: "cps", value: 1000, base: 100000, growth: 1.35, desc: "毎秒 +1000" }
+  { id: "portal", name: "異世界クッキー炉", type: "cps", value: 1000, base: 100000, growth: 1.35, desc: "毎秒 +1000" },
+  { id: "moonBakery", name: "月面ベーカリー", type: "cps", value: 7500, base: 1000000, growth: 1.38, desc: "毎秒 +7500。転生なしだと重い" },
+  { id: "timeOven", name: "時空オーブン", type: "cps", value: 50000, base: 15000000, growth: 1.4, desc: "毎秒 +5万" },
+  { id: "galaxyFactory", name: "銀河工場", type: "cps", value: 350000, base: 250000000, growth: 1.42, desc: "毎秒 +35万" },
+  { id: "blackHoleMixer", name: "ブラックホールミキサー", type: "cps", value: 2500000, base: 5000000000, growth: 1.45, desc: "毎秒 +250万" },
+  { id: "universeOven", name: "宇宙焼成炉", type: "cps", value: 20000000, base: 100000000000, growth: 1.48, desc: "毎秒 +2000万" },
+  { id: "godFinger", name: "神の指", type: "click", value: 50000, base: 300000000, growth: 1.42, desc: "1タップ +5万。転生後向け" },
+  { id: "cookieSingularity", name: "クッキー特異点", type: "cps", value: 250000000, base: 5000000000000, growth: 1.5, desc: "毎秒 +2.5億。終盤用" }
 ];
 
 const RESEARCH = [
@@ -367,6 +409,50 @@ function $(id) {
   return document.getElementById(id);
 }
 
+function addTap(el, handler) {
+  let startX = 0;
+  let startY = 0;
+  let pointerId = null;
+  let moved = false;
+
+  el.addEventListener("pointerdown", e => {
+    startX = e.clientX;
+    startY = e.clientY;
+    pointerId = e.pointerId;
+    moved = false;
+  });
+
+  el.addEventListener("pointermove", e => {
+    if (pointerId !== e.pointerId) return;
+
+    const dx = Math.abs(e.clientX - startX);
+    const dy = Math.abs(e.clientY - startY);
+
+    if (dx > 12 || dy > 12) {
+      moved = true;
+    }
+  });
+
+  el.addEventListener("pointerup", e => {
+    if (pointerId !== e.pointerId) return;
+
+    const dx = Math.abs(e.clientX - startX);
+    const dy = Math.abs(e.clientY - startY);
+
+    pointerId = null;
+
+    if (moved || dx > 12 || dy > 12) return;
+
+    e.preventDefault();
+    handler(e);
+  });
+
+  el.addEventListener("pointercancel", () => {
+    pointerId = null;
+    moved = true;
+  });
+}
+
 function fmt(n) {
   n = Math.floor(n);
   if (n < 1000) return String(n);
@@ -398,10 +484,13 @@ function costOf(u) {
 
 function baseClickPower() {
   let v = 1;
+
   UPGRADES.forEach(u => {
     if (u.type === "click") v += state.upgrades[u.id] * u.value;
   });
+
   if (state.research.click20) v *= 1.2;
+
   return v * prestigeMultiplier();
 }
 
@@ -411,10 +500,13 @@ function currentClickPower() {
 
 function baseCps() {
   let v = 0;
+
   UPGRADES.forEach(u => {
     if (u.type === "cps") v += state.upgrades[u.id] * u.value;
   });
+
   if (state.research.auto20) v *= 1.2;
+
   return v * prestigeMultiplier();
 }
 
@@ -478,23 +570,40 @@ function updateTopOnly() {
   $("rank").textContent = rankName();
   $("prestige").textContent = state.prestige;
   $("prestigeBonus").textContent = prestigeMultiplier().toFixed(2);
+
+  const cookie = $("cookie");
+  const clickActive = Date.now() < boosts.clickUntil;
+  const cpsActive = Date.now() < boosts.cpsUntil;
+
+  cookie.classList.remove("goldenPower", "clickPower", "autoPower");
+
+  if (clickActive && cpsActive) {
+    cookie.classList.add("goldenPower");
+    cookie.textContent = "🌈🍪";
+  } else if (clickActive) {
+    cookie.classList.add("clickPower");
+    cookie.textContent = "🔥🍪";
+  } else if (cpsActive) {
+    cookie.classList.add("autoPower");
+    cookie.textContent = "⚡🍪";
+  } else {
+    cookie.textContent = "🍪";
+  }
 }
 
-function tapCookie(e) {
-  e.preventDefault();
-
+function tapCookie() {
   const gain = currentClickPower();
+
   earn(gain);
   state.totalClicks += 1;
 
   playSound("cookie");
   showFloat("+" + fmt(gain));
   checkAchievements();
-
   updateTopOnly();
 }
 
-$("cookie").addEventListener("pointerdown", tapCookie);
+addTap($("cookie"), tapCookie);
 
 function buyUpgrade(id) {
   const u = UPGRADES.find(x => x.id === id);
@@ -559,6 +668,7 @@ function renderShop() {
     const cost = costOf(u);
     const btn = document.createElement("button");
     btn.className = "item";
+
     if (state.cookies >= cost) btn.classList.add("canBuy");
 
     btn.innerHTML = `
@@ -567,11 +677,7 @@ function renderShop() {
       <div class="desc">${u.desc} / 所持 ${state.upgrades[u.id]}</div>
     `;
 
-    btn.addEventListener("pointerdown", e => {
-      e.preventDefault();
-      buyUpgrade(u.id);
-    });
-
+    addTap(btn, () => buyUpgrade(u.id));
     box.appendChild(btn);
   });
 }
@@ -583,6 +689,7 @@ function renderResearch() {
   RESEARCH.forEach(r => {
     const btn = document.createElement("button");
     btn.className = "item";
+
     if (!state.research[r.id] && state.cookies >= r.cost) btn.classList.add("canBuy");
     if (state.research[r.id]) btn.classList.add("done");
 
@@ -592,11 +699,7 @@ function renderResearch() {
       <div class="desc">${r.desc}</div>
     `;
 
-    btn.addEventListener("pointerdown", e => {
-      e.preventDefault();
-      buyResearch(r.id);
-    });
-
+    addTap(btn, () => buyResearch(r.id));
     box.appendChild(btn);
   });
 }
@@ -611,6 +714,7 @@ function renderMissions() {
 
     const btn = document.createElement("button");
     btn.className = "item";
+
     if (done && !claimed) btn.classList.add("canBuy");
     if (claimed) btn.classList.add("done");
 
@@ -620,11 +724,7 @@ function renderMissions() {
       <div class="desc">${claimed ? "受け取り済み" : done ? "タップで受け取り" : "未達成"}</div>
     `;
 
-    btn.addEventListener("pointerdown", e => {
-      e.preventDefault();
-      claimMission(m.id);
-    });
-
+    addTap(btn, () => claimMission(m.id));
     box.appendChild(btn);
   });
 }
@@ -724,19 +824,11 @@ function activateCpsBoost() {
   renderActiveTab();
 }
 
-$("clickBoost").addEventListener("pointerdown", e => {
-  e.preventDefault();
-  activateClickBoost();
-});
-
-$("cpsBoost").addEventListener("pointerdown", e => {
-  e.preventDefault();
-  activateCpsBoost();
-});
+addTap($("clickBoost"), activateClickBoost);
+addTap($("cpsBoost"), activateCpsBoost);
 
 document.querySelectorAll(".mode").forEach(btn => {
-  btn.addEventListener("pointerdown", e => {
-    e.preventDefault();
+  addTap(btn, () => {
     buyMode = btn.dataset.mode;
     document.querySelectorAll(".mode").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
@@ -744,9 +836,7 @@ document.querySelectorAll(".mode").forEach(btn => {
 });
 
 document.querySelectorAll(".tab").forEach(btn => {
-  btn.addEventListener("pointerdown", e => {
-    e.preventDefault();
-
+  addTap(btn, () => {
     activeTab = btn.dataset.tab;
 
     document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
@@ -781,19 +871,16 @@ function prestigeReset() {
   renderAllTabs();
 }
 
-$("prestigeBtn").addEventListener("pointerdown", e => {
-  e.preventDefault();
-  prestigeReset();
-});
+addTap($("prestigeBtn"), prestigeReset);
 
-$("resetBtn").addEventListener("pointerdown", e => {
-  e.preventDefault();
+addTap($("resetBtn"), () => {
   if (!confirm("完全にリセットする？")) return;
 
   localStorage.removeItem(saveKey);
   state = freshState();
   boosts.clickUntil = 0;
   boosts.cpsUntil = 0;
+
   updateTopOnly();
   renderAllTabs();
 });
@@ -839,8 +926,7 @@ function showGoldenCookie() {
     scheduleGoldenCookie();
   }, 8000);
 
-  btn.onpointerdown = function (e) {
-    e.preventDefault();
+  addTap(btn, () => {
     clearTimeout(hideTimer);
     btn.style.display = "none";
 
@@ -864,7 +950,7 @@ function showGoldenCookie() {
     updateTopOnly();
     renderActiveTab();
     scheduleGoldenCookie();
-  };
+  });
 }
 
 loadGame();
