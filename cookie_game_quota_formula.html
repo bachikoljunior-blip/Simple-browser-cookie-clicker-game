@@ -1,0 +1,3146 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>クッキーゲーム</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      --bg: #1d130d;
+      --panel: #332318;
+      --panel2: #24170f;
+      --text: #fff3df;
+      --sub: #dbc6aa;
+      --accent: #ffd38a;
+      --good: #9cffb2;
+      --danger: #6b2525;
+      --tab: #4a3020;
+      --tabActive: #a7672c;
+      --item: #5a3822;
+      --itemCanBuy: #7a4a24;
+      --itemDone: #31502c;
+      --locked: #2b211a;
+      --line: rgba(255, 211, 138, 0.30);
+      --lineDone: rgba(156, 255, 178, 0.85);
+      --lineReady: rgba(255, 211, 138, 0.9);
+    }
+
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% -10%, rgba(255,211,138,0.09), transparent 35%),
+        linear-gradient(180deg, #25170f, var(--bg) 50%, #120b07);
+      color: var(--text);
+      font-family: system-ui, -apple-system, sans-serif;
+      text-align: center;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      padding: 8px;
+    }
+
+    body.skillChoiceMode {
+      padding: 0;
+    }
+
+    body.skillChoiceMode .game,
+    body.skillChoiceMode #goldenCookie,
+    body.skillChoiceMode #monsterWrap,
+    body.skillChoiceMode #rewardModal {
+      display: none !important;
+    }
+
+    body.skillChoiceMode #skillChoiceScreen.active {
+      display: block;
+    }
+
+    .game {
+      max-width: 430px;
+      height: calc(100dvh - 16px);
+      margin: auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .top {
+      flex: 0 0 auto;
+      min-height: 0;
+      background:
+        radial-gradient(circle at 80% 0%, rgba(255,211,138,0.13), transparent 38%),
+        linear-gradient(145deg, #3b281b, var(--panel));
+      border-radius: 14px;
+      padding: 10px;
+      margin: 0 0 8px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+      z-index: 10;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    h1 {
+      font-size: 21px;
+      margin: 2px 0 5px;
+    }
+
+    h2 {
+      font-size: 16px;
+      margin: 6px 0;
+    }
+
+    .cookieCount {
+      width: 100%;
+      min-width: 0;
+      font-size: clamp(24px, 7.5vw, 32px);
+      line-height: 1.05;
+      font-weight: 900;
+      margin: 2px 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #cookies {
+      display: block;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .quotaBox {
+      display: block;
+      background: #20140d;
+      border: 1px solid rgba(255, 211, 138, 0.25);
+      border-radius: 12px;
+      padding: 6px 7px;
+      margin: 6px 0;
+      font-size: 12px;
+      line-height: 1.35;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .quotaBox b {
+      color: var(--accent);
+    }
+
+    .quotaBad {
+      border-color: rgba(255,120,120,0.35);
+      color: #ffd0d0;
+    }
+
+    .cookieWrap {
+      position: relative;
+      display: grid;
+      place-items: center;
+      margin-top: 2px;
+      min-height: 145px;
+    }
+
+    #cookie {
+      position: relative;
+      width: 138px;
+      height: 138px;
+      border: none;
+      border-radius: 50%;
+      touch-action: manipulation;
+      background:
+        radial-gradient(circle at 28% 28%, rgba(255,255,255,0.28) 0 12px, transparent 13px),
+        radial-gradient(circle at 24% 33%, #6e381b 0 6px, transparent 7px),
+        radial-gradient(circle at 64% 26%, #6a3418 0 7px, transparent 8px),
+        radial-gradient(circle at 38% 55%, #6a3418 0 8px, transparent 9px),
+        radial-gradient(circle at 68% 62%, #6f371a 0 7px, transparent 8px),
+        radial-gradient(circle at 55% 77%, #6a3418 0 6px, transparent 7px),
+        radial-gradient(circle at 78% 42%, #724020 0 5px, transparent 6px),
+        radial-gradient(circle at 50% 50%, #d99a59 0%, #c87d3a 62%, #a85c27 100%);
+      box-shadow:
+        inset 8px 8px 12px rgba(255,255,255,0.12),
+        inset -12px -14px 18px rgba(0,0,0,0.28),
+        0 10px 20px rgba(0,0,0,0.35);
+      cursor: pointer;
+      transition: transform .08s ease, box-shadow .18s ease, filter .18s ease, background .18s ease;
+      overflow: hidden;
+    }
+
+    #cookie::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 33% 25%, rgba(255,255,255,0.20) 0 18px, transparent 19px),
+        radial-gradient(circle at 45% 34%, rgba(255,255,255,0.08) 0 22px, transparent 23px);
+      pointer-events: none;
+    }
+
+    #cookie::after {
+      content: "";
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.04);
+      pointer-events: none;
+    }
+
+    #cookie:active {
+      transform: scale(0.95);
+    }
+
+    #cookie.boost-all {
+      background:
+        radial-gradient(circle at 28% 28%, rgba(255,255,255,0.36) 0 12px, transparent 13px),
+        radial-gradient(circle at 24% 33%, #8a5a12 0 6px, transparent 7px),
+        radial-gradient(circle at 64% 26%, #9a6416 0 7px, transparent 8px),
+        radial-gradient(circle at 38% 55%, #8f5815 0 8px, transparent 9px),
+        radial-gradient(circle at 68% 62%, #9b6818 0 7px, transparent 8px),
+        radial-gradient(circle at 55% 77%, #8d5f15 0 6px, transparent 7px),
+        radial-gradient(circle at 78% 42%, #9a6b1c 0 5px, transparent 6px),
+        radial-gradient(circle at 50% 50%, #fff2a0 0%, #f4c14a 50%, #d08a18 100%);
+      box-shadow:
+        0 0 24px rgba(255,215,100,0.95),
+        0 0 52px rgba(255,190,80,0.45),
+        inset 8px 8px 12px rgba(255,255,255,0.18),
+        inset -12px -14px 18px rgba(0,0,0,0.20),
+        0 10px 20px rgba(0,0,0,0.35);
+      animation: cookieGlow 0.9s ease-in-out infinite alternate;
+    }
+
+    #cookie.boost-all .sparkle {
+      display: block;
+    }
+
+    .sparkle {
+      display: none;
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 20% 25%, rgba(255,255,255,0.95) 0 2px, transparent 3px),
+        radial-gradient(circle at 74% 22%, rgba(255,255,255,0.9) 0 2px, transparent 3px),
+        radial-gradient(circle at 62% 72%, rgba(255,255,255,0.9) 0 2px, transparent 3px),
+        radial-gradient(circle at 35% 67%, rgba(255,255,255,0.8) 0 1px, transparent 3px),
+        radial-gradient(circle at 50% 42%, rgba(255,255,255,0.8) 0 1px, transparent 3px);
+      animation: sparkleMove 0.75s linear infinite;
+    }
+
+    @keyframes cookieGlow {
+      from { filter: brightness(1); transform: scale(1); }
+      to { filter: brightness(1.14); transform: scale(1.025); }
+    }
+
+    @keyframes sparkleMove {
+      from { opacity: 0.4; transform: rotate(0deg) scale(1); }
+      50% { opacity: 1; }
+      to { opacity: 0.45; transform: rotate(18deg) scale(1.05); }
+    }
+
+    #floatArea {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .float {
+      position: absolute;
+      left: 50%;
+      top: 10px;
+      transform: translateX(-50%);
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--accent);
+      pointer-events: none;
+      animation: rise 0.55s ease-out forwards;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+    }
+
+    @keyframes rise {
+      to { opacity: 0; transform: translate(-50%, -46px); }
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      margin-top: 7px;
+      font-size: 12px;
+      min-width: 0;
+    }
+
+    .stats div {
+      min-width: 0;
+      background: var(--panel2);
+      border-radius: 9px;
+      padding: 6px 4px;
+      overflow: hidden;
+    }
+
+    .stats b {
+      display: block;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    #message {
+      min-height: 18px;
+      margin-top: 5px;
+      color: var(--good);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tabs {
+      flex: 0 0 auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      background: transparent;
+      padding: 0 0 6px;
+      z-index: 5;
+      min-height: 46px;
+    }
+
+    .tab,
+    .mode,
+    .item,
+    .rewardBtn,
+    .startBtn,
+    .takeSkillBtn {
+      border: none;
+      border-radius: 10px;
+      background: var(--tab);
+      color: var(--text);
+      padding: 9px;
+      font-size: 12px;
+      touch-action: pan-y;
+    }
+
+    .tab {
+      min-height: 40px;
+      display: grid;
+      place-items: center;
+      line-height: 1;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .tab.active,
+    .mode.active {
+      background: var(--tabActive);
+      font-weight: 800;
+    }
+
+    .tabPages {
+      flex: 1 1 auto;
+      min-height: 145px;
+      overflow-y: auto;
+      padding-bottom: 24px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tabPage {
+      display: none;
+      background:
+        radial-gradient(circle at 20% 0%, rgba(255,211,138,0.08), transparent 30%),
+        linear-gradient(150deg, #3a271b, var(--panel));
+      border-radius: 14px;
+      padding: 10px;
+      margin: 0 0 8px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .tabPage.active {
+      display: block;
+    }
+
+    .modes {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .mode {
+      width: 80px;
+    }
+
+    .item {
+      display: block;
+      width: 100%;
+      margin: 7px 0;
+      text-align: left;
+      background: var(--item);
+      font-size: 14px;
+    }
+
+    .item.canBuy {
+      background: var(--itemCanBuy);
+      box-shadow: 0 0 0 2px rgba(255,210,130,0.22);
+    }
+
+    .item.locked {
+      opacity: 0.45;
+    }
+
+    .item.done {
+      background: var(--itemDone);
+    }
+
+    .artCard {
+      position: relative;
+      overflow: hidden;
+      min-height: 74px;
+      padding-right: 88px;
+      border: 1px solid rgba(255,255,255,0.07);
+      isolation: isolate;
+      background:
+        linear-gradient(135deg, rgba(255,211,138,0.11), rgba(255,255,255,0.02) 45%),
+        linear-gradient(145deg, #654022, #4e301d);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.05),
+        0 6px 16px rgba(0,0,0,0.16);
+    }
+
+    .artCard.canBuy {
+      background:
+        linear-gradient(135deg, rgba(255,221,145,0.17), rgba(255,255,255,0.03) 45%),
+        linear-gradient(145deg, #825126, #65401f);
+    }
+
+    .artCard.done {
+      background:
+        linear-gradient(135deg, rgba(156,255,178,0.14), rgba(255,255,255,0.03) 45%),
+        linear-gradient(145deg, #365b30, #284421);
+    }
+
+    .artCard b,
+    .artCard .price,
+    .artCard .desc {
+      position: relative;
+      z-index: 2;
+    }
+
+    .artCard::before {
+      content: attr(data-art);
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 58px;
+      line-height: 1;
+      color: rgba(255, 230, 180, 0.18);
+      font-weight: 900;
+      z-index: 1;
+      pointer-events: none;
+      text-shadow: 0 0 22px rgba(255,211,138,0.18);
+    }
+
+    .artCard::after {
+      content: "";
+      position: absolute;
+      right: -30px;
+      top: -30px;
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle, rgba(255,211,138,0.18), transparent 58%),
+        repeating-linear-gradient(35deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 9px);
+      opacity: 0.55;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .desc {
+      color: var(--sub);
+      font-size: 12px;
+      margin-top: 3px;
+    }
+
+    .price {
+      color: var(--accent);
+      font-weight: 900;
+    }
+
+    .infoBox {
+      background:
+        linear-gradient(145deg, rgba(255,255,255,0.035), rgba(0,0,0,0.07)),
+        #24170f;
+      border-radius: 12px;
+      padding: 9px;
+      margin: 8px 0;
+      text-align: left;
+      font-size: 13px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .infoBox h3 {
+      margin: 0 0 6px;
+      font-size: 15px;
+      color: var(--accent);
+    }
+
+    .infoRow {
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 7px 0;
+    }
+
+    .infoRow:first-child {
+      border-top: none;
+    }
+
+    .skillSummary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin: 8px 0;
+    }
+
+    .skillSummary div {
+      background: #24170f;
+      border-radius: 10px;
+      padding: 7px 4px;
+      font-size: 12px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .debugSwitch {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: #402818;
+      border-radius: 12px;
+      padding: 10px;
+      margin: 8px 0;
+      text-align: left;
+    }
+
+    .debugSwitch input {
+      transform: scale(1.25);
+    }
+
+    .debugControls {
+      display: none;
+    }
+
+    .debugControls.active {
+      display: block;
+    }
+
+    .debugRow {
+      display: grid;
+      grid-template-columns: 1fr 90px;
+      gap: 8px;
+      align-items: center;
+      padding: 6px 0;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      font-size: 13px;
+    }
+
+    .debugRow input {
+      width: 90px;
+      border: none;
+      border-radius: 8px;
+      padding: 7px;
+      background: #fff3df;
+      color: #20140d;
+      font-size: 14px;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    #goldenCookie {
+      display: none;
+      position: fixed;
+      width: 72px;
+      height: 72px;
+      border: none;
+      border-radius: 50%;
+      z-index: 999;
+      touch-action: pan-y;
+      cursor: pointer;
+      background:
+        radial-gradient(circle at 28% 28%, rgba(255,255,255,0.32) 0 8px, transparent 9px),
+        radial-gradient(circle at 24% 33%, #a37117 0 4px, transparent 5px),
+        radial-gradient(circle at 64% 26%, #9b6a12 0 5px, transparent 6px),
+        radial-gradient(circle at 38% 55%, #a67418 0 6px, transparent 7px),
+        radial-gradient(circle at 68% 62%, #94600f 0 5px, transparent 6px),
+        radial-gradient(circle at 55% 77%, #a26d16 0 4px, transparent 5px),
+        radial-gradient(circle at 50% 50%, #fff1a0 0%, #f2c24d 55%, #d28a12 100%);
+      box-shadow:
+        0 0 20px rgba(255,215,80,0.85),
+        inset 6px 6px 9px rgba(255,255,255,0.18),
+        inset -8px -9px 12px rgba(0,0,0,0.22),
+        0 10px 20px rgba(0,0,0,0.30);
+    }
+
+    #goldenCookie::before {
+      content: "";
+      position: absolute;
+      inset: -8px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,230,120,0.35), transparent 65%);
+      pointer-events: none;
+    }
+
+    #monsterWrap {
+      display: none;
+      position: fixed;
+      z-index: 998;
+      width: 112px;
+      text-align: center;
+      touch-action: pan-y;
+    }
+
+    #cookieMonster {
+      position: relative;
+      width: 92px;
+      height: 92px;
+      border: none;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 28% 30%, #4b2411 0 5px, transparent 6px),
+        radial-gradient(circle at 65% 25%, #512713 0 6px, transparent 7px),
+        radial-gradient(circle at 35% 70%, #4f2512 0 6px, transparent 7px),
+        radial-gradient(circle at 72% 63%, #5c2d15 0 5px, transparent 6px),
+        radial-gradient(circle at 50% 50%, #d4914d 0%, #b7652d 62%, #814018 100%);
+      box-shadow:
+        0 0 20px rgba(255,120,70,0.35),
+        inset 7px 8px 10px rgba(255,255,255,0.12),
+        inset -10px -12px 15px rgba(0,0,0,0.30),
+        0 10px 20px rgba(0,0,0,0.35);
+    }
+
+    #cookieMonster::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 34% 32%, #fff8e8 0 8px, transparent 9px),
+        radial-gradient(circle at 65% 32%, #fff8e8 0 8px, transparent 9px),
+        radial-gradient(circle at 36% 34%, #5b2012 0 4px, transparent 5px),
+        radial-gradient(circle at 63% 34%, #5b2012 0 4px, transparent 5px),
+        radial-gradient(ellipse at 50% 65%, #7c2c1e 0 12px, transparent 13px);
+      pointer-events: none;
+    }
+
+    #cookieMonster::after {
+      content: "";
+      position: absolute;
+      left: 33px;
+      top: 57px;
+      width: 7px;
+      height: 10px;
+      background: #fff3df;
+      clip-path: polygon(0 0, 100% 0, 50% 100%);
+      box-shadow:
+        10px 2px 0 #fff3df,
+        20px 0 0 #fff3df;
+      pointer-events: none;
+    }
+
+    .monsterHp {
+      width: 112px;
+      height: 10px;
+      background: rgba(0,0,0,0.45);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 5px;
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+
+    #monsterHpFill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #ff6262, #ffd36e);
+    }
+
+    #monsterHpText {
+      margin-top: 2px;
+      font-size: 11px;
+      color: #fff;
+      text-shadow: 0 1px 2px #000;
+      font-weight: 800;
+    }
+
+    #rewardModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 2000;
+      padding: 16px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .rewardPanel {
+      width: min(420px, 100%);
+      background:
+        radial-gradient(circle at 70% 0%, rgba(255,211,138,0.14), transparent 35%),
+        var(--panel);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .rewardPanel h2 {
+      margin: 0 0 6px;
+    }
+
+    .rewardExplain {
+      margin: 0 0 10px;
+      color: var(--sub);
+      font-size: 13px;
+      line-height: 1.45;
+      text-align: left;
+    }
+
+    .rewardBtn {
+      display: block;
+      width: 100%;
+      background: #6b4527;
+      margin: 8px 0;
+      text-align: left;
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .danger {
+      background: var(--danger);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+    }
+
+    #skillChoiceScreen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 5000;
+      background:
+        radial-gradient(circle at 50% -5%, rgba(255,211,138,0.18), transparent 35%),
+        linear-gradient(180deg, #24150d, #100906);
+      color: var(--text);
+      overflow: auto;
+      padding: 10px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #skillChoiceScreen.active {
+      display: block;
+    }
+
+    .skillScreenInner {
+      width: min(1000px, 100%);
+      margin: 0 auto;
+      padding-bottom: 48px;
+    }
+
+    .skillScreenTop {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background:
+        radial-gradient(circle at 75% 0%, rgba(255,211,138,0.18), transparent 35%),
+        linear-gradient(145deg, #3c281b, #25170f);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 10px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.42);
+      text-align: left;
+    }
+
+    .skillScreenTitle {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .skillScreenTitle h2 {
+      margin: 0;
+      color: var(--accent);
+      font-size: 18px;
+    }
+
+    .skillPointBadge {
+      background: #20140d;
+      border: 1px solid rgba(255,211,138,0.28);
+      border-radius: 999px;
+      padding: 6px 9px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .skillScreenGuide {
+      color: var(--sub);
+      font-size: 12px;
+      line-height: 1.45;
+      margin-bottom: 8px;
+    }
+
+    .selectedSkillPanel {
+      background: #20140d;
+      border: 1px solid rgba(255,211,138,0.20);
+      border-radius: 14px;
+      padding: 9px;
+      margin-top: 8px;
+      min-height: 92px;
+    }
+
+    .selectedSkillHead {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .selectedSkillName {
+      color: var(--accent);
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .selectedSkillStatus {
+      font-size: 12px;
+      background: #3a271b;
+      border-radius: 999px;
+      padding: 4px 7px;
+      white-space: nowrap;
+    }
+
+    .selectedSkillDesc {
+      color: var(--sub);
+      font-size: 12px;
+      line-height: 1.45;
+      margin-top: 5px;
+    }
+
+    .selectedSkillCost {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 900;
+      margin-top: 5px;
+    }
+
+    .skillActionRow {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .takeSkillBtn,
+    .startBtn {
+      width: 100%;
+      text-align: center;
+      font-weight: 900;
+      font-size: 13px;
+    }
+
+    .takeSkillBtn {
+      background: #5a3822;
+    }
+
+    .takeSkillBtn.ready {
+      background: #8b592c;
+      box-shadow: 0 0 0 2px rgba(255,211,138,0.14);
+    }
+
+    .startBtn {
+      background: #31502c;
+    }
+
+    .startBtn.locked {
+      opacity: 0.42;
+      background: var(--locked);
+    }
+
+    .skillLegend {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--sub);
+    }
+
+    .skillLegend div {
+      background: rgba(0,0,0,0.18);
+      border-radius: 9px;
+      padding: 6px 4px;
+      text-align: center;
+    }
+
+    .skillMapFrame {
+      margin-top: 10px;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(255,211,138,0.10), transparent 34%),
+        linear-gradient(180deg, #24170f, #160d08);
+      border-radius: 18px;
+      border: 1px solid rgba(255,211,138,0.18);
+      overflow: auto;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.05),
+        0 10px 24px rgba(0,0,0,0.28);
+    }
+
+    .skillMap {
+      position: relative;
+      width: 900px;
+      height: 2220px;
+      min-width: 900px;
+      min-height: 2220px;
+      margin: 0 auto;
+      background:
+        radial-gradient(circle at 50% 15%, rgba(255,211,138,0.08), transparent 28%),
+        radial-gradient(circle at 18% 72%, rgba(156,255,178,0.06), transparent 30%),
+        radial-gradient(circle at 82% 76%, rgba(255,180,100,0.06), transparent 30%);
+    }
+
+    .skillLines {
+      position: absolute;
+      inset: 0;
+      width: 900px;
+      height: 2220px;
+      pointer-events: none;
+    }
+
+    .skillLine {
+      stroke: var(--line);
+      stroke-width: 3;
+      stroke-linecap: round;
+    }
+
+    .skillLine.done {
+      stroke: var(--lineDone);
+      stroke-width: 4;
+      filter: drop-shadow(0 0 4px rgba(156,255,178,0.35));
+    }
+
+    .skillLine.ready {
+      stroke: var(--lineReady);
+      stroke-width: 3.5;
+      filter: drop-shadow(0 0 4px rgba(255,211,138,0.35));
+    }
+
+    .skillNode {
+      position: absolute;
+      width: 96px;
+      height: 72px;
+      transform: translate(-50%, -50%);
+      border: none;
+      border-radius: 16px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,0.06), rgba(0,0,0,0.06)),
+        #362318;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.32);
+      padding: 5px;
+      display: grid;
+      grid-template-rows: 22px 1fr 13px;
+      place-items: center;
+      overflow: hidden;
+      touch-action: pan-y;
+    }
+
+    .skillNode::before {
+      content: "";
+      position: absolute;
+      inset: -20px;
+      background: radial-gradient(circle at 50% 20%, rgba(255,211,138,0.18), transparent 55%);
+      pointer-events: none;
+    }
+
+    .skillNode span {
+      position: relative;
+      z-index: 1;
+    }
+
+    .skillNode.selected {
+      outline: 3px solid rgba(255,211,138,0.9);
+      outline-offset: 2px;
+    }
+
+    .skillNode.done {
+      background:
+        radial-gradient(circle at 50% 0%, rgba(156,255,178,0.20), transparent 50%),
+        #31502c;
+      border-color: rgba(156,255,178,0.48);
+    }
+
+    .skillNode.canBuy {
+      background:
+        radial-gradient(circle at 50% 0%, rgba(255,211,138,0.28), transparent 55%),
+        #754925;
+      border-color: rgba(255,211,138,0.58);
+    }
+
+    .skillNode.locked {
+      opacity: 0.66;
+      background: #241912;
+    }
+
+    .nodeMark {
+      font-size: 20px;
+      line-height: 1;
+      color: var(--accent);
+      font-weight: 900;
+    }
+
+    .nodeName {
+      font-size: 10px;
+      line-height: 1.05;
+      font-weight: 900;
+      padding: 0 2px;
+    }
+
+    .nodeCost {
+      font-size: 10px;
+      line-height: 1;
+      color: var(--accent);
+      font-weight: 800;
+    }
+  </style>
+</head>
+
+<body>
+<main class="game">
+  <section class="top">
+    <h1>クッキーゲーム</h1>
+
+    <div class="cookieCount">
+      <span id="cookies">0</span>
+    </div>
+
+    <div id="quotaBox" class="quotaBox"></div>
+
+    <div class="cookieWrap">
+      <button id="cookie" aria-label="クッキー">
+        <span class="sparkle"></span>
+      </button>
+      <div id="floatArea"></div>
+    </div>
+
+    <button id="goldenCookie" aria-label="金のクッキー"></button>
+
+    <div id="monsterWrap">
+      <button id="cookieMonster" aria-label="クッキーモンスター"></button>
+      <div class="monsterHp">
+        <div id="monsterHpFill"></div>
+      </div>
+      <div id="monsterHpText">HP</div>
+    </div>
+
+    <div class="stats">
+      <div>タップ <b id="power">1</b></div>
+      <div>毎秒 <b id="cps">0</b></div>
+      <div>ランク <b id="rank">初心者</b></div>
+    </div>
+
+    <div id="message"></div>
+  </section>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="shopTab">強化</button>
+    <button class="tab" data-tab="researchTab">研究</button>
+    <button class="tab" data-tab="prestigeTab">転生</button>
+    <button class="tab" data-tab="infoTab">一覧</button>
+  </nav>
+
+  <div class="tabPages">
+    <section id="shopTab" class="tabPage active">
+      <h2>購入モード</h2>
+      <div class="modes">
+        <button class="mode active" data-mode="1">1個</button>
+        <button class="mode" data-mode="10">10個</button>
+        <button class="mode" data-mode="max">最大</button>
+      </div>
+      <div id="shop"></div>
+    </section>
+
+    <section id="researchTab" class="tabPage">
+      <div id="research"></div>
+    </section>
+
+    <section id="prestigeTab" class="tabPage">
+      <div id="prestigePanel"></div>
+    </section>
+
+    <section id="infoTab" class="tabPage">
+      <div id="infoPanel"></div>
+    </section>
+  </div>
+</main>
+
+<div id="rewardModal">
+  <div class="rewardPanel">
+    <h2>報酬を選択</h2>
+    <p class="rewardExplain">下の候補からどれか1つ選んでください。</p>
+    <div id="rewardChoices"></div>
+  </div>
+</div>
+
+<section id="skillChoiceScreen">
+  <div class="skillScreenInner">
+    <div class="skillScreenTop">
+      <div class="skillScreenTitle">
+        <h2>転生スキル選択</h2>
+        <div class="skillPointBadge">所持PT <span id="skillScreenPoints">0</span></div>
+      </div>
+
+      <div class="skillScreenGuide">
+        マークを押すと効果説明が表示されます。最低1つスキルを取るとスタートできます。
+      </div>
+
+      <div id="selectedSkillPanel" class="selectedSkillPanel"></div>
+
+      <div class="skillActionRow">
+        <button id="takeSelectedSkillBtn" class="takeSkillBtn">この効果を取る</button>
+        <button id="skillStartBtn" class="startBtn locked">この構成でスタート</button>
+      </div>
+
+      <div class="skillLegend">
+        <div>緑：解放済み</div>
+        <div>金：取得可能</div>
+        <div>暗：前提不足</div>
+      </div>
+    </div>
+
+    <div class="skillMapFrame">
+      <div id="skillMap" class="skillMap"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+const saveKey = "cookie_game_compact";
+
+const oldSaveKeys = [
+  "cookie_game_compact_v11",
+  "cookie_game_compact_v10",
+  "cookie_game_compact_v9",
+  "cookie_game_compact_v8",
+  "cookie_game_compact_v7",
+  "cookie_game_compact_v6",
+  "cookie_game_compact_v5",
+  "cookie_game_compact_v4",
+  "cookie_game_compact_v3"
+];
+
+const OFFLINE_LIMIT_SECONDS = 60 * 60 * 8;
+const GOLDEN_BOOST_DURATION = 30000;
+
+const UPGRADES = [
+  { id: "finger", name: "強い指", type: "click", value: 1, base: 15, growth: 1.25, desc: "1タップ +1" },
+  { id: "grandma", name: "おばあちゃん", type: "cps", value: 1, base: 50, growth: 1.25, desc: "毎秒 +1" },
+  { id: "oven", name: "オーブン", type: "cps", value: 5, base: 250, growth: 1.28, desc: "毎秒 +5" },
+  { id: "factory", name: "工場", type: "cps", value: 25, base: 1500, growth: 1.3, desc: "毎秒 +25" },
+  { id: "bank", name: "クッキー銀行", type: "cps", value: 150, base: 10000, growth: 1.32, desc: "毎秒 +150" },
+  { id: "portal", name: "異世界クッキー炉", type: "cps", value: 1000, base: 100000, growth: 1.35, desc: "毎秒 +1000" },
+  { id: "moonBakery", name: "月面ベーカリー", type: "cps", value: 7500, base: 1000000, growth: 1.38, desc: "毎秒 +7500" },
+  { id: "timeOven", name: "時空オーブン", type: "cps", value: 50000, base: 15000000, growth: 1.4, desc: "毎秒 +5万" },
+  { id: "galaxyFactory", name: "銀河工場", type: "cps", value: 350000, base: 250000000, growth: 1.42, desc: "毎秒 +35万" },
+  { id: "blackHoleMixer", name: "ブラックホールミキサー", type: "cps", value: 2500000, base: 5000000000, growth: 1.45, desc: "毎秒 +250万" },
+  { id: "universeOven", name: "宇宙焼成炉", type: "cps", value: 20000000, base: 100000000000, growth: 1.48, desc: "毎秒 +2000万" },
+  { id: "godFinger", name: "神の指", type: "click", value: 2000000, base: 300000000000, growth: 1.48, desc: "1タップ +200万" },
+  { id: "cookieSingularity", name: "クッキー特異点", type: "cps", value: 250000000, base: 5000000000000, growth: 1.5, desc: "毎秒 +2.5億" },
+  { id: "quantumBakery", name: "量子ベーカリー", type: "cps", value: 2000000000, base: 120000000000000, growth: 1.52, desc: "毎秒 +20億" },
+  { id: "antimatterOven", name: "反物質オーブン", type: "cps", value: 18000000000, base: 3500000000000000, growth: 1.54, desc: "毎秒 +180億" }
+];
+
+const RESEARCH = [
+  { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 60000, desc: "おばあちゃんは所持数が多いほど自分の生産倍率アップ" },
+  { id: "ovenBatch", name: "オーブン大量焼成", cost: 180000, desc: "オーブンは所持数が多いほど自分の生産倍率アップ" },
+  { id: "factoryNetwork", name: "工場ネットワーク", cost: 900000, skill: "research_factory", desc: "工場は他のアップグレード所持数に応じて自分の生産倍率アップ" },
+  { id: "portalNetwork", name: "異世界接続網", cost: 6000000, skill: "research_portal", desc: "異世界クッキー炉は他のアップグレード所持数に応じて自分の生産倍率アップ" },
+  { id: "bankClickDividend", name: "銀行クリック配当", cost: 25000000, skill: "research_bank", desc: "クッキー銀行の秒間生産量に比例してクリック倍率アップ" },
+  { id: "moonGlobalYeast", name: "月面発酵", cost: 250000000, skill: "research_moon", desc: "月面ベーカリーの秒間生産量に比例して全体の生産量アップ" },
+  { id: "portalGlobalFold", name: "異世界増幅", cost: 2500000000, skill: "research_portalGlobal", desc: "異世界クッキー炉の秒間生産量に比例して全体の生産量アップ" },
+  { id: "galaxyAssembly", name: "銀河分業", cost: 40000000000, skill: "research_galaxy", desc: "銀河工場は所持数が多いほど自分の生産倍率アップ" },
+  { id: "blackHoleCompression", name: "重力圧縮", cost: 1200000000000, skill: "research_blackhole", desc: "ブラックホールミキサーの秒間生産量に比例して全体の生産量アップ" },
+  { id: "quantumProofing", name: "量子発酵", cost: 25000000000000, skill: "research_quantum", desc: "量子ベーカリーは上位設備の所持数に応じて自分の生産倍率アップ" },
+  { id: "antimatterRecipe", name: "反物質配合", cost: 500000000000000, skill: "research_antimatter", desc: "反物質オーブンの秒間生産量に比例して全体の生産量アップ" }
+].sort((a, b) => a.cost - b.cost);
+
+const REWARD_POOL = [
+  { id: "goldenRate", name: "金クッキー出現率アップ", desc: n => `金クッキーの出現間隔 -${15 * n}%相当` },
+  { id: "goldenPower", name: "金ブースト倍率アップ", desc: n => `金クッキーのブースト倍率 +${(0.5 * n).toFixed(1)}` },
+  { id: "goldenAmount", name: "金クッキー獲得量アップ", desc: n => `金クッキーの即時獲得量 +${35 * n}%` },
+  { id: "monsterDamage", name: "対モンスターダメージアップ", desc: n => `モンスターへの最終ダメージ +${40 * n}%` },
+  { id: "monsterRate", name: "モンスター出現率アップ", desc: n => `モンスターの出現間隔 -${15 * n}%相当` }
+];
+
+const SKILL_GROUPS = {
+  core: "中核",
+  click: "タップ",
+  auto: "自動焼成",
+  economy: "経済",
+  research: "研究",
+  upgrade: "設備",
+  golden: "金クッキー",
+  monster: "怪物狩り",
+  reward: "報酬",
+  start: "周回支援",
+  master: "超越"
+};
+
+const SKILL_NODES = [
+  { id: "core", name: "焼成核", branchId: "core", cost: 1, x: 450, y: 70, icon: "◎", prereqs: [], desc: "全生産 +2%。", effects: [{ type: "all", value: 0.02 }] },
+
+  { id: "click_1", name: "指の芯", branchId: "click", cost: 2, x: 260, y: 190, icon: "◆", prereqs: ["core"], desc: "タップ生産 +6%。", effects: [{ type: "click", value: 0.06 }] },
+  { id: "auto_1", name: "火種", branchId: "auto", cost: 2, x: 640, y: 190, icon: "◇", prereqs: ["core"], desc: "毎秒生産 +6%。", effects: [{ type: "cps", value: 0.06 }] },
+  { id: "economy_1", name: "仕入れ", branchId: "economy", cost: 3, x: 450, y: 240, icon: "⬡", prereqs: ["core"], desc: "アップグレード費用 -2%、研究費用 -2%。", effects: [{ type: "upgradeDiscount", value: 0.02 }, { type: "researchDiscount", value: 0.02 }] },
+
+  { id: "golden_1", name: "金色の匂い", branchId: "golden", cost: 5, x: 130, y: 330, icon: "✦", prereqs: ["click_1"], desc: "金クッキー出現間隔 -4%。", effects: [{ type: "goldenRate", value: 0.04 }] },
+  { id: "click_2", name: "連打の呼吸", branchId: "click", cost: 5, x: 290, y: 360, icon: "◆", prereqs: ["click_1"], desc: "タップ生産 +10%。", effects: [{ type: "click", value: 0.10 }] },
+  { id: "research_1", name: "研究机", branchId: "research", cost: 6, x: 450, y: 410, icon: "⌬", prereqs: ["economy_1"], desc: "研究費用 -4%。", effects: [{ type: "researchDiscount", value: 0.04 }] },
+  { id: "auto_2", name: "炉の列", branchId: "auto", cost: 5, x: 610, y: 360, icon: "◇", prereqs: ["auto_1"], desc: "毎秒生産 +10%。", effects: [{ type: "cps", value: 0.10 }] },
+  { id: "monster_1", name: "狩りの合図", branchId: "monster", cost: 5, x: 770, y: 330, icon: "◉", prereqs: ["auto_1"], desc: "モンスター出現間隔 -4%。", effects: [{ type: "monsterRate", value: 0.04 }] },
+
+  { id: "golden_2", name: "金粉回収", branchId: "golden", cost: 12, x: 130, y: 500, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +15%。", effects: [{ type: "goldenAmount", value: 0.15 }] },
+  { id: "click_3", name: "焼き印タップ", branchId: "click", cost: 14, x: 290, y: 545, icon: "◆", prereqs: ["click_2", "golden_1"], desc: "タップ生産 +14%、金獲得量 +6%。", effects: [{ type: "click", value: 0.14 }, { type: "goldenAmount", value: 0.06 }] },
+  { id: "upgrade_moon", name: "月面許可", branchId: "upgrade", cost: 16, x: 450, y: 590, icon: "☾", prereqs: ["economy_1"], desc: "月面ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "moonBakery" }] },
+  { id: "auto_3", name: "同期炉", branchId: "auto", cost: 14, x: 610, y: 545, icon: "◇", prereqs: ["auto_2", "monster_1"], desc: "毎秒生産 +14%、モンスターダメージ +6%。", effects: [{ type: "cps", value: 0.14 }, { type: "monsterDamageSkill", value: 0.06 }] },
+  { id: "monster_2", name: "急所割り", branchId: "monster", cost: 12, x: 770, y: 500, icon: "◉", prereqs: ["monster_1"], desc: "モンスター最終ダメージ +16%。", effects: [{ type: "monsterDamageSkill", value: 0.16 }] },
+
+  { id: "golden_3", name: "輝き増幅", branchId: "golden", cost: 30, x: 130, y: 680, icon: "✦", prereqs: ["golden_2", "click_3"], desc: "金ブースト倍率 +0.35。", effects: [{ type: "goldenPower", value: 0.35 }] },
+  { id: "research_factory", name: "工場理論", branchId: "research", cost: 35, x: 330, y: 740, icon: "⌬", prereqs: ["research_1", "auto_3"], desc: "工場ネットワーク研究を解放。", effects: [{ type: "unlockResearch", target: "factoryNetwork" }] },
+  { id: "economy_2", name: "大量仕入れ", branchId: "economy", cost: 40, x: 450, y: 790, icon: "⬡", prereqs: ["research_1", "upgrade_moon"], desc: "アップグレード費用 -5%。", effects: [{ type: "upgradeDiscount", value: 0.05 }] },
+  { id: "research_bank", name: "銀行配当論", branchId: "research", cost: 35, x: 570, y: 740, icon: "⌬", prereqs: ["research_1", "click_3"], desc: "銀行クリック配当研究を解放。", effects: [{ type: "unlockResearch", target: "bankClickDividend" }] },
+  { id: "monster_3", name: "砕ける皮", branchId: "monster", cost: 30, x: 770, y: 680, icon: "◉", prereqs: ["monster_2", "auto_3"], desc: "モンスターHP -7%。", effects: [{ type: "monsterHpDown", value: 0.07 }] },
+
+  { id: "click_4", name: "神経直結", branchId: "click", cost: 75, x: 220, y: 910, icon: "◆", prereqs: ["golden_3", "research_bank"], desc: "タップ生産 +24%、全生産 +2%。", effects: [{ type: "click", value: 0.24 }, { type: "all", value: 0.02 }] },
+  { id: "upgrade_time", name: "時空免許", branchId: "upgrade", cost: 90, x: 450, y: 965, icon: "◌", prereqs: ["upgrade_moon", "economy_2"], desc: "時空オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "timeOven" }] },
+  { id: "auto_4", name: "無人ライン", branchId: "auto", cost: 75, x: 680, y: 910, icon: "◇", prereqs: ["monster_3", "research_factory"], desc: "毎秒生産 +24%、全生産 +2%。", effects: [{ type: "cps", value: 0.24 }, { type: "all", value: 0.02 }] },
+
+  { id: "golden_4", name: "太陽反応", branchId: "golden", cost: 160, x: 130, y: 1080, icon: "✦", prereqs: ["click_4", "golden_3"], desc: "金出現間隔 -8%、金獲得量 +25%。", effects: [{ type: "goldenRate", value: 0.08 }, { type: "goldenAmount", value: 0.25 }] },
+  { id: "research_portal", name: "異世界理論", branchId: "research", cost: 200, x: 330, y: 1135, icon: "⌬", prereqs: ["research_factory", "upgrade_time"], desc: "異世界接続網研究を解放。", effects: [{ type: "unlockResearch", target: "portalNetwork" }] },
+  { id: "upgrade_galaxy", name: "銀河契約", branchId: "upgrade", cost: 240, x: 450, y: 1200, icon: "✺", prereqs: ["upgrade_time", "auto_4"], desc: "銀河工場を解放。", effects: [{ type: "unlockUpgrade", target: "galaxyFactory" }] },
+  { id: "research_moon", name: "月面酵母", branchId: "research", cost: 200, x: 570, y: 1135, icon: "⌬", prereqs: ["research_bank", "upgrade_time"], desc: "月面発酵研究を解放。", effects: [{ type: "unlockResearch", target: "moonGlobalYeast" }] },
+  { id: "monster_4", name: "怪物王解体", branchId: "monster", cost: 160, x: 770, y: 1080, icon: "◉", prereqs: ["auto_4", "monster_3"], desc: "モンスター最終ダメージ +35%、出現間隔 -8%。", effects: [{ type: "monsterDamageSkill", value: 0.35 }, { type: "monsterRate", value: 0.08 }] },
+
+  { id: "start_1", name: "帰還貯蔵", branchId: "start", cost: 350, x: 160, y: 1280, icon: "▣", prereqs: ["golden_4"], desc: "転生後に5万クッキーから開始。", effects: [{ type: "startCookies", value: 50000 }] },
+  { id: "research_galaxy", name: "銀河設計図", branchId: "research", cost: 420, x: 310, y: 1360, icon: "⌬", prereqs: ["upgrade_galaxy", "research_moon"], desc: "銀河分業研究を解放。", effects: [{ type: "unlockResearch", target: "galaxyAssembly" }] },
+  { id: "upgrade_blackhole", name: "重力設備", branchId: "upgrade", cost: 520, x: 450, y: 1410, icon: "●", prereqs: ["upgrade_galaxy", "research_portal"], desc: "ブラックホールミキサーを解放。", effects: [{ type: "unlockUpgrade", target: "blackHoleMixer" }] },
+  { id: "reward_1", name: "選択の目", branchId: "reward", cost: 420, x: 590, y: 1360, icon: "✧", prereqs: ["monster_4"], desc: "モンスター報酬の選択肢 +1。", effects: [{ type: "rewardChoices", value: 1 }] },
+  { id: "offline_1", name: "長期保存", branchId: "start", cost: 350, x: 740, y: 1280, icon: "▣", prereqs: ["auto_4"], desc: "放置上限 +4時間。", effects: [{ type: "offlineHours", value: 4 }] },
+
+  { id: "reward_2", name: "強化圧縮", branchId: "reward", cost: 700, x: 160, y: 1510, icon: "✧", prereqs: ["reward_1", "research_galaxy"], desc: "アップグレード個別強化の効果 +15%。", effects: [{ type: "upgradePerkPower", value: 0.15 }] },
+  { id: "research_blackhole", name: "重力研究", branchId: "research", cost: 800, x: 330, y: 1580, icon: "⌬", prereqs: ["upgrade_blackhole", "research_galaxy"], desc: "重力圧縮研究を解放。", effects: [{ type: "unlockResearch", target: "blackHoleCompression" }] },
+  { id: "upgrade_universe", name: "宇宙炉心", branchId: "upgrade", cost: 900, x: 450, y: 1640, icon: "✺", prereqs: ["upgrade_blackhole", "reward_2"], desc: "宇宙焼成炉を解放。", effects: [{ type: "unlockUpgrade", target: "universeOven" }] },
+  { id: "research_portalGlobal", name: "増幅論", branchId: "research", cost: 1100, x: 570, y: 1580, icon: "⌬", prereqs: ["research_portal", "upgrade_blackhole"], desc: "異世界増幅研究を解放。", effects: [{ type: "unlockResearch", target: "portalGlobalFold" }] },
+  { id: "start_2", name: "帰還神殿", branchId: "start", cost: 900, x: 740, y: 1510, icon: "▣", prereqs: ["start_1", "offline_1"], desc: "転生後に100万クッキーから開始、放置上限 +4時間。", effects: [{ type: "startCookies", value: 950000 }, { type: "offlineHours", value: 4 }] },
+
+  { id: "upgrade_godfinger", name: "神指契約", branchId: "upgrade", cost: 2000, x: 250, y: 1780, icon: "◆", prereqs: ["upgrade_universe", "click_4"], desc: "神の指を解放。", effects: [{ type: "unlockUpgrade", target: "godFinger" }] },
+  { id: "upgrade_singularity", name: "特異点管理", branchId: "upgrade", cost: 2000, x: 450, y: 1830, icon: "◎", prereqs: ["upgrade_universe", "research_portalGlobal"], desc: "クッキー特異点を解放、全生産 +8%。", effects: [{ type: "unlockUpgrade", target: "cookieSingularity" }, { type: "all", value: 0.08 }] },
+  { id: "upgrade_quantum", name: "量子厨房", branchId: "upgrade", cost: 3500, x: 650, y: 1780, icon: "✺", prereqs: ["upgrade_singularity", "research_blackhole"], desc: "量子ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "quantumBakery" }] },
+
+  { id: "research_quantum", name: "量子酵母", branchId: "research", cost: 5000, x: 330, y: 1960, icon: "⌬", prereqs: ["upgrade_quantum", "upgrade_godfinger"], desc: "量子発酵研究を解放。", effects: [{ type: "unlockResearch", target: "quantumProofing" }] },
+  { id: "upgrade_antimatter", name: "反物質炉", branchId: "upgrade", cost: 7000, x: 570, y: 1960, icon: "✹", prereqs: ["upgrade_quantum", "upgrade_singularity"], desc: "反物質オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "antimatterOven" }] },
+  { id: "research_antimatter", name: "反物質配合論", branchId: "research", cost: 8000, x: 450, y: 2070, icon: "⌬", prereqs: ["upgrade_antimatter", "research_quantum"], desc: "反物質配合研究を解放。", effects: [{ type: "unlockResearch", target: "antimatterRecipe" }] },
+
+  { id: "master_final", name: "超越体", branchId: "master", cost: 10000, x: 450, y: 2170, icon: "✹", prereqs: ["research_antimatter", "start_2"], desc: "全生産 +35%、タップ +20%、毎秒 +20%、報酬量 +10%。", effects: [{ type: "all", value: 0.35 }, { type: "click", value: 0.20 }, { type: "cps", value: 0.20 }, { type: "rewardBonus", value: 0.10 }] }
+];
+
+const SKILLS = SKILL_NODES.map(skill => ({
+  ...skill,
+  branchName: SKILL_GROUPS[skill.branchId] || "スキル",
+  prereqs: skill.prereqs || []
+}));
+
+const UPGRADE_UNLOCK_SKILLS = {
+  moonBakery: "upgrade_moon",
+  timeOven: "upgrade_time",
+  galaxyFactory: "upgrade_galaxy",
+  blackHoleMixer: "upgrade_blackhole",
+  universeOven: "upgrade_universe",
+  godFinger: "upgrade_godfinger",
+  cookieSingularity: "upgrade_singularity",
+  quantumBakery: "upgrade_quantum",
+  antimatterOven: "upgrade_antimatter"
+};
+
+let state = freshState();
+let buyMode = "1";
+let audioCtx = null;
+let boostUntil = 0;
+let activeTab = "shopTab";
+let debugMode = false;
+let selectedSkillId = null;
+
+let goldenSpawnTimer = null;
+let goldenHideTimer = null;
+let goldenVisible = false;
+
+let monsterSpawnTimer = null;
+let monsterHideTimer = null;
+let monsterVisible = false;
+let monster = { level: 1, hp: 1, maxHp: 1 };
+
+let pendingRewardChoices = [];
+let rewardOpenTimer = null;
+
+function freshState() {
+  const upgrades = {};
+  const research = {};
+  const perks = {};
+  const upgradePerks = {};
+  const skills = {};
+
+  UPGRADES.forEach(u => {
+    upgrades[u.id] = 0;
+    upgradePerks[u.id] = 0;
+  });
+
+  RESEARCH.forEach(r => research[r.id] = false);
+  REWARD_POOL.forEach(r => perks[r.id] = 0);
+  SKILLS.forEach(s => skills[s.id] = false);
+
+  return {
+    cookies: 0,
+    cookieRemainder: 0,
+    totalCookies: 0,
+    runCookies: 0,
+    totalClicks: 0,
+
+    prestige: 0,
+    prestigeTotal: 0,
+    prestigeRuns: 0,
+    runStart: Date.now(),
+    monstersDefeated: 0,
+
+    awaitingSkillChoice: false,
+    skillChoiceStartCount: 0,
+
+    upgrades,
+    research,
+    perks,
+    upgradePerks,
+    skills,
+    lastSave: Date.now()
+  };
+}
+
+function ensureState() {
+  const base = freshState();
+
+  state.upgrades = { ...base.upgrades, ...(state.upgrades || {}) };
+  state.research = { ...base.research, ...(state.research || {}) };
+  state.perks = { ...base.perks, ...(state.perks || {}) };
+  state.upgradePerks = { ...base.upgradePerks, ...(state.upgradePerks || {}) };
+  state.skills = { ...base.skills, ...(state.skills || {}) };
+
+  state.cookies = Math.floor(Number(state.cookies) || 0);
+  state.cookieRemainder = Number(state.cookieRemainder) || 0;
+  state.totalCookies = Math.floor(Number(state.totalCookies) || 0);
+  state.runCookies = Math.floor(Number(state.runCookies) || 0);
+  state.totalClicks = Math.floor(Number(state.totalClicks) || 0);
+
+  state.prestige = Math.floor(Number(state.prestige) || 0);
+  state.prestigeTotal = Math.floor(Number(state.prestigeTotal ?? state.prestige) || 0);
+  state.prestigeRuns = Math.floor(Number(state.prestigeRuns) || 0);
+  state.runStart = Number(state.runStart) || Date.now();
+  state.monstersDefeated = Math.floor(Number(state.monstersDefeated) || 0);
+
+  state.awaitingSkillChoice = Boolean(state.awaitingSkillChoice);
+  state.skillChoiceStartCount = Math.floor(Number(state.skillChoiceStartCount) || 0);
+  state.lastSave = Number(state.lastSave) || Date.now();
+
+  if (state.cookieRemainder < 0 || state.cookieRemainder >= 1) {
+    const fixed = Math.floor(state.cookieRemainder);
+    state.cookies += fixed;
+    state.cookieRemainder -= fixed;
+  }
+}
+
+function $(id) {
+  return document.getElementById(id);
+}
+
+function addTap(el, handler) {
+  let startX = 0;
+  let startY = 0;
+  let pointerId = null;
+  let moved = false;
+
+  el.addEventListener("pointerdown", e => {
+    startX = e.clientX;
+    startY = e.clientY;
+    pointerId = e.pointerId;
+    moved = false;
+  });
+
+  el.addEventListener("pointermove", e => {
+    if (pointerId !== e.pointerId) return;
+    const dx = Math.abs(e.clientX - startX);
+    const dy = Math.abs(e.clientY - startY);
+    if (dx > 12 || dy > 12) moved = true;
+  });
+
+  el.addEventListener("pointerup", e => {
+    if (pointerId !== e.pointerId) return;
+    const dx = Math.abs(e.clientX - startX);
+    const dy = Math.abs(e.clientY - startY);
+    pointerId = null;
+    if (moved || dx > 12 || dy > 12) return;
+    e.preventDefault();
+    handler(e);
+  });
+
+  el.addEventListener("pointercancel", () => {
+    pointerId = null;
+    moved = true;
+  });
+}
+
+function fmtShort(n) {
+  n = Number(n) || 0;
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(n);
+
+  if (abs >= 100) return sign + abs.toFixed(0);
+  if (abs >= 10) return sign + abs.toFixed(1).replace(".0", "");
+  return sign + abs.toFixed(2).replace(/\.?0+$/, "");
+}
+
+function fmt(n) {
+  n = Number(n) || 0;
+  const abs = Math.abs(n);
+
+  if (abs < 1000) return String(Math.floor(n));
+  if (abs < 1000000) return fmtShort(n / 1000) + "K";
+  if (abs < 1000000000) return fmtShort(n / 1000000) + "M";
+  if (abs < 1000000000000) return fmtShort(n / 1000000000) + "B";
+  if (abs < 1000000000000000) return fmtShort(n / 1000000000000) + "T";
+  return fmtShort(n / 1000000000000000) + "Qa";
+}
+
+function fmtTime(seconds) {
+  seconds = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function getUpgrade(id) {
+  return UPGRADES.find(u => u.id === id);
+}
+
+function getSkill(id) {
+  return SKILLS.find(s => s.id === id);
+}
+
+function hasSkill(id) {
+  return Boolean(state.skills && state.skills[id]);
+}
+
+function boughtSkillCount() {
+  return SKILLS.filter(s => hasSkill(s.id)).length;
+}
+
+function totalSkillCost() {
+  return SKILLS.reduce((sum, skill) => sum + skill.cost, 0);
+}
+
+function maxSkillCost() {
+  return SKILLS.reduce((max, skill) => Math.max(max, skill.cost), 0);
+}
+
+function pausedForSkillChoice() {
+  return Boolean(state.awaitingSkillChoice);
+}
+
+function skillEffect(type, target) {
+  let total = 0;
+
+  SKILLS.forEach(skill => {
+    if (!hasSkill(skill.id)) return;
+
+    (skill.effects || []).forEach(effect => {
+      if (effect.type !== type) return;
+      if (target && effect.target !== target) return;
+
+      total += Number(effect.value) || 0;
+    });
+  });
+
+  return total;
+}
+
+function hasSkillEffect(type, target) {
+  return SKILLS.some(skill => {
+    if (!hasSkill(skill.id)) return false;
+    return (skill.effects || []).some(effect => {
+      if (effect.type !== type) return false;
+      if (target && effect.target !== target) return false;
+      return true;
+    });
+  });
+}
+
+function totalUpgradeCount() {
+  return UPGRADES.reduce((sum, u) => sum + state.upgrades[u.id], 0);
+}
+
+function otherUpgradeCount(id) {
+  return Math.max(0, totalUpgradeCount() - state.upgrades[id]);
+}
+
+function upgradeUnlocked(u) {
+  const need = UPGRADE_UNLOCK_SKILLS[u.id];
+  return !need || hasSkill(need);
+}
+
+function researchUnlocked(r) {
+  return !r.skill || hasSkill(r.skill) || hasSkillEffect("unlockResearch", r.id);
+}
+
+function highestOwnedUpgradeIndex() {
+  let index = -1;
+
+  UPGRADES.forEach((u, i) => {
+    if (state.upgrades[u.id] > 0) index = Math.max(index, i);
+  });
+
+  return index;
+}
+
+function visibleUpgradeLimitIndex() {
+  return Math.min(UPGRADES.length - 1, Math.max(1, highestOwnedUpgradeIndex() + 1));
+}
+
+function visibleUpgrades() {
+  const limit = visibleUpgradeLimitIndex();
+  return UPGRADES.filter((u, i) => i <= limit && upgradeUnlocked(u));
+}
+
+function prestigeMultiplier() {
+  return 1 + skillEffect("all");
+}
+
+function clickSkillMultiplier() {
+  return 1 + skillEffect("click");
+}
+
+function cpsSkillMultiplier() {
+  return 1 + skillEffect("cps");
+}
+
+function goldenMultiplier() {
+  return 3 + state.perks.goldenPower * 0.5 + skillEffect("goldenPower");
+}
+
+function goldenBoostMultiplier() {
+  return Date.now() < boostUntil ? goldenMultiplier() : 1;
+}
+
+function challengeMultiplier() {
+  return 1;
+}
+
+function upgradeBoostRate(u) {
+  const index = UPGRADES.findIndex(x => x.id === u.id);
+  const base = Math.max(0.06, 0.22 - index * 0.011);
+  return base * (1 + skillEffect("upgradePerkPower"));
+}
+
+function upgradePersonalMultiplier(u) {
+  const lv = state.upgradePerks[u.id] || 0;
+  return 1 + lv * upgradeBoostRate(u);
+}
+
+function researchUpgradeMultiplier(u) {
+  let m = 1;
+  const owned = state.upgrades[u.id];
+
+  if (u.id === "grandma" && state.research.grandmaCrowd) {
+    m *= 1 + Math.min(4, owned * 0.025);
+  }
+
+  if (u.id === "oven" && state.research.ovenBatch) {
+    m *= 1 + Math.min(4, owned * 0.020);
+  }
+
+  if (u.id === "factory" && state.research.factoryNetwork) {
+    m *= 1 + Math.min(5, otherUpgradeCount(u.id) * 0.012);
+  }
+
+  if (u.id === "portal" && state.research.portalNetwork) {
+    m *= 1 + Math.min(6, otherUpgradeCount(u.id) * 0.007);
+  }
+
+  if (u.id === "galaxyFactory" && state.research.galaxyAssembly) {
+    m *= 1 + Math.min(7, owned * 0.012);
+  }
+
+  if (u.id === "quantumBakery" && state.research.quantumProofing) {
+    const upperCount = (state.upgrades.universeOven || 0) + (state.upgrades.cookieSingularity || 0) + (state.upgrades.antimatterOven || 0);
+    m *= 1 + Math.min(8, upperCount * 0.018);
+  }
+
+  return m;
+}
+
+function rawUpgradeContribution(u) {
+  return state.upgrades[u.id] * u.value * upgradePersonalMultiplier(u) * researchUpgradeMultiplier(u);
+}
+
+function rawUpgradeCps(u) {
+  if (u.type !== "cps") return 0;
+  return rawUpgradeContribution(u);
+}
+
+function bankClickMultiplier() {
+  if (!state.research.bankClickDividend) return 1;
+
+  const bank = getUpgrade("bank");
+  const bankCps = rawUpgradeCps(bank);
+
+  return 1 + Math.min(4, Math.sqrt(bankCps) / 220);
+}
+
+function globalResearchMultiplier() {
+  let m = 1;
+
+  if (state.research.moonGlobalYeast) {
+    const moon = getUpgrade("moonBakery");
+    const moonCps = rawUpgradeCps(moon);
+    m *= 1 + Math.min(3, Math.sqrt(moonCps) / 650);
+  }
+
+  if (state.research.portalGlobalFold) {
+    const portal = getUpgrade("portal");
+    const portalCps = rawUpgradeCps(portal);
+    m *= 1 + Math.min(4, Math.sqrt(portalCps) / 900);
+  }
+
+  if (state.research.blackHoleCompression) {
+    const blackHole = getUpgrade("blackHoleMixer");
+    const blackHoleCps = rawUpgradeCps(blackHole);
+    m *= 1 + Math.min(5, Math.sqrt(blackHoleCps) / 1800);
+  }
+
+  if (state.research.antimatterRecipe) {
+    const antimatter = getUpgrade("antimatterOven");
+    const antimatterCps = rawUpgradeCps(antimatter);
+    m *= 1 + Math.min(6, Math.sqrt(antimatterCps) / 8000);
+  }
+
+  return m;
+}
+
+function monsterBaseDamage() {
+  return Math.max(1, currentClickPower()) + currentCps() / 30;
+}
+
+function monsterDamageMultiplier() {
+  return 1 + state.perks.monsterDamage * 0.40 + skillEffect("monsterDamageSkill");
+}
+
+function goldenAmountMultiplier() {
+  return 1 + state.perks.goldenAmount * 0.35 + skillEffect("goldenAmount");
+}
+
+function goldenSpawnFactor() {
+  let factor = 1;
+
+  factor *= Math.pow(0.87, state.perks.goldenRate);
+  factor *= 1 - Math.min(0.65, skillEffect("goldenRate"));
+
+  return Math.max(0.20, factor);
+}
+
+function monsterSpawnFactor() {
+  let factor = 1;
+
+  factor *= Math.pow(0.87, state.perks.monsterRate);
+  factor *= 1 - Math.min(0.65, skillEffect("monsterRate"));
+
+  return Math.max(0.25, factor);
+}
+
+function upgradeDiscount() {
+  return Math.max(0.45, 1 - Math.min(0.55, skillEffect("upgradeDiscount")));
+}
+
+function researchDiscount() {
+  return Math.max(0.45, 1 - Math.min(0.55, skillEffect("researchDiscount")));
+}
+
+function costOf(u) {
+  return Math.floor(u.base * Math.pow(u.growth, state.upgrades[u.id]) * upgradeDiscount());
+}
+
+function researchCost(r) {
+  return Math.floor(r.cost * researchDiscount());
+}
+
+function baseClickPower() {
+  let v = 1;
+
+  UPGRADES.forEach(u => {
+    if (u.type === "click") {
+      v += rawUpgradeContribution(u);
+    }
+  });
+
+  v *= bankClickMultiplier();
+  v *= clickSkillMultiplier();
+  v *= prestigeMultiplier();
+  v *= globalResearchMultiplier();
+
+  return v;
+}
+
+function currentClickPower() {
+  return baseClickPower() * goldenBoostMultiplier() * challengeMultiplier();
+}
+
+function baseCps() {
+  let v = 0;
+
+  UPGRADES.forEach(u => {
+    v += rawUpgradeCps(u);
+  });
+
+  v *= cpsSkillMultiplier();
+  v *= prestigeMultiplier();
+  v *= globalResearchMultiplier();
+
+  return v;
+}
+
+function currentCps() {
+  return baseCps() * goldenBoostMultiplier() * challengeMultiplier();
+}
+
+function earn(amount) {
+  if (pausedForSkillChoice()) return 0;
+
+  amount = Number(amount);
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+
+  const total = state.cookieRemainder + amount;
+  const whole = Math.floor(total);
+  state.cookieRemainder = total - whole;
+
+  if (whole <= 0) return 0;
+
+  state.cookies += whole;
+  state.totalCookies += whole;
+  state.runCookies += whole;
+
+  return whole;
+}
+
+function spend(amount) {
+  amount = Math.floor(Number(amount) || 0);
+  if (state.cookies < amount) return false;
+  state.cookies -= amount;
+  return true;
+}
+
+function quotaElapsedSeconds() {
+  return Math.max(0, (Date.now() - state.runStart) / 1000);
+}
+
+function lateMonsterQuotaRaw(s) {
+  const progress = (s - 10) / 3590;
+  const brake = Math.min(1, Math.pow(s / 1200, 20));
+
+  return (
+    Math.pow(s / 10, 1.35) +
+    1000000000000000 * Math.pow(progress, 4.2) * brake
+  );
+}
+
+const MONSTER_Q5 = Math.pow(300 / 10, 1.35) + 1000000;
+const MONSTER_Q60 = lateMonsterQuotaRaw(3600);
+const MONSTER_LOG_Q5 = Math.log(MONSTER_Q5);
+const MONSTER_LOG_Q60 = Math.log(MONSTER_Q60);
+
+function monsterQuotaRequired() {
+  const s = Math.max(0, (Date.now() - state.runStart) / 1000);
+
+  if (s < 10) return 0;
+
+  if (s < 300) {
+    const t = (s - 10) / 290;
+
+    return Math.max(1, Math.floor(
+      Math.pow(s / 10, 1.35) +
+      1000000 * Math.pow(t, 2.6)
+    ));
+  }
+
+  if (s < 3600) {
+    const t = (s - 300) / 3300;
+    const smooth = t * t * (3 - 2 * t);
+
+    return Math.max(1, Math.floor(
+      Math.exp(MONSTER_LOG_Q5 + (MONSTER_LOG_Q60 - MONSTER_LOG_Q5) * smooth)
+    ));
+  }
+
+  return Math.max(1, Math.floor(lateMonsterQuotaRaw(s)));
+}
+
+function monsterQuotaMet() {
+  return state.runCookies >= monsterQuotaRequired();
+}
+
+function canMonsterAppear() {
+  return !pausedForSkillChoice() && monsterQuotaMet();
+}
+
+function renderQuota() {
+  const box = $("quotaBox");
+  const quota = monsterQuotaRequired();
+  const ok = monsterQuotaMet();
+  const diff = state.runCookies - quota;
+
+  box.classList.toggle("quotaBad", !ok);
+
+  if (pausedForSkillChoice()) {
+    box.innerHTML = `
+      <b>転生後の準備中</b>
+    `;
+    return;
+  }
+
+  if (ok) {
+    box.innerHTML = `
+      <b>ノルマ達成中</b>：
+      ${fmt(state.runCookies)} / ${fmt(quota)}
+      ｜ 経過 ${fmtTime(quotaElapsedSeconds())}
+    `;
+  } else {
+    box.innerHTML = `
+      <b>ノルマ未達</b>：
+      ${fmt(state.runCookies)} / ${fmt(quota)}
+      ｜ 不足 ${fmt(Math.abs(diff))}
+    `;
+  }
+}
+
+function playSound(kind) {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!audioCtx) audioCtx = new AudioContext();
+
+    if (kind === "cookie" || kind === "monster") {
+      const duration = kind === "monster" ? 0.13 : 0.075;
+      const volume = kind === "monster" ? 0.16 : 0.055;
+
+      const bufferSize = Math.floor(audioCtx.sampleRate * duration);
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+
+      for (let i = 0; i < bufferSize; i++) {
+        const t = i / bufferSize;
+        const crack = Math.random() * 2 - 1;
+        const decay = Math.pow(1 - t, kind === "monster" ? 2.2 : 3.2);
+        data[i] = crack * decay;
+      }
+
+      const source = audioCtx.createBufferSource();
+      const filter = audioCtx.createBiquadFilter();
+      const gain = audioCtx.createGain();
+
+      source.buffer = buffer;
+      filter.type = "bandpass";
+      filter.frequency.value = kind === "monster" ? 1700 : 2300;
+      filter.Q.value = kind === "monster" ? 1.8 : 1.2;
+
+      gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      source.start();
+      source.stop(audioCtx.currentTime + duration);
+      return;
+    }
+
+    if (kind === "upgrade") {
+      const now = audioCtx.currentTime;
+
+      [420, 630].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = "triangle";
+        osc.frequency.value = freq;
+
+        gain.gain.setValueAtTime(0.055, now + i * 0.055);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.055 + 0.12);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(now + i * 0.055);
+        osc.stop(now + i * 0.055 + 0.12);
+      });
+
+      return;
+    }
+
+    if (kind === "golden") {
+      const now = audioCtx.currentTime;
+
+      [740, 980, 1320].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.value = freq;
+
+        gain.gain.setValueAtTime(0.045, now + i * 0.045);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.045 + 0.16);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(now + i * 0.045);
+        osc.stop(now + i * 0.045 + 0.16);
+      });
+    }
+  } catch (e) {}
+}
+
+function showMessage(text) {
+  $("message").textContent = text;
+  clearTimeout(showMessage.timer);
+  showMessage.timer = setTimeout(() => $("message").textContent = "", 1500);
+}
+
+function showFloat(text) {
+  const div = document.createElement("div");
+  div.className = "float";
+  div.textContent = text;
+  $("floatArea").appendChild(div);
+  setTimeout(() => div.remove(), 600);
+}
+
+function updateTopOnly() {
+  $("cookies").textContent = fmt(state.cookies);
+  $("power").textContent = fmt(currentClickPower());
+  $("cps").textContent = pausedForSkillChoice() ? "準備中" : fmt(currentCps());
+  $("rank").textContent = rankName();
+
+  $("cookie").classList.toggle("boost-all", Date.now() < boostUntil);
+
+  renderQuota();
+
+  if (monsterVisible) renderMonsterHp();
+}
+
+function tapCookie() {
+  if (pausedForSkillChoice()) {
+    openSkillChoiceScreen();
+    return;
+  }
+
+  const gained = earn(currentClickPower());
+
+  state.totalClicks += 1;
+
+  playSound("cookie");
+  showFloat("+" + fmt(gained));
+  updateTopOnly();
+}
+
+addTap($("cookie"), tapCookie);
+
+function buyUpgrade(id) {
+  if (pausedForSkillChoice()) {
+    openSkillChoiceScreen();
+    return;
+  }
+
+  const u = UPGRADES.find(x => x.id === id);
+
+  if (!upgradeUnlocked(u)) return;
+
+  const target = buyMode === "max" ? Infinity : Number(buyMode);
+  let bought = 0;
+
+  while (bought < target) {
+    const cost = costOf(u);
+    if (!spend(cost)) break;
+
+    state.upgrades[id] += 1;
+    bought += 1;
+
+    if (bought > 5000) break;
+  }
+
+  if (bought > 0) {
+    playSound("upgrade");
+    showMessage(`${u.name} ×${bought}`);
+    saveGame();
+    renderActiveTab();
+    updateTopOnly();
+  }
+}
+
+function buyResearch(id) {
+  if (pausedForSkillChoice()) {
+    openSkillChoiceScreen();
+    return;
+  }
+
+  const r = RESEARCH.find(x => x.id === id);
+
+  if (!researchUnlocked(r)) return;
+  if (state.research[id]) return;
+  if (!spend(researchCost(r))) return;
+
+  state.research[id] = true;
+
+  playSound("upgrade");
+  showMessage(`${r.name} 解放`);
+  saveGame();
+  renderActiveTab();
+  updateTopOnly();
+}
+
+function skillVisible(skill) {
+  if (hasSkill(skill.id)) return true;
+  if (skill.prereqs.length === 0) return true;
+  return skill.prereqs.some(id => hasSkill(id));
+}
+
+function skillCanBuy(skill) {
+  if (hasSkill(skill.id)) return false;
+  if (!skill.prereqs.every(id => hasSkill(id))) return false;
+  return state.prestige >= skill.cost;
+}
+
+function selectSkill(id) {
+  selectedSkillId = id;
+  renderSkillChoiceScreen();
+}
+
+function takeSelectedSkill() {
+  const skill = getSkill(selectedSkillId);
+  if (!skill) return;
+
+  if (hasSkill(skill.id)) return;
+
+  const missing = skill.prereqs.filter(req => !hasSkill(req));
+  if (missing.length > 0) return;
+
+  if (state.prestige < skill.cost) return;
+
+  state.prestige -= skill.cost;
+  state.skills[skill.id] = true;
+
+  playSound("upgrade");
+  saveGame();
+
+  const visibleCanBuy = SKILLS.find(s => skillVisible(s) && skillCanBuy(s));
+  selectedSkillId = visibleCanBuy ? visibleCanBuy.id : skill.id;
+
+  renderSkillChoiceScreen();
+  updateTopOnly();
+}
+
+function openSkillChoiceScreen() {
+  document.body.classList.add("skillChoiceMode");
+  $("skillChoiceScreen").classList.add("active");
+  renderSkillChoiceScreen();
+
+  setTimeout(() => {
+    const frame = document.querySelector(".skillMapFrame");
+    if (frame) frame.scrollLeft = Math.max(0, ($("skillMap").offsetWidth - frame.clientWidth) / 2);
+  }, 0);
+}
+
+function closeSkillChoiceScreen() {
+  $("skillChoiceScreen").classList.remove("active");
+  document.body.classList.remove("skillChoiceMode");
+}
+
+function renderSkillChoiceScreen() {
+  $("skillScreenPoints").textContent = fmt(state.prestige);
+
+  const visibleSkills = SKILLS.filter(skillVisible);
+  const chosenThisTime = boughtSkillCount() > state.skillChoiceStartCount;
+  const canStart = pausedForSkillChoice() && chosenThisTime;
+
+  if (!selectedSkillId || !visibleSkills.some(s => s.id === selectedSkillId)) {
+    const firstCanBuy = visibleSkills.find(skillCanBuy);
+    selectedSkillId = firstCanBuy ? firstCanBuy.id : visibleSkills[0]?.id || null;
+  }
+
+  const selected = getSkill(selectedSkillId);
+  const selectedDone = selected ? hasSkill(selected.id) : false;
+  const selectedCanBuy = selected ? skillCanBuy(selected) : false;
+
+  let statusText = "未選択";
+  if (selected) {
+    if (selectedDone) statusText = "解放済み";
+    else if (selectedCanBuy) statusText = "取得可能";
+    else statusText = "前提不足 / PT不足";
+  }
+
+  $("selectedSkillPanel").innerHTML = selected ? `
+    <div class="selectedSkillHead">
+      <div class="selectedSkillName">${selected.icon} ${selected.name}</div>
+      <div class="selectedSkillStatus">${statusText}</div>
+    </div>
+    <div class="selectedSkillCost">消費PT：${fmt(selected.cost)} / 系統：${selected.branchName}</div>
+    <div class="selectedSkillDesc">${selected.desc}</div>
+    <div class="selectedSkillDesc">前提：${selected.prereqs.length ? selected.prereqs.map(id => getSkill(id)?.name || id).join("、") : "なし"}</div>
+  ` : `
+    <div class="selectedSkillName">スキルを選択</div>
+    <div class="selectedSkillDesc">マークを押すと説明がここに表示されます。</div>
+  `;
+
+  const takeBtn = $("takeSelectedSkillBtn");
+  takeBtn.classList.toggle("ready", selectedCanBuy);
+  takeBtn.textContent = selectedDone ? "解放済み" : selectedCanBuy ? "この効果を取る" : "取得できません";
+  takeBtn.disabled = !selectedCanBuy;
+
+  const startBtn = $("skillStartBtn");
+  startBtn.classList.toggle("locked", !canStart);
+  startBtn.disabled = !canStart;
+
+  const lines = visibleSkills.flatMap(skill => {
+    return skill.prereqs.map(reqId => {
+      const from = getSkill(reqId);
+      if (!from || !skillVisible(from)) return "";
+
+      const done = hasSkill(reqId) && hasSkill(skill.id);
+      const ready = hasSkill(reqId) && !hasSkill(skill.id);
+
+      return `
+        <line
+          class="skillLine ${done ? "done" : ""} ${ready ? "ready" : ""}"
+          x1="${from.x}"
+          y1="${from.y}"
+          x2="${skill.x}"
+          y2="${skill.y}"
+        />
+      `;
+    }).join("");
+  }).join("");
+
+  const nodes = visibleSkills.map(skill => {
+    const done = hasSkill(skill.id);
+    const canBuy = skillCanBuy(skill);
+    const locked = !done && !canBuy;
+    const selectedClass = selectedSkillId === skill.id ? "selected" : "";
+
+    return `
+      <button
+        class="skillNode ${selectedClass} ${done ? "done" : ""} ${canBuy ? "canBuy" : ""} ${locked ? "locked" : ""}"
+        style="left:${skill.x}px; top:${skill.y}px;"
+        data-skill-node="${skill.id}"
+        aria-label="${skill.name}"
+      >
+        <span class="nodeMark">${skill.icon}</span>
+        <span class="nodeName">${skill.name}</span>
+        <span class="nodeCost">${done ? "済" : "PT " + fmt(skill.cost)}</span>
+      </button>
+    `;
+  }).join("");
+
+  $("skillMap").innerHTML = `
+    <svg class="skillLines" viewBox="0 0 900 2220" preserveAspectRatio="none">
+      ${lines}
+    </svg>
+    ${nodes}
+  `;
+
+  document.querySelectorAll("[data-skill-node]").forEach(btn => {
+    addTap(btn, () => selectSkill(btn.dataset.skillNode));
+  });
+}
+
+addTap($("takeSelectedSkillBtn"), takeSelectedSkill);
+
+addTap($("skillStartBtn"), () => {
+  if (!pausedForSkillChoice()) return;
+
+  const chosenThisTime = boughtSkillCount() > state.skillChoiceStartCount;
+
+  if (!chosenThisTime) return;
+
+  state.awaitingSkillChoice = false;
+  state.skillChoiceStartCount = boughtSkillCount();
+  state.runStart = Date.now();
+
+  closeSkillChoiceScreen();
+
+  const startCookies = Math.floor(skillEffect("startCookies"));
+  if (startCookies > 0) earn(startCookies);
+
+  saveGame();
+  updateTopOnly();
+  renderAllTabs();
+  switchTab("shopTab");
+  scheduleGoldenCookie();
+  scheduleMonster();
+  showMessage("周回開始");
+});
+
+function upgradeArt(u) {
+  const map = {
+    finger: "◇",
+    grandma: "♧",
+    oven: "♨",
+    factory: "⚙",
+    bank: "⬡",
+    portal: "◌",
+    moonBakery: "☾",
+    timeOven: "◷",
+    galaxyFactory: "✺",
+    blackHoleMixer: "●",
+    universeOven: "◎",
+    godFinger: "◆",
+    cookieSingularity: "✹",
+    quantumBakery: "✺",
+    antimatterOven: "✹"
+  };
+
+  return map[u.id] || "◎";
+}
+
+function researchArt(r) {
+  if (r.id.includes("grandma")) return "♧";
+  if (r.id.includes("oven")) return "♨";
+  if (r.id.includes("factory")) return "⚙";
+  if (r.id.includes("portal")) return "◌";
+  if (r.id.includes("bank")) return "⬡";
+  if (r.id.includes("moon")) return "☾";
+  return "⌬";
+}
+
+function upgradeShopEffectText(u) {
+  const owned = state.upgrades[u.id];
+  const before = upgradeEffectiveContribution(u);
+
+  state.upgrades[u.id] = owned + 1;
+  const after = upgradeEffectiveContribution(u);
+  state.upgrades[u.id] = owned;
+
+  const add = Math.max(0, after - before);
+  const kind = u.type === "cps" ? "毎秒" : "タップ";
+
+  return `現在 ${kind} +${fmt(before)} / 次 +${fmt(add)}`;
+}
+
+function renderShop() {
+  const box = $("shop");
+  box.innerHTML = "";
+
+  visibleUpgrades().forEach(u => {
+    const cost = costOf(u);
+    const btn = document.createElement("button");
+
+    btn.className = "item artCard";
+    btn.dataset.art = upgradeArt(u);
+
+    if (state.cookies >= cost && !pausedForSkillChoice()) btn.classList.add("canBuy");
+
+    btn.innerHTML = `
+      <b>${u.name}</b>
+      <div class="price">${fmt(cost)} クッキー</div>
+      <div class="desc">${upgradeShopEffectText(u)} / 所持 ${fmt(state.upgrades[u.id])}</div>
+    `;
+
+    addTap(btn, () => buyUpgrade(u.id));
+    box.appendChild(btn);
+  });
+}
+
+function renderResearch() {
+  const box = $("research");
+  box.innerHTML = "";
+
+  const list = RESEARCH.filter(r => researchUnlocked(r));
+
+  if (list.length === 0) {
+    box.innerHTML = `<div class="desc">研究はまだない</div>`;
+    return;
+  }
+
+  list.forEach(r => {
+    const cost = researchCost(r);
+    const btn = document.createElement("button");
+
+    btn.className = "item artCard";
+    btn.dataset.art = researchArt(r);
+
+    if (!state.research[r.id] && state.cookies >= cost && !pausedForSkillChoice()) btn.classList.add("canBuy");
+    if (state.research[r.id]) btn.classList.add("done");
+
+    btn.innerHTML = `
+      <b>${r.name}</b>
+      <div class="price">${state.research[r.id] ? "解放済み" : fmt(cost) + " クッキー"}</div>
+      <div class="desc">${r.desc}</div>
+    `;
+
+    addTap(btn, () => buyResearch(r.id));
+    box.appendChild(btn);
+  });
+}
+
+function prestigeGain() {
+  const run = Math.max(0, Math.floor(state.runCookies));
+  if (run < 1000000) return 0;
+
+  const base = Math.pow(run / 1000000, 0.56);
+  const runBonus = 1 + Math.min(1.5, state.prestigeRuns * 0.04);
+
+  return Math.max(1, Math.floor(base * runBonus));
+}
+
+function prestigeUnlocked() {
+  return state.runCookies >= 1000000 || state.prestigeTotal > 0 || state.prestigeRuns > 0;
+}
+
+function renderPrestige() {
+  const box = $("prestigePanel");
+
+  if (!prestigeUnlocked()) {
+    box.innerHTML = `
+      <div class="infoBox">
+        <h3>？？？</h3>
+        <div class="desc">100万クッキーで解放</div>
+      </div>
+    `;
+    return;
+  }
+
+  const canPrestige = state.runCookies >= 1000000 && !pausedForSkillChoice();
+  const gain = canPrestige ? prestigeGain() : 0;
+
+  box.innerHTML = `
+    <div class="skillSummary">
+      <div>所持PT<br><b>${fmt(state.prestige)}</b></div>
+      <div>累計PT<br><b>${fmt(state.prestigeTotal)}</b></div>
+      <div>解放数<br><b>${boughtSkillCount()} / ${SKILLS.length}</b></div>
+    </div>
+
+    <div class="infoBox">
+      <h3>転生</h3>
+      <div class="infoRow">獲得予定ポイント：+${fmt(gain)}</div>
+      <button id="prestigeBtn" class="item ${canPrestige ? "canBuy" : "locked"}">${canPrestige ? "転生する" : "100万クッキーで転生可能"}</button>
+      <button id="resetBtn" class="item danger">完全リセット</button>
+    </div>
+  `;
+
+  const prestigeBtn = $("prestigeBtn");
+  if (prestigeBtn) addTap(prestigeBtn, prestigeReset);
+
+  const resetBtn = $("resetBtn");
+  if (resetBtn) addTap(resetBtn, completeReset);
+}
+
+function upgradeEffectiveContribution(u) {
+  let v = rawUpgradeContribution(u);
+
+  if (u.type === "click") {
+    v *= bankClickMultiplier();
+  }
+
+  v *= u.type === "click" ? clickSkillMultiplier() : cpsSkillMultiplier();
+  v *= prestigeMultiplier();
+  v *= globalResearchMultiplier();
+  v *= goldenBoostMultiplier();
+  v *= challengeMultiplier();
+
+  return v;
+}
+
+function renderInfo() {
+  const box = $("infoPanel");
+
+  const visible = visibleUpgrades();
+
+  const perkRows = REWARD_POOL
+    .filter(r => state.perks[r.id] > 0)
+    .map(r => {
+      const lv = state.perks[r.id];
+      return `
+        <div class="infoRow">
+          <b>${r.name}</b> Lv.${fmt(lv)}
+          <div class="desc">${r.desc(lv)}</div>
+        </div>
+      `;
+    })
+    .join("");
+
+  const upgradePerkRows = visible
+    .filter(u => state.upgradePerks[u.id] > 0)
+    .map(u => {
+      const lv = state.upgradePerks[u.id];
+      const percent = upgradeBoostRate(u) * 100 * lv;
+
+      return `
+        <div class="infoRow">
+          <b>${u.name} 個別強化</b> Lv.${fmt(lv)}
+          <div class="desc">効果 +${percent.toFixed(1)}%</div>
+        </div>
+      `;
+    })
+    .join("");
+
+  const skillRows = SKILLS
+    .filter(s => hasSkill(s.id))
+    .map(s => {
+      return `
+        <div class="infoRow">
+          <b>${s.branchName} / ${s.name}</b>
+          <div class="desc">${s.desc}</div>
+        </div>
+      `;
+    })
+    .join("");
+
+  const upgradeRows = visible
+    .map(u => {
+      const owned = state.upgrades[u.id];
+      const kind = u.type === "cps" ? "毎秒" : "タップ";
+      const baseTotal = owned * u.value;
+      const effective = upgradeEffectiveContribution(u);
+      const personal = upgradePersonalMultiplier(u);
+      const researchM = researchUpgradeMultiplier(u);
+
+      return `
+        <div class="infoRow">
+          <b>${u.name}</b>
+          <div class="desc">
+            所持 ${fmt(owned)} / 個別倍率 x${personal.toFixed(3)} / 研究倍率 x${researchM.toFixed(3)}<br>
+            基礎 ${kind} +${fmt(baseTotal)} / 現在倍率込み ${kind} +${fmt(effective)}
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  const debugRows = visible
+    .map(u => {
+      return `
+        <label class="debugRow">
+          <span>${u.name}</span>
+          <input
+            type="number"
+            min="0"
+            step="1"
+            value="${state.upgrades[u.id]}"
+            data-debug-upgrade="${u.id}"
+          >
+        </label>
+      `;
+    })
+    .join("");
+
+  box.innerHTML = `
+    <div class="infoBox">
+      <h3>現在の倍率・状態</h3>
+      <div class="infoRow">スキル全体倍率：x${prestigeMultiplier().toFixed(3)}</div>
+      <div class="infoRow">スキルタップ倍率：x${clickSkillMultiplier().toFixed(3)}</div>
+      <div class="infoRow">スキル毎秒倍率：x${cpsSkillMultiplier().toFixed(3)}</div>
+      <div class="infoRow">金クッキー倍率：x${goldenMultiplier().toFixed(3)}</div>
+      <div class="infoRow">研究による全体倍率：x${globalResearchMultiplier().toFixed(3)}</div>
+      <div class="infoRow">銀行クリック配当：x${bankClickMultiplier().toFixed(3)}</div>
+      <div class="infoRow">アップグレード費用倍率：x${upgradeDiscount().toFixed(3)}</div>
+      <div class="infoRow">研究費用倍率：x${researchDiscount().toFixed(3)}</div>
+      <div class="infoRow">金クッキー獲得量倍率：x${goldenAmountMultiplier().toFixed(3)}</div>
+      <div class="infoRow">ノルマ：${fmt(state.runCookies)} / ${fmt(monsterQuotaRequired())}</div>
+      <div class="infoRow">モンスター出現：${canMonsterAppear() ? "可能" : "ノルマ未達"}</div>
+      <div class="infoRow">モンスター基本ダメージ：${fmt(monsterBaseDamage())}</div>
+      <div class="infoRow">モンスター最終ダメージ：${fmt(monsterBaseDamage() * monsterDamageMultiplier())}</div>
+    </div>
+
+    <div class="infoBox">
+      <h3>解放済みスキル</h3>
+      ${skillRows || `<div class="desc">まだスキルなし</div>`}
+    </div>
+
+    <div class="infoBox">
+      <h3>獲得した報酬</h3>
+      ${perkRows || ``}
+      ${upgradePerkRows || ``}
+      ${(!perkRows && !upgradePerkRows) ? `<div class="desc">まだ報酬なし</div>` : ``}
+    </div>
+
+    <div class="infoBox">
+      <h3>解放済みアップグレード一覧</h3>
+      ${upgradeRows}
+    </div>
+
+    <label class="debugSwitch">
+      <span>
+        <b>デバッグ用スイッチ</b>
+        <div class="desc">オンにすると数値直接編集と強制出現ボタンを表示</div>
+      </span>
+      <input id="debugSwitchInput" type="checkbox" ${debugMode ? "checked" : ""}>
+    </label>
+
+    <div class="debugControls ${debugMode ? "active" : ""}">
+      <div class="infoBox">
+        <h3>強制出現</h3>
+        <button id="forceGoldenBtn" class="item">金クッキーをすぐ出す</button>
+        <button id="forceMonsterBtn" class="item">クッキーモンスターをすぐ出す</button>
+      </div>
+
+      <div class="infoBox">
+        <h3>アップグレード数を直接変更</h3>
+        ${debugRows}
+      </div>
+    </div>
+  `;
+
+  $("debugSwitchInput").addEventListener("change", e => {
+    debugMode = e.target.checked;
+    renderInfo();
+  });
+
+  const goldenBtn = $("forceGoldenBtn");
+  if (goldenBtn) addTap(goldenBtn, forceGoldenCookie);
+
+  const monsterBtn = $("forceMonsterBtn");
+  if (monsterBtn) addTap(monsterBtn, forceMonster);
+
+  document.querySelectorAll("[data-debug-upgrade]").forEach(input => {
+    input.addEventListener("input", e => {
+      const id = e.target.dataset.debugUpgrade;
+      const value = Math.max(0, Math.floor(Number(e.target.value) || 0));
+
+      state.upgrades[id] = value;
+
+      saveGame();
+      updateTopOnly();
+    });
+
+    input.addEventListener("blur", () => {
+      updateTopOnly();
+      renderInfo();
+    });
+  });
+}
+
+function renderActiveTab() {
+  if (activeTab === "shopTab") renderShop();
+  if (activeTab === "researchTab") renderResearch();
+  if (activeTab === "prestigeTab") renderPrestige();
+  if (activeTab === "infoTab") renderInfo();
+}
+
+function renderAllTabs() {
+  renderShop();
+  renderResearch();
+  renderPrestige();
+  renderInfo();
+}
+
+function switchTab(tabId) {
+  activeTab = tabId;
+
+  document.querySelectorAll(".tab").forEach(b => {
+    b.classList.toggle("active", b.dataset.tab === tabId);
+  });
+
+  document.querySelectorAll(".tabPage").forEach(p => {
+    p.classList.toggle("active", p.id === tabId);
+  });
+
+  renderActiveTab();
+}
+
+function rankName() {
+  const t = state.totalCookies;
+
+  if (t >= 1000000000000) return "宇宙";
+  if (t >= 1000000000) return "神";
+  if (t >= 10000000) return "王";
+  if (t >= 1000000) return "大企業";
+  if (t >= 100000) return "経営者";
+  if (t >= 10000) return "職人";
+  if (t >= 1000) return "見習い";
+
+  return "初心者";
+}
+
+document.querySelectorAll(".mode").forEach(btn => {
+  addTap(btn, () => {
+    buyMode = btn.dataset.mode;
+
+    document.querySelectorAll(".mode").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+  });
+});
+
+document.querySelectorAll(".tab").forEach(btn => {
+  addTap(btn, () => {
+    switchTab(btn.dataset.tab);
+  });
+});
+
+function prestigeReset() {
+  if (state.runCookies < 1000000 || pausedForSkillChoice()) return;
+
+  const gain = prestigeGain();
+
+  const keepTotal = state.totalCookies;
+  const keepClicks = state.totalClicks;
+  const keepPrestige = state.prestige + gain;
+  const keepPrestigeTotal = state.prestigeTotal + gain;
+  const keepMonsterKills = state.monstersDefeated;
+  const keepPrestigeRuns = state.prestigeRuns + 1;
+  const keepPerks = state.perks;
+  const keepUpgradePerks = state.upgradePerks;
+  const keepSkills = state.skills;
+
+  state = freshState();
+
+  state.totalCookies = keepTotal;
+  state.totalClicks = keepClicks;
+  state.prestige = keepPrestige;
+  state.prestigeTotal = keepPrestigeTotal;
+  state.prestigeRuns = keepPrestigeRuns;
+  state.monstersDefeated = keepMonsterKills;
+  state.perks = keepPerks;
+  state.upgradePerks = keepUpgradePerks;
+  state.skills = keepSkills;
+  state.runStart = Date.now();
+  state.awaitingSkillChoice = true;
+  state.skillChoiceStartCount = boughtSkillCount();
+
+  boostUntil = 0;
+  selectedSkillId = null;
+
+  clearTimeout(goldenSpawnTimer);
+  clearTimeout(goldenHideTimer);
+  clearTimeout(monsterSpawnTimer);
+  clearTimeout(monsterHideTimer);
+  clearTimeout(rewardOpenTimer);
+
+  goldenVisible = false;
+  monsterVisible = false;
+  $("goldenCookie").style.display = "none";
+  $("monsterWrap").style.display = "none";
+  $("rewardModal").style.display = "none";
+
+  playSound("upgrade");
+  showMessage(`転生ポイント +${fmt(gain)}`);
+  saveGame();
+  updateTopOnly();
+  renderAllTabs();
+  openSkillChoiceScreen();
+}
+
+function completeReset() {
+  if (!confirm("完全にリセットする？")) return;
+
+  localStorage.removeItem(saveKey);
+  oldSaveKeys.forEach(key => localStorage.removeItem(key));
+
+  state = freshState();
+  boostUntil = 0;
+  selectedSkillId = null;
+
+  clearTimeout(goldenSpawnTimer);
+  clearTimeout(goldenHideTimer);
+  clearTimeout(monsterSpawnTimer);
+  clearTimeout(monsterHideTimer);
+  clearTimeout(rewardOpenTimer);
+
+  goldenVisible = false;
+  monsterVisible = false;
+
+  $("goldenCookie").style.display = "none";
+  $("monsterWrap").style.display = "none";
+  $("rewardModal").style.display = "none";
+  closeSkillChoiceScreen();
+
+  scheduleGoldenCookie();
+  scheduleMonster();
+
+  updateTopOnly();
+  renderAllTabs();
+  switchTab("shopTab");
+}
+
+function saveGame() {
+  state.lastSave = Date.now();
+  localStorage.setItem(saveKey, JSON.stringify(state));
+}
+
+function findSavedData() {
+  const current = localStorage.getItem(saveKey);
+  if (current) return current;
+
+  for (const oldKey of oldSaveKeys) {
+    const oldData = localStorage.getItem(oldKey);
+
+    if (oldData) {
+      localStorage.setItem(saveKey, oldData);
+      return oldData;
+    }
+  }
+
+  return null;
+}
+
+function loadGame() {
+  const raw = findSavedData();
+
+  if (!raw) return;
+
+  try {
+    state = JSON.parse(raw);
+    ensureState();
+
+    if (!pausedForSkillChoice()) {
+      const now = Date.now();
+      const baseLimit = OFFLINE_LIMIT_SECONDS;
+      const extraLimit = skillEffect("offlineHours") * 60 * 60;
+      const seconds = Math.min(Math.max(0, now - state.lastSave) / 1000, baseLimit + extraLimit);
+      const gained = earn(baseCps() * seconds);
+
+      if (gained > 0) showMessage(`放置 +${fmt(gained)}`);
+    }
+
+    saveGame();
+  } catch (e) {
+    state = freshState();
+  }
+}
+
+function scheduleGoldenCookie() {
+  clearTimeout(goldenSpawnTimer);
+
+  if (pausedForSkillChoice()) return;
+  if (goldenVisible) return;
+
+  const min = 18000;
+  const max = 45000;
+  const wait = (min + Math.random() * (max - min)) * goldenSpawnFactor();
+
+  goldenSpawnTimer = setTimeout(showGoldenCookie, wait);
+}
+
+function scheduleMonster() {
+  clearTimeout(monsterSpawnTimer);
+
+  if (pausedForSkillChoice()) return;
+  if (monsterVisible) return;
+
+  if (!canMonsterAppear()) {
+    monsterSpawnTimer = setTimeout(scheduleMonster, 10000);
+    return;
+  }
+
+  const level = monsterLevel();
+  const min = Math.max(24000, 52000 - level * 600);
+  const max = Math.max(42000, 90000 - level * 800);
+  const wait = (min + Math.random() * (max - min)) * monsterSpawnFactor();
+
+  monsterSpawnTimer = setTimeout(() => {
+    if (canMonsterAppear()) {
+      showMonster();
+    } else {
+      scheduleMonster();
+    }
+  }, wait);
+}
+
+function placeFixedElement(el, size, minY) {
+  const pad = 12;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  const minX = pad;
+  const maxX = Math.max(minX, vw - size - pad);
+  const maxY = Math.max(minY, vh - size - 24);
+
+  const x = minX + Math.random() * Math.max(1, maxX - minX);
+  const y = minY + Math.random() * Math.max(1, maxY - minY);
+
+  el.style.left = x + "px";
+  el.style.top = y + "px";
+}
+
+function showGoldenCookie() {
+  if (pausedForSkillChoice()) return;
+  if (goldenVisible) return;
+
+  goldenVisible = true;
+  goldenSpawnTimer = null;
+
+  const btn = $("goldenCookie");
+
+  placeFixedElement(btn, 72, 90);
+
+  btn.style.display = "block";
+
+  clearTimeout(goldenHideTimer);
+  goldenHideTimer = setTimeout(() => {
+    hideGoldenCookie(true);
+  }, 8000);
+}
+
+function forceGoldenCookie() {
+  if (pausedForSkillChoice()) {
+    openSkillChoiceScreen();
+    return;
+  }
+
+  clearTimeout(goldenSpawnTimer);
+  clearTimeout(goldenHideTimer);
+
+  goldenVisible = true;
+  goldenSpawnTimer = null;
+
+  const btn = $("goldenCookie");
+
+  placeFixedElement(btn, 72, 90);
+
+  btn.style.display = "block";
+
+  goldenHideTimer = setTimeout(() => {
+    hideGoldenCookie(true);
+  }, 8000);
+
+  showMessage("金クッキーを出現させた");
+}
+
+function hideGoldenCookie(shouldReschedule) {
+  goldenVisible = false;
+
+  clearTimeout(goldenHideTimer);
+  goldenHideTimer = null;
+
+  $("goldenCookie").style.display = "none";
+
+  if (shouldReschedule) scheduleGoldenCookie();
+}
+
+function collectGoldenCookie() {
+  if (!goldenVisible) return;
+
+  hideGoldenCookie(false);
+
+  const r = Math.random();
+
+  if (r < 0.5) {
+    const gained = earn(
+      Math.max(100, currentCps() * 60, currentClickPower() * 50) * goldenAmountMultiplier()
+    );
+    showMessage(`金 +${fmt(gained)}`);
+  } else {
+    boostUntil = Date.now() + GOLDEN_BOOST_DURATION;
+    showMessage(`金: 全生産${goldenMultiplier().toFixed(1)}倍`);
+  }
+
+  playSound("golden");
+  saveGame();
+  updateTopOnly();
+  renderActiveTab();
+  scheduleGoldenCookie();
+}
+
+addTap($("goldenCookie"), collectGoldenCookie);
+
+function monsterLevel() {
+  const runLevel = Math.max(1, Math.floor(Math.log10(state.runCookies + 1000)) - 2);
+  const prestigeLevel = Math.floor(state.prestigeTotal / 12);
+  const killLevel = Math.floor(state.monstersDefeated / 5);
+
+  return Math.max(1, runLevel + prestigeLevel + killLevel);
+}
+
+function monsterHpValue(level) {
+  const quota = Math.max(1, monsterQuotaRequired());
+
+  let hp =
+    20 +
+    Math.sqrt(quota + 50) * (0.9 + level * 0.15) +
+    Math.pow(level, 1.7) * 12;
+
+  hp *= 1 - Math.min(0.55, skillEffect("monsterHpDown"));
+
+  return Math.floor(hp);
+}
+
+function showMonster() {
+  if (pausedForSkillChoice()) return;
+  if (monsterVisible) return;
+  if (!canMonsterAppear()) {
+    scheduleMonster();
+    return;
+  }
+
+  monsterVisible = true;
+  monsterSpawnTimer = null;
+
+  const level = monsterLevel();
+
+  monster.level = level;
+  monster.maxHp = Math.max(40, monsterHpValue(level));
+  monster.hp = monster.maxHp;
+
+  const wrap = $("monsterWrap");
+
+  placeFixedElement(wrap, 112, 120);
+
+  wrap.style.display = "block";
+  renderMonsterHp();
+
+  clearTimeout(monsterHideTimer);
+  monsterHideTimer = setTimeout(() => {
+    hideMonster(true);
+  }, 14000);
+}
+
+function forceMonster() {
+  if (pausedForSkillChoice()) {
+    openSkillChoiceScreen();
+    return;
+  }
+
+  clearTimeout(monsterSpawnTimer);
+  clearTimeout(monsterHideTimer);
+
+  monsterVisible = true;
+  monsterSpawnTimer = null;
+
+  const level = monsterLevel();
+
+  monster.level = level;
+  monster.maxHp = Math.max(40, monsterHpValue(level));
+  monster.hp = monster.maxHp;
+
+  const wrap = $("monsterWrap");
+
+  placeFixedElement(wrap, 112, 120);
+
+  wrap.style.display = "block";
+  renderMonsterHp();
+
+  monsterHideTimer = setTimeout(() => {
+    hideMonster(true);
+  }, 14000);
+
+  showMessage("クッキーモンスターを出現させた");
+}
+
+function hideMonster(shouldReschedule) {
+  monsterVisible = false;
+
+  clearTimeout(monsterHideTimer);
+  monsterHideTimer = null;
+
+  $("monsterWrap").style.display = "none";
+
+  if (shouldReschedule) scheduleMonster();
+}
+
+function renderMonsterHp() {
+  const ratio = Math.max(0, monster.hp / monster.maxHp);
+  $("monsterHpFill").style.width = Math.floor(ratio * 100) + "%";
+  $("monsterHpText").textContent = `Lv.${fmt(monster.level)} HP ${fmt(monster.hp)} / ${fmt(monster.maxHp)}`;
+}
+
+function hitMonster() {
+  if (!monsterVisible) return;
+
+  const damage = Math.max(1, Math.floor(monsterBaseDamage() * monsterDamageMultiplier()));
+
+  monster.hp -= damage;
+
+  playSound("monster");
+  renderMonsterHp();
+
+  if (monster.hp <= 0) defeatMonster();
+}
+
+addTap($("cookieMonster"), hitMonster);
+
+function defeatMonster() {
+  const defeatedLevel = monster.level;
+
+  hideMonster(false);
+
+  state.monstersDefeated += 1;
+
+  playSound("golden");
+  showMessage("撃破");
+
+  clearTimeout(rewardOpenTimer);
+  rewardOpenTimer = setTimeout(() => {
+    rewardOpenTimer = null;
+    showRewardChoices(defeatedLevel);
+  }, 700);
+
+  saveGame();
+  updateTopOnly();
+  renderActiveTab();
+  scheduleMonster();
+}
+
+function upgradeRewardDesc(u, count) {
+  const percent = upgradeBoostRate(u) * 100 * count;
+  return `${u.name}の効果 +${percent.toFixed(1)}%`;
+}
+
+function buildMonsterRewardChoices(level) {
+  const baseCount = 1 + Math.floor(level / 10);
+  const count = Math.max(1, Math.floor(baseCount * (1 + skillEffect("rewardBonus"))));
+  const choiceLimit = Math.min(7, 3 + Math.floor(skillEffect("rewardChoices")));
+
+  const coreChoices = REWARD_POOL.map(r => ({
+    kind: "perk",
+    id: r.id,
+    key: "perk:" + r.id,
+    name: r.name,
+    count,
+    desc: r.desc
+  }));
+
+  const ownedUpgradeChoices = UPGRADES
+    .filter(u => state.upgrades[u.id] > 0 && upgradeUnlocked(u))
+    .map(u => ({
+      kind: "upgrade",
+      id: u.id,
+      key: "upgrade:" + u.id,
+      name: `${u.name} 強化`,
+      count,
+      desc: n => upgradeRewardDesc(u, n)
+    }));
+
+  const choices = [];
+
+  if (ownedUpgradeChoices.length > 0) {
+    choices.push(ownedUpgradeChoices[Math.floor(Math.random() * ownedUpgradeChoices.length)]);
+  }
+
+  const restPool = [...coreChoices, ...ownedUpgradeChoices]
+    .filter(c => !choices.some(x => x.key === c.key))
+    .sort(() => Math.random() - 0.5);
+
+  while (choices.length < choiceLimit && restPool.length > 0) {
+    choices.push(restPool.shift());
+  }
+
+  return choices;
+}
+
+function showRewardChoices(level) {
+  pendingRewardChoices = buildMonsterRewardChoices(level);
+
+  const box = $("rewardChoices");
+  box.innerHTML = "";
+
+  pendingRewardChoices.forEach(choice => {
+    const btn = document.createElement("button");
+    btn.className = "rewardBtn";
+    btn.innerHTML = `
+      <b>${choice.name}</b>
+      <div class="desc">${choice.desc(choice.count)}</div>
+    `;
+
+    addTap(btn, () => chooseReward(choice));
+    box.appendChild(btn);
+  });
+
+  $("rewardModal").style.display = "flex";
+}
+
+function chooseReward(choice) {
+  if (choice.kind === "perk") {
+    state.perks[choice.id] += choice.count;
+  }
+
+  if (choice.kind === "upgrade") {
+    state.upgradePerks[choice.id] += choice.count;
+  }
+
+  $("rewardModal").style.display = "none";
+
+  showMessage("報酬を獲得");
+  saveGame();
+  updateTopOnly();
+  renderActiveTab();
+}
+
+window.addEventListener("resize", () => {
+  if (goldenVisible) placeFixedElement($("goldenCookie"), 72, 90);
+  if (monsterVisible) placeFixedElement($("monsterWrap"), 112, 120);
+});
+
+loadGame();
+ensureState();
+
+updateTopOnly();
+renderAllTabs();
+switchTab(activeTab);
+
+if (pausedForSkillChoice()) {
+  openSkillChoiceScreen();
+} else {
+  scheduleGoldenCookie();
+  scheduleMonster();
+}
+
+setInterval(() => {
+  if (!pausedForSkillChoice()) {
+    earn(currentCps() / 20);
+  }
+
+  updateTopOnly();
+}, 50);
+
+setInterval(() => {
+  if (activeTab !== "infoTab" && document.activeElement.tagName !== "INPUT") {
+    renderActiveTab();
+  }
+
+  updateTopOnly();
+}, 1000);
+
+setInterval(saveGame, 5000);
+</script>
+</body>
+</html>
