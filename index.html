@@ -5771,26 +5771,37 @@ function upgradeShopEffectText(u) {
 
 function renderShop() {
   const box = $("shop");
-  box.innerHTML = "";
+  const items = visibleUpgrades();
+  const ids = items.map(u => u.id);
+  const existingIds = [...box.children].map(el => el.dataset.id);
+  const sameList = ids.length === existingIds.length && ids.every((id, i) => id === existingIds[i]);
 
-  visibleUpgrades().forEach(u => {
+  if (!sameList) {
+    box.innerHTML = "";
+
+    items.forEach(u => {
+      const btn = document.createElement("button");
+
+      btn.className = "item artCard";
+      btn.dataset.id = u.id;
+      btn.dataset.art = upgradeArt(u);
+      setArtImage(btn, ASSETS.upgrades[u.id]);
+
+      addTap(btn, () => buyUpgrade(u.id));
+      box.appendChild(btn);
+    });
+  }
+
+  [...box.children].forEach((btn, i) => {
+    const u = items[i];
     const cost = costOf(u);
-    const btn = document.createElement("button");
 
-    btn.className = "item artCard";
-    btn.dataset.art = upgradeArt(u);
-    setArtImage(btn, ASSETS.upgrades[u.id]);
-
-    if (state.cookies >= cost && !pausedForSkillChoice()) btn.classList.add("canBuy");
-
+    btn.classList.toggle("canBuy", state.cookies >= cost && !pausedForSkillChoice());
     btn.innerHTML = `
       <b>${u.name}</b>
       <div class="price">${fmt(cost)} クッキー</div>
       <div class="desc">${upgradeShopEffectText(u)} / 所持 ${fmt(state.upgrades[u.id])}</div>
     `;
-
-    addTap(btn, () => buyUpgrade(u.id));
-    box.appendChild(btn);
   });
 }
 
@@ -5958,8 +5969,6 @@ function appendResearchAnalysisPanel(box) {
 
 function renderResearch() {
   const box = $("research");
-  box.innerHTML = "";
-
   const list = RESEARCH.filter(r => researchUnlocked(r));
 
   if (list.length === 0) {
@@ -5968,26 +5977,45 @@ function renderResearch() {
     return;
   }
 
-  list.forEach(r => {
+  const ids = list.map(r => r.id);
+  let cards = [...box.querySelectorAll(".item.artCard")];
+  const existingIds = cards.map(el => el.dataset.id);
+  const sameList = ids.length === existingIds.length && ids.every((id, i) => id === existingIds[i]);
+
+  if (!sameList) {
+    box.innerHTML = "";
+
+    list.forEach(r => {
+      const btn = document.createElement("button");
+
+      btn.className = "item artCard";
+      btn.dataset.id = r.id;
+      btn.dataset.art = researchArt(r);
+      setArtImage(btn, ASSETS.research[r.id]);
+
+      addTap(btn, () => buyResearch(r.id));
+      box.appendChild(btn);
+    });
+
+    cards = [...box.querySelectorAll(".item.artCard")];
+  } else {
+    const oldPanel = box.querySelector(".researchAnalysisPanel");
+    if (oldPanel) oldPanel.remove();
+  }
+
+  cards.forEach((btn, i) => {
+    const r = list[i];
     const cost = researchCost(r);
-    const btn = document.createElement("button");
+    const done = Boolean(state.research[r.id]);
 
-    btn.className = "item artCard";
-    btn.dataset.art = researchArt(r);
-    setArtImage(btn, ASSETS.research[r.id]);
-
-    if (!state.research[r.id] && state.cookies >= cost && !pausedForSkillChoice()) btn.classList.add("canBuy");
-    if (state.research[r.id]) btn.classList.add("done");
-
+    btn.classList.toggle("canBuy", !done && state.cookies >= cost && !pausedForSkillChoice());
+    btn.classList.toggle("done", done);
     btn.innerHTML = `
       <b>${r.name}</b>
-      <div class="price">${state.research[r.id] ? "解放済み" : fmt(cost) + " クッキー"}</div>
+      <div class="price">${done ? "解放済み" : fmt(cost) + " クッキー"}</div>
       <div class="desc">${r.desc}</div>
-      ${state.research[r.id] && r.detail ? `<div class="desc">詳細：${r.detail}</div>` : ""}
+      ${done && r.detail ? `<div class="desc">詳細：${r.detail}</div>` : ""}
     `;
-
-    addTap(btn, () => buyResearch(r.id));
-    box.appendChild(btn);
   });
 
   appendResearchAnalysisPanel(box);
