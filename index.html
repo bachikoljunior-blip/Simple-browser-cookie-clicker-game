@@ -5551,8 +5551,7 @@ function renderSkillChoiceScreen() {
   $("skillScreenPoints").textContent = fmt(state.prestige);
 
   const visibleSkills = SKILLS.filter(skillVisible);
-  const chosenThisTime = boughtSkillCount() > state.skillChoiceStartCount;
-  const canStart = pausedForSkillChoice() && chosenThisTime;
+  const canStart = pausedForSkillChoice();
 
   if (!selectedSkillId || !visibleSkills.some(s => s.id === selectedSkillId)) {
     const firstCanBuy = visibleSkills.find(skillCanBuy);
@@ -5673,10 +5672,6 @@ addTap($("takeSelectedSkillBtn"), takeSelectedSkill);
 
 addTap($("skillStartBtn"), () => {
   if (!pausedForSkillChoice()) return;
-
-  const chosenThisTime = boughtSkillCount() > state.skillChoiceStartCount;
-
-  if (!chosenThisTime) return;
 
   state.awaitingSkillChoice = false;
   state.skillChoiceStartCount = boughtSkillCount();
