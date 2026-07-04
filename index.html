@@ -3497,6 +3497,18 @@ function rewardChoiceArt(choice) {
   return "";
 }
 
+// 報酬モーダルを開く直前に選択肢画像をデコードしておき、表示時のカクつきを防ぐ
+function preloadRewardChoiceImages(choices) {
+  (choices || []).forEach(choice => {
+    const src = rewardChoiceArt(choice);
+    if (!src) return;
+
+    const img = new Image();
+    img.src = src;
+    if (typeof img.decode === "function") img.decode().catch(() => {});
+  });
+}
+
 function addTap(el, handler) {
   let startX = 0;
   let startY = 0;
@@ -6852,6 +6864,37 @@ function scheduleMonster() {
 }
 
 
+function rectRelativeToHost(el, host) {
+  const r = el.getBoundingClientRect();
+  const h = host.getBoundingClientRect();
+  return { left: r.left - h.left, top: r.top - h.top, right: r.right - h.left, bottom: r.bottom - h.top };
+}
+
+// クッキー本体・金クッキー・他のモンスターと重ならないようにするための配置済み矩形一覧
+// (タップ判定は見た目の丸みに関係なく要素の矩形全体なので、矩形のまま扱う)
+function occupiedRects(host, excludeEl) {
+  const rects = [];
+  const cookie = $("cookie");
+
+  if (cookie) rects.push(rectRelativeToHost(cookie, host));
+
+  const golden = $("goldenCookie");
+  if (goldenVisible && golden && golden !== excludeEl) rects.push(rectRelativeToHost(golden, host));
+
+  monsters.forEach(m => {
+    if (m.el && m.el !== excludeEl) rects.push(rectRelativeToHost(m.el, host));
+  });
+
+  return rects;
+}
+
+function overlapArea(a, b, margin) {
+  const m = margin || 0;
+  const ox = Math.min(a.right, b.right + m) - Math.max(a.left, b.left - m);
+  const oy = Math.min(a.bottom, b.bottom + m) - Math.max(a.top, b.top - m);
+  return ox > 0 && oy > 0 ? ox * oy : 0;
+}
+
 function placeFixedElement(el, width, height, minY) {
   const host = document.querySelector(".top");
   if (!el || !host) return;
@@ -6860,16 +6903,52 @@ function placeFixedElement(el, width, height, minY) {
   const quota = $("quotaBox");
   const hostW = host.clientWidth || 360;
   const hostH = host.clientHeight || 320;
-  const w = Number(width) || 0;
-  const h = Number(height) || w;
+  const naturalW = Number(width) || 0;
+  const naturalH = Number(height) || naturalW;
 
+  // ノルマ表示より下・.top の内側、という条件は絶対に譲らない(隠れたりはみ出たりしない)
   const quotaBottom = quota ? quota.offsetTop + quota.offsetHeight : 0;
-  const yMin = Math.max(pad, quotaBottom + 4, Number(minY) || 0);
-  const maxX = Math.max(pad, hostW - w - pad);
-  const maxY = Math.max(yMin, hostH - h - 8);
+  const minYFixed = Math.max(pad, quotaBottom + 4, Number(minY) || 0);
 
-  const x = pad + Math.random() * Math.max(1, maxX - pad);
-  const y = yMin + Math.random() * Math.max(1, maxY - yMin);
+  const blockers = occupiedRects(host, el);
+  const margin = 6;
+
+  function tryPlace(w, h) {
+    const maxX = Math.max(pad, hostW - w - pad);
+    const maxY = Math.max(minYFixed, hostH - h - pad);
+    let best = null;
+
+    for (let attempt = 0; attempt < 60; attempt++) {
+      const x = pad + Math.random() * Math.max(1, maxX - pad);
+      const y = minYFixed + Math.random() * Math.max(1, maxY - minYFixed);
+      const candidate = { left: x, top: y, right: x + w, bottom: y + h };
+      const score = blockers.reduce((sum, b) => sum + overlapArea(candidate, b, margin), 0);
+
+      if (!best || score < best.score) best = { x, y, score };
+      if (score === 0) break;
+    }
+
+    return best;
+  }
+
+  // まず等身大で置き場所を探し、クッキー本体などとどうしても重なる場合は
+  // 段階的に縮小しながら再挑戦して、隠したり枠外に出したりせず収める
+  let scale = 1;
+  let best = tryPlace(naturalW, naturalH);
+
+  while (best.score > 0 && scale > 0.4) {
+    scale = Math.max(0.4, scale * 0.85);
+    best = tryPlace(naturalW * scale, naturalH * scale);
+  }
+
+  el.style.transform = scale < 0.999 ? `translateZ(0) scale(${scale.toFixed(3)})` : "translateZ(0)";
+  el.style.transformOrigin = "top left";
+
+  // 最終安全策：ごく小さい端末でも .top の外には絶対に出さない
+  const finalW = naturalW * scale;
+  const finalH = naturalH * scale;
+  const x = Math.min(Math.max(best.x, pad), Math.max(pad, hostW - finalW - pad));
+  const y = Math.min(Math.max(best.y, pad), Math.max(pad, hostH - finalH - pad));
 
   el.style.left = x + "px";
   el.style.top = y + "px";
@@ -7268,6 +7347,10 @@ function defeatMonster(id) {
   playSound("golden");
   showMessage(message);
 
+  pendingRewardChoices = buildMonsterRewardChoices(defeatedLevel);
+  state.nextRewardCountBonus = 0;
+  preloadRewardChoiceImages(pendingRewardChoices);
+
   clearTimeout(rewardOpenTimer);
   rewardOpenTimer = setTimeout(() => {
     rewardOpenTimer = null;
@@ -7492,8 +7575,10 @@ function upgradeRewardPreviewText(choice) {
 }
 
 function showRewardChoices(level) {
-  pendingRewardChoices = buildMonsterRewardChoices(level);
-  state.nextRewardCountBonus = 0;
+  if (!pendingRewardChoices || pendingRewardChoices.length === 0) {
+    pendingRewardChoices = buildMonsterRewardChoices(level);
+    state.nextRewardCountBonus = 0;
+  }
 
   const modal = $("rewardModal");
   const notice = $("rewardLockNotice");
