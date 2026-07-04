@@ -2576,6 +2576,22 @@
     }
     .tab:first-child { border-left: none; }
 
+    /* 追加調整：タブ表示を画面の半分弱に固定し、上部エリアが残りを埋める */
+    .top {
+      flex: 1 1 auto !important;
+    }
+
+    .tabPages {
+      flex: 0 0 auto !important;
+      height: 44dvh !important;
+      max-height: 44dvh !important;
+    }
+
+    body.sectionFullscreen .tabPages {
+      height: auto !important;
+      max-height: none !important;
+    }
+
     /* 追加実装：報酬を誤タップしないための獲得演出とロック */
     #rewardModal.rewardLocked .rewardBtn {
       pointer-events: none;
@@ -6499,7 +6515,12 @@ document.addEventListener("keydown", e => {
 
 document.querySelectorAll(".tab").forEach(btn => {
   addTap(btn, () => {
-    switchTab(btn.dataset.tab);
+    const tabId = btn.dataset.tab;
+    if (activeTab === tabId) {
+      toggleTabPageFullscreen(tabId);
+      return;
+    }
+    switchTab(tabId);
   });
 });
 
