@@ -3277,10 +3277,17 @@ const SKILL_ZOOM_MAX = 1.65;
 const SKILL_ZOOM_STEP = 0.12;
 
 let goldenSpawnTimer = null;
+let goldenSpawnDeadline = null;
+let goldenSpawnCallback = null;
+let goldenSpawnPausedRemaining = null;
 let goldenHideTimer = null;
 let goldenVisible = false;
 
 let monsterSpawnTimer = null;
+let monsterSpawnDeadline = null;
+let monsterSpawnCallback = null;
+let monsterSpawnPausedRemaining = null;
+let rewardSpawnPauseActive = false;
 let monsterHideTimer = null;
 let monsterVisible = false;
 let monster = { level: 1, hp: 1, maxHp: 1 };
@@ -5038,7 +5045,7 @@ function checkQuotaState() {
   if (quota !== null && quota > 0 && state.runCookies < quota) {
     state.quotaFailed = true;
     state.quotaActive = false;
-    clearTimeout(monsterSpawnTimer);
+    clearMonsterSpawnTimer();
     hideMonster(false);
     showMessage("ノルマ終了：この周回のモンスターチャンス終了");
     return;
@@ -6315,8 +6322,8 @@ function switchTab(tabId) {
     scheduleGoldenCookie();
     scheduleMonster();
   } else {
-    clearTimeout(goldenSpawnTimer);
-    clearTimeout(monsterSpawnTimer);
+    clearGoldenSpawnTimer();
+    clearMonsterSpawnTimer();
     if (goldenVisible) hideGoldenCookie();
     hideMonster(false);
   }
@@ -6589,9 +6596,9 @@ function prestigeReset() {
   clearGoldenBoosts();
   selectedSkillId = null;
 
-  clearTimeout(goldenSpawnTimer);
+  clearGoldenSpawnTimer();
   clearTimeout(goldenHideTimer);
-  clearTimeout(monsterSpawnTimer);
+  clearMonsterSpawnTimer();
   clearTimeout(monsterHideTimer);
   clearTimeout(rewardOpenTimer);
 
@@ -6626,9 +6633,9 @@ function completeReset() {
   clearGoldenBoosts();
   selectedSkillId = null;
 
-  clearTimeout(goldenSpawnTimer);
+  clearGoldenSpawnTimer();
   clearTimeout(goldenHideTimer);
-  clearTimeout(monsterSpawnTimer);
+  clearMonsterSpawnTimer();
   clearTimeout(monsterHideTimer);
   clearTimeout(rewardOpenTimer);
 
@@ -6722,14 +6729,80 @@ function normalPlayScreenActive() {
     && !rewardOpen;
 }
 
-function scheduleGoldenCookie() {
+function setGoldenSpawnTimer(fn, wait) {
   clearTimeout(goldenSpawnTimer);
+  goldenSpawnCallback = fn;
+  goldenSpawnDeadline = Date.now() + wait;
+  goldenSpawnPausedRemaining = null;
+  goldenSpawnTimer = setTimeout(fn, wait);
+}
+
+function clearGoldenSpawnTimer() {
+  clearTimeout(goldenSpawnTimer);
+  goldenSpawnTimer = null;
+  goldenSpawnCallback = null;
+  goldenSpawnDeadline = null;
+  goldenSpawnPausedRemaining = null;
+}
+
+function setMonsterSpawnTimer(fn, wait) {
+  clearTimeout(monsterSpawnTimer);
+  monsterSpawnCallback = fn;
+  monsterSpawnDeadline = Date.now() + wait;
+  monsterSpawnPausedRemaining = null;
+  monsterSpawnTimer = setTimeout(fn, wait);
+}
+
+function clearMonsterSpawnTimer() {
+  clearTimeout(monsterSpawnTimer);
+  monsterSpawnTimer = null;
+  monsterSpawnCallback = null;
+  monsterSpawnDeadline = null;
+  monsterSpawnPausedRemaining = null;
+}
+
+// 報酬選択モーダルが開いている間、金クッキー・モンスターの出現カウントダウンを
+// 一時停止し、閉じたときに残り時間から再開する(ノルマと同様にじっくり考えられるように)
+function updateSpawnTimerPauseState() {
+  const shouldPause = rewardModalOpen();
+
+  if (shouldPause && !rewardSpawnPauseActive) {
+    rewardSpawnPauseActive = true;
+
+    if (goldenSpawnTimer && goldenSpawnDeadline != null) {
+      goldenSpawnPausedRemaining = Math.max(0, goldenSpawnDeadline - Date.now());
+      clearTimeout(goldenSpawnTimer);
+      goldenSpawnTimer = null;
+    }
+
+    if (monsterSpawnTimer && monsterSpawnDeadline != null) {
+      monsterSpawnPausedRemaining = Math.max(0, monsterSpawnDeadline - Date.now());
+      clearTimeout(monsterSpawnTimer);
+      monsterSpawnTimer = null;
+    }
+  } else if (!shouldPause && rewardSpawnPauseActive) {
+    rewardSpawnPauseActive = false;
+
+    if (goldenSpawnPausedRemaining != null && goldenSpawnCallback) {
+      setGoldenSpawnTimer(goldenSpawnCallback, goldenSpawnPausedRemaining);
+    }
+    goldenSpawnPausedRemaining = null;
+
+    if (monsterSpawnPausedRemaining != null && monsterSpawnCallback) {
+      setMonsterSpawnTimer(monsterSpawnCallback, monsterSpawnPausedRemaining);
+    }
+    monsterSpawnPausedRemaining = null;
+  }
+}
+
+function scheduleGoldenCookie() {
+  clearGoldenSpawnTimer();
 
   if (pausedForSkillChoice()) return;
   if (goldenVisible) return;
 
   if (!normalPlayScreenActive()) {
-    goldenSpawnTimer = setTimeout(scheduleGoldenCookie, 5000);
+    setGoldenSpawnTimer(scheduleGoldenCookie, 5000);
     return;
   }
 
@@ -6740,22 +6813,29 @@ function scheduleGoldenCookie() {
   const wait = protectedWait(raw, 1000);
   state.nextGoldenSpawnMultiplier = 1;
 
-  goldenSpawnTimer = setTimeout(showGoldenCookie, wait);
+  setGoldenSpawnTimer(showGoldenCookie, wait);
 }
 
 
+function fireMonsterSpawn() {
+  if (canMonsterAppear() && normalPlayScreenActive()) {
+    showMonster();
+  }
+  scheduleMonster();
+}
+
 function scheduleMonster() {
-  clearTimeout(monsterSpawnTimer);
+  clearMonsterSpawnTimer();
 
   if (pausedForSkillChoice()) return;
 
   if (!normalPlayScreenActive()) {
-    monsterSpawnTimer = setTimeout(scheduleMonster, 5000);
+    setMonsterSpawnTimer(scheduleMonster, 5000);
     return;
   }
 
   if (!canMonsterAppear()) {
-    monsterSpawnTimer = setTimeout(scheduleMonster, 10000);
+    setMonsterSpawnTimer(scheduleMonster, 10000);
     return;
   }
 
@@ -6768,16 +6848,11 @@ function scheduleMonster() {
   const wait = protectedWait(raw, 1000);
   state.nextMonsterSpawnMultiplier = 1;
 
-  monsterSpawnTimer = setTimeout(() => {
-    if (canMonsterAppear() && normalPlayScreenActive()) {
-      showMonster();
-    }
-    scheduleMonster();
-  }, wait);
+  setMonsterSpawnTimer(fireMonsterSpawn, wait);
 }
 
 
-function placeFixedElement(el, size, minY) {
+function placeFixedElement(el, width, height, minY) {
   const host = document.querySelector(".top");
   if (!el || !host) return;
 
@@ -6785,11 +6860,13 @@ function placeFixedElement(el, size, minY) {
   const quota = $("quotaBox");
   const hostW = host.clientWidth || 360;
   const hostH = host.clientHeight || 320;
+  const w = Number(width) || 0;
+  const h = Number(height) || w;
 
   const quotaBottom = quota ? quota.offsetTop + quota.offsetHeight : 0;
   const yMin = Math.max(pad, quotaBottom + 4, Number(minY) || 0);
-  const maxX = Math.max(pad, hostW - size - pad);
-  const maxY = Math.max(yMin, hostH - size - 8);
+  const maxX = Math.max(pad, hostW - w - pad);
+  const maxY = Math.max(yMin, hostH - h - 8);
 
   const x = pad + Math.random() * Math.max(1, maxX - pad);
   const y = yMin + Math.random() * Math.max(1, maxY - yMin);
@@ -6809,13 +6886,13 @@ function showGoldenCookie() {
   }
 
   goldenVisible = true;
-  goldenSpawnTimer = null;
+  clearGoldenSpawnTimer();
 
   const btn = $("goldenCookie");
   const top = document.querySelector(".top");
   if (btn && top && btn.parentElement !== top) top.appendChild(btn);
 
-  placeFixedElement(btn, 72, 90);
+  placeFixedElement(btn, 90, 90, 90);
 
   btn.style.display = "block";
 
@@ -6832,15 +6909,14 @@ function forceGoldenCookie() {
     return;
   }
 
-  clearTimeout(goldenSpawnTimer);
+  clearGoldenSpawnTimer();
   clearTimeout(goldenHideTimer);
 
   goldenVisible = true;
-  goldenSpawnTimer = null;
 
   const btn = $("goldenCookie");
 
-  placeFixedElement(btn, 72, 90);
+  placeFixedElement(btn, 90, 90, 90);
 
   btn.style.display = "block";
 
@@ -6980,7 +7056,7 @@ function showMonster() {
     return;
   }
 
-  monsterSpawnTimer = null;
+  clearMonsterSpawnTimer();
 
   const level = monsterLevel();
   const id = monsterIdSeq++;
@@ -7009,7 +7085,7 @@ function showMonster() {
   state.goldenFirstHitReady = false;
   state.nextMonsterHpMultiplier = 1;
 
-  placeFixedElement(mon.el, 118, 90);
+  placeFixedElement(mon.el, 142, 158, 90);
   renderMonsterHp(mon.id);
 
   mon.hideTimer = setTimeout(() => {
@@ -7023,7 +7099,7 @@ function forceMonster() {
     return;
   }
 
-  clearTimeout(monsterSpawnTimer);
+  clearMonsterSpawnTimer();
   state.quotaFailed = false;
   state.quotaActive = true;
 
@@ -7164,7 +7240,7 @@ function defeatMonster(id) {
     state.nextGoldenSpawnMultiplier *= Math.exp(-beastScentLv * 0.25);
 
     if (!goldenVisible) {
-      clearTimeout(goldenSpawnTimer);
+      clearGoldenSpawnTimer();
       scheduleGoldenCookie();
     }
   }
@@ -7489,9 +7565,9 @@ function chooseReward(choice) {
 }
 
 window.addEventListener("resize", () => {
-  if (goldenVisible) placeFixedElement($("goldenCookie"), 72, 90);
+  if (goldenVisible) placeFixedElement($("goldenCookie"), 90, 90, 90);
   monsters.forEach(m => {
-    if (m.el) placeFixedElement(m.el, 118, 90);
+    if (m.el) placeFixedElement(m.el, 142, 158, 90);
   });
 });
 
@@ -7516,10 +7592,11 @@ if (pausedForSkillChoice()) {
 
 setInterval(() => {
   updateQuotaPauseState();
-  if (!pausedForSkillChoice() && !rewardModalOpen()) {
+  updateSpawnTimerPauseState();
+  if (!pausedForSkillChoice()) {
     earn(currentCps() / 20);
     checkQuotaState();
-    tickOrderProgress(1 / 20);
+    if (!rewardModalOpen()) tickOrderProgress(1 / 20);
   }
 
   updateTopOnly();
