@@ -1785,8 +1785,8 @@
     .stats div,
     .infoBox,
     .skillSummary div {
-      background: rgba(24, 13, 7, 0.66) !important;
-      border-color: rgba(255,205,122,0.24) !important;
+      background: rgba(24, 13, 7, 0.90) !important;
+      border-color: rgba(255,205,122,0.28) !important;
       backdrop-filter: blur(2px);
     }
 
@@ -1797,15 +1797,15 @@
     .startBtn,
     .takeSkillBtn {
       background:
-        linear-gradient(180deg, rgba(100,58,25,0.82), rgba(37,20,10,0.86)) !important;
-      border-color: rgba(255,198,101,0.30) !important;
+        linear-gradient(180deg, #5a3a1e, #2c180c) !important;
+      border-color: rgba(255,198,101,0.34) !important;
     }
 
     .tab.active,
     .mode.active {
       background:
-        linear-gradient(180deg, rgba(205,128,45,0.94), rgba(95,47,13,0.94)) !important;
-      border-color: rgba(255,222,143,0.54) !important;
+        linear-gradient(180deg, #c97e2b, #5e2f0d) !important;
+      border-color: rgba(255,222,143,0.62) !important;
     }
 
     .artCard {
@@ -2051,21 +2051,23 @@
     .artCard {
       min-height: 108px !important;
       padding: 12px 158px 12px 12px !important;
+      /* 背景が透けないよう全面を濃い焦げ茶の不透明に。右端だけわずかに明るくして
+         奥のイラストが沈まないようにする */
       background:
-        linear-gradient(90deg, rgba(15, 7, 3, 0.62) 0%, rgba(15, 7, 3, 0.46) 48%, rgba(15, 7, 3, 0.00) 100%) !important;
-      border-color: rgba(255, 213, 132, 0.36) !important;
+        linear-gradient(90deg, #3a2010 0%, #2c1809 62%, #3a2211 100%) !important;
+      border-color: rgba(255, 213, 132, 0.40) !important;
     }
 
     .artCard.canBuy {
       background:
-        linear-gradient(90deg, rgba(74, 37, 10, 0.66) 0%, rgba(74, 37, 10, 0.42) 48%, rgba(74, 37, 10, 0.00) 100%) !important;
-      border-color: rgba(255, 228, 151, 0.62) !important;
+        linear-gradient(90deg, #5a3312 0%, #3d220c 62%, #52300f 100%) !important;
+      border-color: rgba(255, 228, 151, 0.68) !important;
     }
 
     .artCard.done {
       background:
-        linear-gradient(90deg, rgba(20, 48, 17, 0.62) 0%, rgba(20, 48, 17, 0.42) 48%, rgba(20, 48, 17, 0.00) 100%) !important;
-      border-color: rgba(156,255,178,0.42) !important;
+        linear-gradient(90deg, #234a1a 0%, #172f12 62%, #21451a 100%) !important;
+      border-color: rgba(156,255,178,0.46) !important;
     }
 
     .artCard::before {
@@ -3617,6 +3619,15 @@
       padding: 5px 4px !important;
     }
 
+    .skillViewBtn {
+      width: 100%;
+      margin-bottom: 10px;
+      font-weight: 900 !important;
+      color: #cdeaff !important;
+      border-color: rgba(91,200,255,0.5) !important;
+      background: linear-gradient(180deg, #1a3350, #0b1a2c) !important;
+    }
+
     /* ===== 周回方針の選択画面(スタート後に表示) ===== */
     .policyChoiceScreen {
       display: none;
@@ -4720,6 +4731,7 @@ let activeGoldenAfterheats = [];
 let goldenAfterheatTimers = [];
 let activeTab = "shopTab";
 let selectedSkillId = null;
+let skillViewMode = false;
 let skillMapZoom = 0.92;
 
 const SKILL_MAP_WIDTH = 2120;
@@ -7799,6 +7811,7 @@ function scrollSelectedSkillIntoView() {
 }
 
 function takeSelectedSkill() {
+  if (skillViewMode) return;
   const skill = getSkill(selectedSkillId);
   if (!skill) return;
 
@@ -7907,6 +7920,17 @@ function toggleSkillTreeOnly() {
   }, 60);
 }
 
+// 転生タブから「確認だけ」スキルツリーを開く(初転生後、転生前でも閲覧可能)。
+// awaitingSkillChoiceは立てないので周回は継続し、スキルの取得もできない
+function openSkillTreeView() {
+  skillViewMode = true;
+  if (goldenVisible) hideGoldenCookie(false);
+  hideMonster(false);
+  clearGoldenSpawnTimer();
+  clearMonsterSpawnTimer();
+  openSkillChoiceScreen();
+}
+
 function openSkillChoiceScreen() {
   playScreenTransition();
   closeTabPageFullscreen();
@@ -7922,6 +7946,7 @@ function openSkillChoiceScreen() {
 }
 
 function closeSkillChoiceScreen() {
+  skillViewMode = false;
   const screen = $("skillChoiceScreen");
   screen.classList.remove("active", "treeOnly");
   document.body.classList.remove("skillChoiceMode");
@@ -8117,14 +8142,21 @@ function renderSkillChoiceScreen() {
   `;
 
   const takeBtn = $("takeSelectedSkillBtn");
-  takeBtn.classList.toggle("ready", selectedCanBuy);
-  takeBtn.textContent = selectedDone ? "解放済み" : selectedCanBuy ? "この効果を取る" : "取得できません";
-  takeBtn.disabled = !selectedCanBuy;
+  if (skillViewMode) {
+    takeBtn.classList.remove("ready");
+    takeBtn.textContent = "取得は転生時のみ";
+    takeBtn.disabled = true;
+  } else {
+    takeBtn.classList.toggle("ready", selectedCanBuy);
+    takeBtn.textContent = selectedDone ? "解放済み" : selectedCanBuy ? "この効果を取る" : "取得できません";
+    takeBtn.disabled = !selectedCanBuy;
+  }
 
   const startBtn = $("skillStartBtn");
-  startBtn.classList.toggle("locked", !canStart);
-  startBtn.disabled = !canStart;
-  startBtn.textContent = "この構成でスタート";
+  const startEnabled = skillViewMode || canStart;
+  startBtn.classList.toggle("locked", !startEnabled);
+  startBtn.disabled = !startEnabled;
+  startBtn.textContent = skillViewMode ? "閉じる" : "この構成でスタート";
 
   const lines = visibleSkills.flatMap(skill => {
     return skill.prereqs.map(reqId => {
@@ -8307,6 +8339,15 @@ function beginRunAfterSkills() {
 }
 
 addTap($("skillStartBtn"), () => {
+  // 確認モード(転生タブから開いた場合)は閉じるだけ
+  if (skillViewMode) {
+    playSound("tab");
+    closeSkillChoiceScreen();
+    updateTopOnly();
+    renderActiveTab();
+    return;
+  }
+
   if (!pausedForSkillChoice()) return;
 
   // 転生後の流れ: スキル選択 → 周回方針選択 → ステージ選択 → 周回開始
@@ -8730,6 +8771,8 @@ function renderPrestige() {
       <div>解放数<br><b>${boughtSkillCount()} / ${SKILLS.length}</b></div>
     </div>
 
+    ${state.prestigeRuns >= 1 ? `<button id="skillViewBtn" class="item skillViewBtn">スキルツリーを確認する</button>` : ""}
+
     ${policyBox}
 
     <div class="infoBox">
@@ -8744,6 +8787,9 @@ function renderPrestige() {
       <button id="resetBtn" class="item danger">完全リセット</button>
     </div>
   `;
+
+  const skillViewBtn = $("skillViewBtn");
+  if (skillViewBtn) addTap(skillViewBtn, openSkillTreeView);
 
   const prestigeBtn = $("prestigeBtn");
   if (prestigeBtn) addTap(prestigeBtn, prestigeReset);
