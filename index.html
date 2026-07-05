@@ -3619,6 +3619,15 @@
       padding: 5px 4px !important;
     }
 
+    .skillViewBtn {
+      width: 100%;
+      margin-bottom: 10px;
+      font-weight: 900 !important;
+      color: #cdeaff !important;
+      border-color: rgba(91,200,255,0.5) !important;
+      background: linear-gradient(180deg, #1a3350, #0b1a2c) !important;
+    }
+
     /* ===== 周回方針の選択画面(スタート後に表示) ===== */
     .policyChoiceScreen {
       display: none;
@@ -4333,6 +4342,7 @@ let activeGoldenAfterheats = [];
 let goldenAfterheatTimers = [];
 let activeTab = "shopTab";
 let selectedSkillId = null;
+let skillViewMode = false;
 let skillMapZoom = 0.92;
 
 const SKILL_MAP_WIDTH = 2120;
@@ -6932,6 +6942,7 @@ function scrollSelectedSkillIntoView() {
 }
 
 function takeSelectedSkill() {
+  if (skillViewMode) return;
   const skill = getSkill(selectedSkillId);
   if (!skill) return;
 
@@ -7030,6 +7041,17 @@ function toggleSkillTreeOnly() {
   }, 60);
 }
 
+// 転生タブから「確認だけ」スキルツリーを開く(初転生後、転生前でも閲覧可能)。
+// awaitingSkillChoiceは立てないので周回は継続し、スキルの取得もできない
+function openSkillTreeView() {
+  skillViewMode = true;
+  if (goldenVisible) hideGoldenCookie(false);
+  hideMonster(false);
+  clearGoldenSpawnTimer();
+  clearMonsterSpawnTimer();
+  openSkillChoiceScreen();
+}
+
 function openSkillChoiceScreen() {
   playScreenTransition();
   closeTabPageFullscreen();
@@ -7045,6 +7067,7 @@ function openSkillChoiceScreen() {
 }
 
 function closeSkillChoiceScreen() {
+  skillViewMode = false;
   const screen = $("skillChoiceScreen");
   screen.classList.remove("active", "treeOnly");
   document.body.classList.remove("skillChoiceMode");
@@ -7156,14 +7179,21 @@ function renderSkillChoiceScreen() {
   `;
 
   const takeBtn = $("takeSelectedSkillBtn");
-  takeBtn.classList.toggle("ready", selectedCanBuy);
-  takeBtn.textContent = selectedDone ? "解放済み" : selectedCanBuy ? "この効果を取る" : "取得できません";
-  takeBtn.disabled = !selectedCanBuy;
+  if (skillViewMode) {
+    takeBtn.classList.remove("ready");
+    takeBtn.textContent = "取得は転生時のみ";
+    takeBtn.disabled = true;
+  } else {
+    takeBtn.classList.toggle("ready", selectedCanBuy);
+    takeBtn.textContent = selectedDone ? "解放済み" : selectedCanBuy ? "この効果を取る" : "取得できません";
+    takeBtn.disabled = !selectedCanBuy;
+  }
 
   const startBtn = $("skillStartBtn");
-  startBtn.classList.toggle("locked", !canStart);
-  startBtn.disabled = !canStart;
-  startBtn.textContent = "この構成でスタート";
+  const startEnabled = skillViewMode || canStart;
+  startBtn.classList.toggle("locked", !startEnabled);
+  startBtn.disabled = !startEnabled;
+  startBtn.textContent = skillViewMode ? "閉じる" : "この構成でスタート";
 
   const lines = visibleSkills.flatMap(skill => {
     return skill.prereqs.map(reqId => {
@@ -7339,6 +7369,15 @@ function beginRunAfterSkills() {
 }
 
 addTap($("skillStartBtn"), () => {
+  // 確認モード(転生タブから開いた場合)は閉じるだけ
+  if (skillViewMode) {
+    playSound("tab");
+    closeSkillChoiceScreen();
+    updateTopOnly();
+    renderActiveTab();
+    return;
+  }
+
   if (!pausedForSkillChoice()) return;
 
   // 周回方針が解禁されていて未選択なら、スタート後に方針選択画面を表示する
@@ -7762,6 +7801,8 @@ function renderPrestige() {
       <div>解放数<br><b>${boughtSkillCount()} / ${SKILLS.length}</b></div>
     </div>
 
+    ${state.prestigeRuns >= 1 ? `<button id="skillViewBtn" class="item skillViewBtn">スキルツリーを確認する</button>` : ""}
+
     ${policyBox}
 
     <div class="infoBox">
@@ -7776,6 +7817,9 @@ function renderPrestige() {
       <button id="resetBtn" class="item danger">完全リセット</button>
     </div>
   `;
+
+  const skillViewBtn = $("skillViewBtn");
+  if (skillViewBtn) addTap(skillViewBtn, openSkillTreeView);
 
   const prestigeBtn = $("prestigeBtn");
   if (prestigeBtn) addTap(prestigeBtn, prestigeReset);
