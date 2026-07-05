@@ -1083,9 +1083,9 @@
     .skillMap {
       position: relative;
       width: 2000px;
-      height: 2960px;
+      height: 3320px;
       min-width: 2000px;
-      min-height: 2960px;
+      min-height: 3320px;
       transform-origin: 0 0;
       background:
         radial-gradient(circle at 50% 50%, rgba(55,176,255,0.18), transparent 18%),
@@ -1123,7 +1123,7 @@
       position: absolute;
       inset: 0;
       width: 2000px;
-      height: 2960px;
+      height: 3320px;
       pointer-events: none;
       z-index: 2;
       overflow: visible;
@@ -1141,11 +1141,12 @@
     }
 
     .skillLine.done {
-      opacity: 0.68;
-      stroke-width: 3.4;
-      stroke-dasharray: none;
-      animation: none;
-      filter: drop-shadow(0 0 3px var(--branch-color));
+      opacity: 0.98;
+      stroke-width: 4.6;
+      stroke-dasharray: 16 8;
+      filter:
+        drop-shadow(0 0 4px var(--branch-color))
+        drop-shadow(0 0 10px var(--branch-color));
     }
 
     .skillLine.ready {
@@ -1243,20 +1244,6 @@
         linear-gradient(145deg, rgba(255,255,255,0.12), rgba(0,0,0,0.10)),
         rgba(2,18,26,0.98);
       border-color: rgba(var(--branch-rgb),0.92);
-    }
-
-    /* 完了済みノードは全開放時に画面全体が点滅・回転して見づらくならないよう、
-       常時アニメーションを止めて落ち着いた表示にする(取得可能ノードだけ目立たせる) */
-    .skillNode.done::before,
-    .skillNode.locked::before {
-      animation: none;
-      opacity: 0.6;
-    }
-
-    .skillNode.done::after,
-    .skillNode.locked::after {
-      animation: none;
-      opacity: 0;
     }
 
     .skillNode.canBuy {
@@ -3091,7 +3078,7 @@ const ASSETS = {
 
 const UPGRADES = [
   // クリックとおばあちゃんは基礎値1。香料棚を銀行〜異世界炉の中間に追加し、工場以降は緩やかに重くなる。
-  { id: "finger", name: "強い指", type: "click", value: 1, base: 0.0257, growth: 1.32, desc: "1タップ +1" },
+  { id: "finger", name: "強い指", type: "click", value: 1, base: 0.0506, growth: 1.32, desc: "1タップ +1" },
   { id: "grandma", name: "おばあちゃん", type: "cps", value: 1, base: 40, growth: 1.30, desc: "毎秒 +1" },
   { id: "oven", name: "オーブン", type: "cps", value: 8, base: 520, growth: 1.35, desc: "毎秒 +8" },
   { id: "factory", name: "工場", type: "cps", value: 45, base: 7200, growth: 1.37, desc: "毎秒 +45" },
@@ -3111,40 +3098,40 @@ const UPGRADES = [
 
 const RESEARCH = [
   // 序盤は体感しやすい研究。研究改造室以降は、設備ごとの特殊効果を一つずつ広げる。
-  { id: "fingerTechnique", name: "指先の型", cost: 7000, detail: "会心率は強い指数で上がり、会心倍率はlogで永久に伸びる。", desc: "タップ時、会心が発生するようになる。強い指が多いほど会心率と会心倍率が伸びる" },
-  { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 42000, detail: "おばあちゃん数の平方根で、強い指・オーブン・工場を補助する。", desc: "おばあちゃんが強い指・オーブン・工場を支援する" },
-  { id: "ovenBatch", name: "オーブン大量焼成", cost: 135000, detail: "現在ノルマ層が高いほど、オーブン倍率がlogで伸びる。", desc: "ノルマ層が進んでいる周回ほどオーブンが安定して強くなる" },
-  { id: "factoryNetwork", name: "工場ネットワーク", cost: 760000, advanced: true, skill: "research_factory", detail: "強い指・おばあちゃん・オーブンの所持数と工場数で、工場倍率が伸びる。", desc: "強い指・おばあちゃん・オーブンの所持数に応じて工場が強化される" },
-  { id: "spiceBlend", name: "香料調合", cost: 1850000, advanced: true, skill: "research_spice", detail: "金クッキー取得後しばらく香料棚が強化される。金色型と自動型をつなぐ研究。", desc: "金クッキー取得後、一定時間だけ香料棚の生産倍率が上がる" },
-  { id: "portalNetwork", name: "異世界接続網", cost: 5200000, advanced: true, skill: "research_portal", detail: "金クッキー取得後、異世界クッキー炉の数に応じて一定時間モンスター出現間隔を短縮する。", desc: "金クッキー取得後、一定時間だけモンスター出現が少し早くなる" },
-  { id: "bankClickDividend", name: "銀行クリック配当", cost: 18000000, advanced: true, skill: "research_bank", detail: "銀行数と所持クッキー量でクリックが強くなる。買うか貯めるかの判断材料になる。", desc: "銀行数と所持クッキー量に応じてクリックが強化される" },
-  { id: "moonGlobalYeast", name: "月面発酵", cost: 180000000, advanced: true, skill: "research_moon", detail: "第3層以降のノルマ層と月面ベーカリー数に応じて全体生産が伸び、ノルマ上昇も少し抑える。", desc: "ノルマ第3層以降で全体生産が少し伸び、ノルマ上昇も少し抑える" },
-  { id: "portalGlobalFold", name: "異世界増幅", cost: 1800000000, advanced: true, skill: "research_portalGlobal", detail: "異世界炉数、金ブースト、出現中モンスター数に応じて全体生産が伸びる。", desc: "異世界炉・金ブースト・モンスター数がかみ合うほど全体生産が伸びる" },
-  { id: "galaxyAssembly", name: "銀河分業", cost: 26000000000, advanced: true, skill: "research_galaxy", detail: "所持している設備種類数と銀河工場数に応じて銀河工場倍率が伸びる。", desc: "所持設備の種類数が多いほど銀河工場が強くなる" },
-  { id: "blackHoleCompression", name: "重力圧縮", cost: 760000000000, advanced: true, skill: "research_blackhole", detail: "ノルマ未達寸前で、周回中1回だけブラックホール数に応じて必要ノルマを圧縮する。全体生産も上げる。", desc: "ノルマ未達寸前で一度だけ必要ノルマを圧縮し、全体生産も強化する" },
-  { id: "quantumProofing", name: "量子発酵", cost: 16000000000000, advanced: true, skill: "research_quantum", detail: "取得済み研究数と量子ベーカリー数に応じて量子ベーカリーが伸びる。", desc: "研究数が多いほど量子ベーカリーの生産が伸びる" },
-  { id: "antimatterRecipe", name: "反物質配合", cost: 300000000000000, advanced: true, skill: "research_antimatter", detail: "反物質オーブン数と取得スキル数に応じて全体生産が伸びる。", desc: "反物質オーブンと取得スキル数が多いほど全体生産が伸びる" }
+  { id: "fingerTechnique", name: "指先の型", cost: 30000, detail: "会心率は強い指数で上がり、会心倍率はlogで永久に伸びる。", desc: "タップ時、会心が発生するようになる。強い指が多いほど会心率と会心倍率が伸びる" },
+  { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 120000, detail: "おばあちゃん数の平方根で、強い指・オーブン・工場を補助する。", desc: "おばあちゃんが強い指・オーブン・工場を支援する" },
+  { id: "ovenBatch", name: "オーブン大量焼成", cost: 300000, detail: "現在ノルマ層が高いほど、オーブン倍率がlogで伸びる。", desc: "ノルマ層が進んでいる周回ほどオーブンが安定して強くなる" },
+  { id: "factoryNetwork", name: "工場ネットワーク", cost: 1600000, advanced: true, skill: "research_factory", detail: "強い指・おばあちゃん・オーブンの所持数と工場数で、工場倍率が伸びる。", desc: "強い指・おばあちゃん・オーブンの所持数に応じて工場が強化される" },
+  { id: "spiceBlend", name: "香料調合", cost: 8000000, advanced: true, skill: "research_spice", detail: "金クッキー取得後しばらく香料棚が強化される。金色型と自動型をつなぐ研究。", desc: "金クッキー取得後、一定時間だけ香料棚の生産倍率が上がる" },
+  { id: "portalNetwork", name: "異世界接続網", cost: 24000000, advanced: true, skill: "research_portal", detail: "金クッキー取得後、異世界クッキー炉の数に応じて一定時間モンスター出現間隔を短縮する。", desc: "金クッキー取得後、一定時間だけモンスター出現が少し早くなる" },
+  { id: "bankClickDividend", name: "銀行クリック配当", cost: 80000000, advanced: true, skill: "research_bank", detail: "銀行数と所持クッキー量でクリックが強くなる。買うか貯めるかの判断材料になる。", desc: "銀行数と所持クッキー量に応じてクリックが強化される" },
+  { id: "moonGlobalYeast", name: "月面発酵", cost: 800000000, advanced: true, skill: "research_moon", detail: "第3層以降のノルマ層と月面ベーカリー数に応じて全体生産が伸び、ノルマ上昇も少し抑える。", desc: "ノルマ第3層以降で全体生産が少し伸び、ノルマ上昇も少し抑える" },
+  { id: "portalGlobalFold", name: "異世界増幅", cost: 8000000000, advanced: true, skill: "research_portalGlobal", detail: "異世界炉数、金ブースト、出現中モンスター数に応じて全体生産が伸びる。", desc: "異世界炉・金ブースト・モンスター数がかみ合うほど全体生産が伸びる" },
+  { id: "galaxyAssembly", name: "銀河分業", cost: 120000000000, advanced: true, skill: "research_galaxy", detail: "所持している設備種類数と銀河工場数に応じて銀河工場倍率が伸びる。", desc: "所持設備の種類数が多いほど銀河工場が強くなる" },
+  { id: "blackHoleCompression", name: "重力圧縮", cost: 3200000000000, advanced: true, skill: "research_blackhole", detail: "ノルマ未達寸前で、周回中1回だけブラックホール数に応じて必要ノルマを圧縮する。全体生産も上げる。", desc: "ノルマ未達寸前で一度だけ必要ノルマを圧縮し、全体生産も強化する" },
+  { id: "quantumProofing", name: "量子発酵", cost: 64000000000000, advanced: true, skill: "research_quantum", detail: "取得済み研究数と量子ベーカリー数に応じて量子ベーカリーが伸びる。", desc: "研究数が多いほど量子ベーカリーの生産が伸びる" },
+  { id: "antimatterRecipe", name: "反物質配合", cost: 1280000000000000, advanced: true, skill: "research_antimatter", detail: "反物質オーブン数と取得スキル数に応じて全体生産が伸びる。", desc: "反物質オーブンと取得スキル数が多いほど全体生産が伸びる" }
 ].sort((a, b) => a.cost - b.cost);
 
 const REWARD_POOL = [
   { id: "goldenRate", name: "金クッキー出現率アップ", category: "golden", desc: n => `金クッキー出現間隔を指数式で短縮 Lv.${n}` },
   { id: "goldenPower", name: "金ブースト倍率アップ", category: "golden", desc: n => `金ブースト倍率 +${(0.25 * n / (1 + n / 60)).toFixed(2)}(逓減式)、ブースト時間も逓減式で延長` },
-  { id: "goldenAmount", name: "金クッキー獲得量アップ", category: "golden", desc: n => `金クッキー即時獲得量 +${Math.round(50 * n / (1 + n / 60))}%(逓減式)、ブースト時間も延長` },
-  { id: "monsterDamage", name: "対モンスターダメージアップ", category: "hunt", desc: n => `モンスターへの最終ダメージ +${100 * n}%相当` },
+  { id: "goldenAmount", name: "金クッキー獲得量アップ", category: "golden", desc: n => `金クッキー即時獲得量 +${Math.round(45 * n / (1 + n / 45))}%(逓減式)、ブースト時間も延長` },
+  { id: "monsterDamage", name: "対モンスターダメージアップ", category: "hunt", desc: n => `モンスターへの最終ダメージ +${450 * n}%相当` },
   { id: "monsterRate", name: "モンスター出現率アップ", category: "hunt", desc: n => `モンスター出現間隔を指数式で短縮 Lv.${n}` },
   { id: "monsterStay", name: "濃い餌", category: "hunt", desc: n => `モンスター滞在時間が伸びる Lv.${n}` },
 
-  { id: "goldenChain", name: "黄金連鎖", category: "golden", unlockSkill: "unlock_reward_goldenChain", desc: n => `金クッキー取得後、次のモンスターへのダメージ +${150 * n}%` },
-  { id: "crackedFang", name: "割れた牙", category: "hunt", unlockSkill: "unlock_reward_crackedFang", desc: n => `モンスターへのダメージ +${100 * n}%` },
+  { id: "goldenChain", name: "黄金連鎖", category: "golden", unlockSkill: "unlock_reward_goldenChain", desc: n => `金クッキー取得後、次のモンスターへのダメージ +${200 * n}%` },
+  { id: "crackedFang", name: "割れた牙", category: "hunt", unlockSkill: "unlock_reward_crackedFang", desc: n => `モンスターへのダメージ +${450 * n}%` },
   { id: "chainPrep", name: "連戦準備", category: "risk", unlockSkill: "unlock_reward_chainPrep", desc: n => `撃破後、次のモンスター出現を指数式で短縮。ただし次のHPも増加 Lv.${n}` },
   { id: "huntFocus", name: "狩猟集中", category: "risk", unlockSkill: "unlock_reward_huntFocus", desc: n => `次のモンスターへのダメージが大きく上がる。成功で報酬Lv+1、失敗で次HP低下・報酬Lv-1 Lv.${n}` },
-  { id: "goldenTarget", name: "金色標的", category: "golden", unlockSkill: "unlock_reward_goldenTarget", desc: n => `金ブースト中、モンスターへのダメージ +${100 * n}%` },
-  { id: "goldenFirstHit", name: "金粉の初撃", category: "golden", unlockSkill: "unlock_reward_goldenFirstHit", desc: n => `金クッキー取得後、次のモンスターへの初撃ダメージ +${200 * n}%` },
+  { id: "goldenTarget", name: "金色標的", category: "golden", unlockSkill: "unlock_reward_goldenTarget", desc: n => `金ブースト中、モンスターへのダメージ +${220 * n}%` },
+  { id: "goldenFirstHit", name: "金粉の初撃", category: "golden", unlockSkill: "unlock_reward_goldenFirstHit", desc: n => `金クッキー取得後、次のモンスターへの初撃ダメージ +${250 * n}%` },
   { id: "beastScent", name: "獣の嗅覚", category: "golden", unlockSkill: "unlock_reward_beastScent", desc: n => `モンスター撃破後、次の金クッキー出現を指数式で短縮 Lv.${n}` },
-  { id: "beastHeatFerment", name: "獣熱発酵", category: "hunt", unlockSkill: "unlock_reward_beastHeatFerment", desc: n => `モンスター撃破数に応じて全生産上昇。撃破1体ごとに +${(3.0 * n).toFixed(1)}%` },
+  { id: "beastHeatFerment", name: "獣熱発酵", category: "hunt", unlockSkill: "unlock_reward_beastHeatFerment", desc: n => `モンスター撃破数に応じて全生産上昇。撃破1体ごとに +${(5.0 * n).toFixed(1)}%` },
   { id: "biteRecovery", name: "甘噛み回収", category: "hunt", unlockSkill: "unlock_reward_biteRecovery", desc: n => `モンスターにダメージを与えるたび、少量のクッキーを獲得` },
-  { id: "crushedMill", name: "砕粉ミル", category: "equipment", unlockSkill: "unlock_reward_crushedMill", desc: n => `設備個別強化の効果 +${50 * n}%` },
-  { id: "huntingCore", name: "狩猟炉心", category: "hunt", unlockSkill: "unlock_reward_huntingCore", desc: n => `モンスター撃破数に応じて毎秒生産上昇。撃破1体ごとに +${(4.0 * n).toFixed(1)}%` },
+  { id: "crushedMill", name: "砕粉ミル", category: "equipment", unlockSkill: "unlock_reward_crushedMill", desc: n => `設備個別強化の効果 +${150 * n}%` },
+  { id: "huntingCore", name: "狩猟炉心", category: "hunt", unlockSkill: "unlock_reward_huntingCore", desc: n => `モンスター撃破数に応じて毎秒生産上昇。撃破1体ごとに +${(20 * n).toFixed(1)}%` },
   { id: "brandHunt", name: "焼き印狩り", category: "hunt", unlockSkill: "unlock_reward_brandHunt", desc: n => `タップ系設備の所持数に応じてモンスターダメージ上昇` },
   { id: "deepPursuit", name: "深追いの契約", category: "risk", unlockSkill: "unlock_reward_deepPursuit", desc: n => `モンスター出現が速くなり、HPも上がるが、報酬Lvも増えやすくなる Lv.${n}` },
   { id: "goldenBeastMutation", name: "金獣変異", category: "risk", unlockSkill: "unlock_reward_goldenBeastMutation", desc: n => `金ブースト中の撃破時、逓減式の確率で報酬Lv +1` }
@@ -3164,100 +3151,106 @@ const SKILL_GROUPS = {
   master: "超越"
 };
 
+// SKILL_NODESのyは-120〜2920まで存在し、そのままだとキャンバス上端より
+// 上(負の座標)に配置されるノードが出現して届かなくなるため、全ノードを
+// 一律で下にずらして必ずキャンバス内に収める
+const SKILL_MAP_Y_OFFSET = 220;
+
 const SKILL_NODES = [
   // 座標規則：中央x=1000。左側はタップ/金色、右側は自動/怪物、上側は研究/設備、下側は報酬/周回。各列は原則x=200刻み、各段はy=140〜160刻み。
-  { id: "core", name: "分岐炉心", branchId: "core", cost: 22, x: 1000, y: 1120, icon: "◎", prereqs: [], desc: "転生後に周回方針を選べるようにする。スキルツリーの分岐を開く最初の特殊効果。", effects: [{ type: "unlockSystem", target: "runPolicy" }] },
+  { id: "core", name: "分岐炉心", branchId: "core", cost: 15, x: 1000, y: 1120, icon: "◎", prereqs: [], desc: "転生後に周回方針を選べるようにする。スキルツリーの分岐を開く最初の特殊効果。", effects: [{ type: "unlockSystem", target: "runPolicy" }] },
 
   // 左上：タップ型
-  { id: "click_1", name: "会心の指", branchId: "click", cost: 371800, x: 800, y: 980, icon: "◆", prereqs: ["core"], desc: "タップ生産 +150%。会心タップ型への入口。", effects: [{ type: "click", value: 1.5 }] },
-  { id: "click_2", name: "連打の呼吸", branchId: "click", cost: 6.66325e28, x: 620, y: 860, icon: "◆", prereqs: ["click_1"], desc: "タップ生産 +375%。", effects: [{ type: "click", value: 3.75 }] },
-  { id: "click_3", name: "焼き印タップ", branchId: "click", cost: 2.47402e39, x: 440, y: 740, icon: "◆", prereqs: ["click_2", "golden_2"], desc: "タップ生産 +938%、金獲得量 +27%。", effects: [{ type: "click", value: 9.375 }, { type: "goldenAmount", value: 0.27 }] },
-  { id: "click_4", name: "神経直結", branchId: "click", cost: 9.74114e68, x: 260, y: 620, icon: "◆", prereqs: ["golden_3", "research_bank"], desc: "タップ生産 +24%、全生産 +11185%。銀行配当の増幅先。", effects: [{ type: "click", value: 0.24 }, { type: "all", value: 111.8477 }] },
+  { id: "click_1", name: "会心の指", branchId: "click", cost: 337500, x: 800, y: 980, icon: "◆", prereqs: ["core"], desc: "タップ生産 +800%。会心タップ型への入口。", effects: [{ type: "click", value: 8 }] },
+  { id: "click_2", name: "連打の呼吸", branchId: "click", cost: 2.04073e53, x: 620, y: 860, icon: "◆", prereqs: ["click_1"], desc: "タップ生産 x285474。", effects: [{ type: "click", value: 285472.96 }] },
+  { id: "click_3", name: "焼き印タップ", branchId: "click", cost: 8.16293e55, x: 440, y: 740, icon: "◆", prereqs: ["click_2", "golden_2"], desc: "タップ生産 x2569257.6、金獲得量 +30%。", effects: [{ type: "click", value: 2569256.64 }, { type: "goldenAmount", value: 0.3 }] },
+  { id: "click_4", name: "神経直結", branchId: "click", cost: 4.70716e77, x: 260, y: 620, icon: "◆", prereqs: ["golden_3", "research_bank"], desc: "タップ生産 +24%、全生産 x499452.7。銀行配当の増幅先。", effects: [{ type: "click", value: 0.24 }, { type: "all", value: 499451.68 }] },
 
   // 左下：金クッキー型
-  { id: "golden_1", name: "金色の匂い", branchId: "golden", cost: 5.12558e26, x: 800, y: 1260, icon: "✦", prereqs: ["core"], desc: "金クッキー出現間隔を短縮。", effects: [{ type: "goldenRate", value: 0.12 }] },
-  { id: "golden_2", name: "金粉回収", branchId: "golden", cost: 8.66223e30, x: 620, y: 1380, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +68%。", effects: [{ type: "goldenAmount", value: 0.675 }] },
-  { id: "golden_3", name: "輝き増幅", branchId: "golden", cost: 1.19416e52, x: 440, y: 1500, icon: "✦", prereqs: ["golden_2", "click_3"], desc: "金ブースト倍率 +1.05。金色観測の前提。", effects: [{ type: "goldenPower", value: 1.05 }] },
-  { id: "golden_analysis", name: "金色観測", branchId: "golden", cost: 1.94823e68, x: 260, y: 1620, icon: "✦", prereqs: ["golden_3"], desc: "一覧に金クッキー出現間隔とブースト時間の目安を追加する。", effects: [{ type: "unlockSystem", target: "goldenAnalysis" }] },
-  { id: "golden_4", name: "太陽反応", branchId: "golden", cost: 1.26635e71, x: 80, y: 1740, icon: "✦", prereqs: ["golden_analysis", "click_4"], desc: "金出現間隔を大きく短縮、金獲得量 +113%。", effects: [{ type: "goldenRate", value: 0.24 }, { type: "goldenAmount", value: 1.125 }] },
+  { id: "golden_1", name: "金色の匂い", branchId: "golden", cost: 1.9929e40, x: 800, y: 1260, icon: "✦", prereqs: ["core"], desc: "金クッキー出現間隔を短縮。", effects: [{ type: "goldenRate", value: 0.24 }] },
+  { id: "golden_2", name: "金粉回収", branchId: "golden", cost: 7.97162e42, x: 620, y: 1380, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +75%。", effects: [{ type: "goldenAmount", value: 0.75 }] },
+  { id: "golden_3", name: "輝き増幅", branchId: "golden", cost: 2.75499e62, x: 440, y: 1500, icon: "✦", prereqs: ["golden_2", "click_3"], desc: "金ブースト倍率 +2.1。金色観測の前提。", effects: [{ type: "goldenPower", value: 2.1 }] },
+  { id: "golden_analysis", name: "金色観測", branchId: "golden", cost: 5.50998e61, x: 260, y: 1620, icon: "✦", prereqs: ["golden_3"], desc: "一覧に金クッキー出現間隔とブースト時間の目安を追加する。", effects: [{ type: "unlockSystem", target: "goldenAnalysis" }] },
+  { id: "golden_4", name: "太陽反応", branchId: "golden", cost: 7.06074e79, x: 80, y: 1740, icon: "✦", prereqs: ["golden_analysis", "click_4"], desc: "金出現間隔を大きく短縮、金獲得量 +125%。", effects: [{ type: "goldenRate", value: 0.48 }, { type: "goldenAmount", value: 1.25 }] },
 
   // 右上：自動焼成型
-  { id: "auto_1", name: "火種", branchId: "auto", cost: 2860, x: 1200, y: 980, icon: "◇", prereqs: ["core"], desc: "毎秒生産 +180%。自動焼成型への入口。", effects: [{ type: "cps", value: 1.8 }] },
-  { id: "auto_2", name: "炉の列", branchId: "auto", cost: 816844600000, x: 1380, y: 860, icon: "◇", prereqs: ["auto_1"], desc: "毎秒生産 +504%。", effects: [{ type: "cps", value: 5.04 }] },
-  { id: "auto_3", name: "同期炉", branchId: "auto", cost: 1.79461e18, x: 1560, y: 740, icon: "◇", prereqs: ["auto_2", "monster_2"], desc: "毎秒生産 +1411%、モンスターダメージ +30%。", effects: [{ type: "cps", value: 14.112 }, { type: "monsterDamageSkill", value: 0.3 }] },
-  { id: "auto_4", name: "無人ライン", branchId: "auto", cost: 5.43542e45, x: 1740, y: 620, icon: "◇", prereqs: ["monster_3", "research_factory"], desc: "毎秒生産 +24%、全生産 +3995%。工場理論の増幅先。", effects: [{ type: "cps", value: 0.24 }, { type: "all", value: 39.9456 }] },
-  { id: "bake_temperature", name: "焼き加減管理", branchId: "auto", cost: 2.19089e106, x: 1740, y: 500, icon: "♨", prereqs: ["auto_3", "research_remodel"], desc: "通常画面に焼き加減を追加する。焼き加減によって、金クッキー・毎秒生産・狩猟の有利時間が切り替わる。", effects: [{ type: "unlockSystem", target: "bakeTemperature" }] },
+  { id: "auto_1", name: "火種", branchId: "auto", cost: 2250, x: 1200, y: 980, icon: "◇", prereqs: ["core"], desc: "毎秒生産 +1300%。自動焼成型への入口。", effects: [{ type: "cps", value: 13 }] },
+  { id: "auto_2", name: "炉の列", branchId: "auto", cost: 1139062500000, x: 1380, y: 860, icon: "◇", prereqs: ["auto_1"], desc: "毎秒生産 x183。", effects: [{ type: "cps", value: 182 }] },
+  { id: "auto_3", name: "同期炉", branchId: "auto", cost: 3.84434e18, x: 1560, y: 740, icon: "◇", prereqs: ["auto_2", "monster_2"], desc: "毎秒生産 x2549、モンスターダメージ +60%。", effects: [{ type: "cps", value: 2548 }, { type: "monsterDamageSkill", value: 0.6 }] },
+  { id: "auto_4", name: "無人ライン", branchId: "auto", cost: 1.9462e27, x: 1740, y: 620, icon: "◇", prereqs: ["monster_3", "research_factory"], desc: "毎秒生産 +24%、全生産 x35676.1。工場理論の増幅先。", effects: [{ type: "cps", value: 0.24 }, { type: "all", value: 35675.12 }] },
+  { id: "bake_temperature", name: "焼き加減管理", branchId: "auto", cost: 1.1533e20, x: 1740, y: 500, icon: "♨", prereqs: ["auto_3", "research_remodel"], desc: "通常画面に焼き加減を追加する。焼き加減によって、金クッキー・毎秒生産・狩猟の有利時間が切り替わる。", effects: [{ type: "unlockSystem", target: "bakeTemperature" }] },
 
   // 右下：怪物狩り型
-  { id: "monster_1", name: "狩りの合図", branchId: "monster", cost: 48334000, x: 1200, y: 1260, icon: "◉", prereqs: ["core"], desc: "モンスター出現間隔を短縮。", effects: [{ type: "monsterRate", value: 0.12 }] },
-  { id: "monster_2", name: "急所割り", branchId: "monster", cost: 106189798000000, x: 1380, y: 1380, icon: "◉", prereqs: ["monster_1"], desc: "モンスター最終ダメージ +80%。", effects: [{ type: "monsterDamageSkill", value: 0.8 }] },
-  { id: "monster_3", name: "砕ける皮", branchId: "monster", cost: 4.18109e43, x: 1560, y: 1500, icon: "◉", prereqs: ["monster_2", "auto_3"], desc: "モンスターHP -24%。狩猟分析の前提。", effects: [{ type: "monsterHpDown", value: 0.28 }] },
-  { id: "hunt_analysis", name: "狩猟分析", branchId: "monster", cost: 4.03627e55, x: 1740, y: 1620, icon: "◉", prereqs: ["monster_3"], desc: "モンスターHP表示に、現在火力での必要攻撃数を追加する。", effects: [{ type: "unlockSystem", target: "huntAnalysis" }] },
-  { id: "monster_4", name: "群れ読み", branchId: "monster", cost: 2.62357e58, x: 1920, y: 1740, icon: "◉", prereqs: ["hunt_analysis"], desc: "モンスター滞在時間を伸ばし、報酬解放の前提になる。", effects: [{ type: "monsterStay", value: 0.3 }] },
+  { id: "monster_1", name: "狩りの合図", branchId: "monster", cost: 50625000, x: 1200, y: 1260, icon: "◉", prereqs: ["core"], desc: "モンスター出現間隔を短縮。", effects: [{ type: "monsterRate", value: 0.24 }] },
+  { id: "monster_2", name: "急所割り", branchId: "monster", cost: 170859375000000, x: 1380, y: 1380, icon: "◉", prereqs: ["monster_1"], desc: "モンスター最終ダメージ +160%。", effects: [{ type: "monsterDamageSkill", value: 1.6 }] },
+  { id: "monster_3", name: "砕ける皮", branchId: "monster", cost: 1.29746e25, x: 1560, y: 1500, icon: "◉", prereqs: ["monster_2", "auto_3"], desc: "モンスターHP -50%。狩猟分析の前提。", effects: [{ type: "monsterHpDown", value: 0.7 }] },
+  { id: "hunt_analysis", name: "狩猟分析", branchId: "monster", cost: 2.59493e24, x: 1740, y: 1620, icon: "◉", prereqs: ["monster_3"], desc: "モンスターHP表示に、現在火力での必要攻撃数を追加する。", effects: [{ type: "unlockSystem", target: "huntAnalysis" }] },
+  { id: "monster_4", name: "群れ読み", branchId: "monster", cost: 6.19873e66, x: 1920, y: 1740, icon: "◉", prereqs: ["hunt_analysis"], desc: "モンスター滞在時間を伸ばし、報酬解放の前提になる。", effects: [{ type: "monsterStay", value: 0.5 }] },
 
   // 上：研究と設備解放。研究解放は1つずつ。
-  { id: "economy_1", name: "仕入れ", branchId: "economy", cost: 6283420000, x: 1000, y: 900, icon: "⬡", prereqs: ["core"], desc: "アップグレード費用 -10%、研究費用 -10%。経済型への入口。", effects: [{ type: "upgradeDiscount", value: 0.1 }, { type: "researchDiscount", value: 0.1 }] },
-  { id: "research_1", name: "研究机", branchId: "research", cost: 1.38047e16, x: 1000, y: 740, icon: "⌬", prereqs: ["economy_1"], desc: "研究費用 -18%。研究系の入口。", effects: [{ type: "researchDiscount", value: 0.2 }] },
-  { id: "research_remodel", name: "研究改造室", branchId: "research", cost: 2.33299e20, x: 1000, y: 580, icon: "⌬", prereqs: ["research_1"], desc: "特殊研究の入口。研究費用 -14%。研究が固定倍率だけでなく、設備ごとの特殊効果を持つようになる。", effects: [{ type: "researchDiscount", value: 0.15 }, { type: "unlockSystem", target: "researchRemodel" }] },
-  { id: "economy_2", name: "まとめ買い", branchId: "economy", cost: 1.46392e35, x: 800, y: 580, icon: "⬡", prereqs: ["economy_1"], desc: "アップグレード費用 -22%。", effects: [{ type: "upgradeDiscount", value: 0.25 }] },
-  { id: "economy_analysis", name: "経済分析", branchId: "economy", cost: 2.84816e108, x: 620, y: 460, icon: "⬡", prereqs: ["economy_2"], desc: "強化カードに、価格あたりの増加量を追加表示する。", effects: [{ type: "unlockSystem", target: "economyAnalysis" }] },
-  { id: "order_board", name: "注文ボード", branchId: "economy", cost: 3.7026e110, x: 440, y: 340, icon: "⬡", prereqs: ["economy_analysis"], desc: "一覧タブに注文ボードを追加する。ノルマ進行度に応じて要求量と報酬倍率が上がる短期目標を表示する。", effects: [{ type: "unlockSystem", target: "orderBoard" }] },
-  { id: "research_bank", name: "銀行配当論", branchId: "research", cost: 3.21622e41, x: 820, y: 420, icon: "⌬", prereqs: ["research_remodel", "click_3"], desc: "銀行クリック配当研究を解放。", effects: [{ type: "unlockResearch", target: "bankClickDividend" }] },
-  { id: "research_factory", name: "工場理論", branchId: "research", cost: 3.03289e22, x: 1180, y: 420, icon: "⌬", prereqs: ["research_remodel", "auto_3"], desc: "工場ネットワーク研究を解放。", effects: [{ type: "unlockResearch", target: "factoryNetwork" }] },
-  { id: "research_spice", name: "香料調合論", branchId: "research", cost: 1.12609e33, x: 1000, y: 260, icon: "⌬", prereqs: ["research_remodel", "golden_2", "auto_2"], desc: "香料調合研究を解放。金クッキー型と自動焼成型をつなぐ。", effects: [{ type: "unlockResearch", target: "spiceBlend" }] },
+  { id: "economy_1", name: "仕入れ", branchId: "economy", cost: 7593750000, x: 1000, y: 900, icon: "⬡", prereqs: ["core"], desc: "アップグレード費用 -21%、研究費用 -21%。経済型への入口。", effects: [{ type: "upgradeDiscount", value: 0.24 }, { type: "researchDiscount", value: 0.24 }] },
+  { id: "research_1", name: "研究机", branchId: "research", cost: 2.56289e16, x: 1000, y: 740, icon: "⌬", prereqs: ["economy_1"], desc: "研究費用 -38%。研究系の入口。", effects: [{ type: "researchDiscount", value: 0.48 }] },
+  { id: "research_remodel", name: "研究改造室", branchId: "research", cost: 5.7665e20, x: 1000, y: 580, icon: "⌬", prereqs: ["research_1"], desc: "特殊研究の入口。研究費用 -30%。研究が固定倍率だけでなく、設備ごとの特殊効果を持つようになる。", effects: [{ type: "researchDiscount", value: 0.36 }, { type: "unlockSystem", target: "researchRemodel" }] },
+  { id: "economy_2", name: "まとめ買い", branchId: "economy", cost: 1.24556e35, x: 800, y: 580, icon: "⬡", prereqs: ["economy_1"], desc: "アップグレード費用 -45%。", effects: [{ type: "upgradeDiscount", value: 0.6 }] },
+  { id: "economy_analysis", name: "経済分析", branchId: "economy", cost: 2.49113e34, x: 620, y: 460, icon: "⬡", prereqs: ["economy_2"], desc: "強化カードに、価格あたりの増加量を追加表示する。", effects: [{ type: "unlockSystem", target: "economyAnalysis" }] },
+  { id: "order_board", name: "注文ボード", branchId: "economy", cost: 4.98226e33, x: 440, y: 340, icon: "⬡", prereqs: ["economy_analysis"], desc: "一覧タブに注文ボードを追加する。ノルマ進行度に応じて要求量と報酬倍率が上がる短期目標を表示する。", effects: [{ type: "unlockSystem", target: "orderBoard" }] },
+  { id: "research_bank", name: "銀行配当論", branchId: "research", cost: 1.22444e58, x: 820, y: 420, icon: "⌬", prereqs: ["research_remodel", "click_3"], desc: "銀行クリック配当研究を解放。", effects: [{ type: "unlockResearch", target: "bankClickDividend" }] },
+  { id: "research_factory", name: "工場理論", branchId: "research", cost: 8.64976e22, x: 1180, y: 420, icon: "⌬", prereqs: ["research_remodel", "auto_3"], desc: "工場ネットワーク研究を解放。", effects: [{ type: "unlockResearch", target: "factoryNetwork" }] },
+  { id: "research_spice", name: "香料調合論", branchId: "research", cost: 1.27546e48, x: 1000, y: 260, icon: "⌬", prereqs: ["research_remodel", "golden_2", "auto_2"], desc: "香料調合研究を解放。金クッキー型と自動焼成型をつなぐ。", effects: [{ type: "unlockResearch", target: "spiceBlend" }] },
 
-  { id: "upgrade_moon", name: "月面許可", branchId: "upgrade", cost: 3.94275e24, x: 1180, y: 260, icon: "◌", prereqs: ["research_factory"], desc: "月面ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "moonBakery" }] },
-  { id: "upgrade_time", name: "時空免許", branchId: "upgrade", cost: 1.90309e37, x: 1360, y: 140, icon: "◌", prereqs: ["upgrade_moon", "economy_2"], desc: "時空オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "timeOven" }] },
-  { id: "research_moon", name: "月面酵母", branchId: "research", cost: 2.01813e56, x: 820, y: 140, icon: "⌬", prereqs: ["research_bank", "upgrade_moon"], desc: "月面発酵研究を解放。", effects: [{ type: "unlockResearch", target: "moonGlobalYeast" }] },
-  { id: "research_portal", name: "異世界理論", branchId: "research", cost: 9.18586e49, x: 1180, y: 20, icon: "⌬", prereqs: ["research_factory", "upgrade_time"], desc: "異世界接続網研究を解放。", effects: [{ type: "unlockResearch", target: "portalNetwork" }] },
-  { id: "upgrade_galaxy", name: "銀河契約", branchId: "upgrade", cost: 7.06605e47, x: 1540, y: 20, icon: "✺", prereqs: ["upgrade_time", "auto_4"], desc: "銀河工場を解放。", effects: [{ type: "unlockUpgrade", target: "galaxyFactory" }] },
-  { id: "research_galaxy", name: "銀河設計図", branchId: "research", cost: 3.41065e60, x: 640, y: 20, icon: "⌬", prereqs: ["upgrade_galaxy", "research_moon"], desc: "銀河分業研究を解放。", effects: [{ type: "unlockResearch", target: "galaxyAssembly" }] },
-  { id: "upgrade_blackhole", name: "重力設備", branchId: "upgrade", cost: 1.55241e54, x: 1360, y: -120, icon: "●", prereqs: ["upgrade_galaxy", "research_portal"], desc: "ブラックホールミキサーを解放。", effects: [{ type: "unlockUpgrade", target: "blackHoleMixer" }] },
-  { id: "research_blackhole", name: "重力研究", branchId: "research", cost: 1.033e88, x: 1000, y: -120, icon: "⌬", prereqs: ["upgrade_blackhole", "research_galaxy"], desc: "重力圧縮研究を解放。", effects: [{ type: "unlockResearch", target: "blackHoleCompression" }] },
-  { id: "research_portalGlobal", name: "増幅論", branchId: "research", cost: 2.14013e75, x: 1540, y: -120, icon: "⌬", prereqs: ["research_portal", "upgrade_blackhole"], desc: "異世界増幅研究を解放。", effects: [{ type: "unlockResearch", target: "portalGlobalFold" }] },
-  { id: "research_analysis", name: "研究解析", branchId: "research", cost: 4.81338e112, x: 820, y: -120, icon: "⌬", prereqs: ["research_moon", "research_portal"], desc: "研究カードに現在効果・相性・弱点を表示する。経済分析も取得済みなら、強化カードの効率表示が研究効果込みになる。", effects: [{ type: "unlockSystem", target: "researchAnalysis" }] },
+  { id: "upgrade_moon", name: "月面許可", branchId: "upgrade", cost: 1.55696e31, x: 1180, y: 260, icon: "◌", prereqs: ["research_factory"], desc: "月面ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "moonBakery" }] },
+  { id: "upgrade_time", name: "時空免許", branchId: "upgrade", cost: 4.98226e37, x: 1360, y: 140, icon: "◌", prereqs: ["upgrade_moon", "economy_2"], desc: "時空オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "timeOven" }] },
+  { id: "research_moon", name: "月面酵母", branchId: "research", cost: 4.13249e64, x: 820, y: 140, icon: "⌬", prereqs: ["research_bank", "upgrade_moon"], desc: "月面発酵研究を解放。", effects: [{ type: "unlockResearch", target: "moonGlobalYeast" }] },
+  { id: "research_portal", name: "異世界理論", branchId: "research", cost: 5.10183e50, x: 1180, y: 20, icon: "⌬", prereqs: ["research_factory", "upgrade_time"], desc: "異世界接続網研究を解放。", effects: [{ type: "unlockResearch", target: "portalNetwork" }] },
+  { id: "upgrade_galaxy", name: "銀河契約", branchId: "upgrade", cost: 3.18865e45, x: 1540, y: 20, icon: "✺", prereqs: ["upgrade_time", "auto_4"], desc: "銀河工場を解放。", effects: [{ type: "unlockUpgrade", target: "galaxyFactory" }] },
+  { id: "research_galaxy", name: "銀河設計図", branchId: "research", cost: 9.29809e68, x: 640, y: 20, icon: "⌬", prereqs: ["upgrade_galaxy", "research_moon"], desc: "銀河分業研究を解放。", effects: [{ type: "unlockResearch", target: "galaxyAssembly" }] },
+  { id: "upgrade_blackhole", name: "重力設備", branchId: "upgrade", cost: 1.83666e60, x: 1360, y: -120, icon: "●", prereqs: ["upgrade_galaxy", "research_portal"], desc: "ブラックホールミキサーを解放。", effects: [{ type: "unlockUpgrade", target: "blackHoleMixer" }] },
+  { id: "research_blackhole", name: "重力研究", branchId: "research", cost: 1.44767e97, x: 1000, y: -120, icon: "⌬", prereqs: ["upgrade_blackhole", "research_galaxy"], desc: "重力圧縮研究を解放。", effects: [{ type: "unlockResearch", target: "blackHoleCompression" }] },
+  { id: "research_portalGlobal", name: "増幅論", branchId: "research", cost: 1.58867e84, x: 1540, y: -120, icon: "⌬", prereqs: ["research_portal", "upgrade_blackhole"], desc: "異世界増幅研究を解放。", effects: [{ type: "unlockResearch", target: "portalGlobalFold" }] },
+  { id: "research_analysis", name: "研究解析", branchId: "research", cost: 8.26497e63, x: 820, y: -120, icon: "⌬", prereqs: ["research_moon", "research_portal"], desc: "研究カードに現在効果・相性・弱点を表示する。経済分析も取得済みなら、強化カードの効率表示が研究効果込みになる。", effects: [{ type: "unlockSystem", target: "researchAnalysis" }] },
 
   // 下：報酬。選択肢数は有限スキルでのみ増える。
-  { id: "reward_1", name: "選択の目", branchId: "reward", cost: 6.82129e59, x: 1000, y: 1360, icon: "✧", prereqs: ["monster_4"], desc: "モンスター報酬の選択肢 +1。選択肢数を有限に増やす。", effects: [{ type: "rewardChoices", value: 1 }] },
-  { id: "reward_synergy", name: "報酬系統化", branchId: "reward", cost: 8.86768e61, x: 1000, y: 1520, icon: "✧", prereqs: ["reward_1"], desc: "同じ系統の報酬を重ねるほど、系統ボーナスが発動する。", effects: [{ type: "unlockSystem", target: "rewardSynergy" }] },
-  { id: "reward_choice_2", name: "選択の眼光", branchId: "reward", cost: 6.2574e114, x: 1000, y: 1680, icon: "✧", prereqs: ["reward_synergy"], desc: "モンスター報酬の選択肢 +1。選択肢増加はこの有限スキルで止める。", effects: [{ type: "rewardChoices", value: 1 }] },
-  { id: "reward_2", name: "強化圧縮", branchId: "reward", cost: 5.76399e64, x: 820, y: 1680, icon: "✧", prereqs: ["reward_synergy", "research_galaxy"], desc: "アップグレード個別強化の効果 +60%。設備報酬系統の増幅先。", effects: [{ type: "upgradePerkPower", value: 0.6 }] },
+  { id: "reward_1", name: "選択の目", branchId: "reward", cost: 1.23975e66, x: 1000, y: 1360, icon: "✧", prereqs: ["monster_4"], desc: "モンスター報酬の選択肢 +1。選択肢数を有限に増やす。", effects: [{ type: "rewardChoices", value: 1 }] },
+  { id: "reward_synergy", name: "報酬系統化", branchId: "reward", cost: 2.47949e65, x: 1000, y: 1520, icon: "✧", prereqs: ["reward_1"], desc: "同じ系統の報酬を重ねるほど、系統ボーナスが発動する。", effects: [{ type: "unlockSystem", target: "rewardSynergy" }] },
+  { id: "reward_choice_2", name: "選択の眼光", branchId: "reward", cost: 4.95898e64, x: 1000, y: 1680, icon: "✧", prereqs: ["reward_synergy"], desc: "モンスター報酬の選択肢 +1。選択肢増加はこの有限スキルで止める。", effects: [{ type: "rewardChoices", value: 1 }] },
+  { id: "reward_2", name: "強化圧縮", branchId: "reward", cost: 2.09207e73, x: 820, y: 1680, icon: "✧", prereqs: ["reward_synergy", "research_galaxy"], desc: "アップグレード個別強化の効果 +120%。設備報酬系統の増幅先。", effects: [{ type: "upgradePerkPower", value: 1.2 }] },
 
-  { id: "unlock_reward_crackedFang", name: "割れた牙", branchId: "reward", cost: 4.43384e62, x: 1360, y: 1360, icon: "✧", prereqs: ["monster_4"], desc: "報酬カード『割れた牙』を解禁。モンスターへのダメージが上がる。", effects: [{ type: "unlockReward", target: "crackedFang" }] },
-  { id: "unlock_reward_chainPrep", name: "連戦準備", branchId: "reward", cost: 2.78217e77, x: 1540, y: 1520, icon: "✧", prereqs: ["unlock_reward_crackedFang"], desc: "報酬カード『連戦準備』を解禁。撃破後、次出現が早くなるが次HPも上がる。", effects: [{ type: "unlockReward", target: "chainPrep" }] },
-  { id: "unlock_reward_huntFocus", name: "狩猟集中", branchId: "reward", cost: 7.94615e85, x: 1360, y: 1520, icon: "✧", prereqs: ["unlock_reward_crackedFang", "hunt_analysis"], desc: "報酬カード『狩猟集中』を解禁。成功・失敗で次の狩り方が変わる。", effects: [{ type: "unlockReward", target: "huntFocus" }] },
-  { id: "unlock_reward_biteRecovery", name: "甘噛み回収", branchId: "reward", cost: 6.48192e102, x: 1360, y: 1680, icon: "✧", prereqs: ["unlock_reward_huntFocus", "reward_1"], desc: "報酬カード『甘噛み回収』を解禁。攻撃ごとに少量のクッキーを得る。", effects: [{ type: "unlockReward", target: "biteRecovery" }] },
-  { id: "unlock_reward_beastHeatFerment", name: "獣熱発酵", branchId: "reward", cost: 3.83545e98, x: 1540, y: 1680, icon: "✧", prereqs: ["unlock_reward_chainPrep", "reward_2"], desc: "報酬カード『獣熱発酵』を解禁。撃破数で全生産が上がる。", effects: [{ type: "unlockReward", target: "beastHeatFerment" }] },
-  { id: "unlock_reward_huntingCore", name: "狩猟炉心", branchId: "reward", cost: 1.09544e107, x: 1540, y: 1840, icon: "✧", prereqs: ["unlock_reward_beastHeatFerment", "auto_4"], desc: "報酬カード『狩猟炉心』を解禁。撃破数で毎秒生産が上がる。", effects: [{ type: "unlockReward", target: "huntingCore" }] },
-  { id: "unlock_reward_brandHunt", name: "焼き印狩り", branchId: "reward", cost: 1.42408e109, x: 1360, y: 1840, icon: "✧", prereqs: ["unlock_reward_biteRecovery", "click_4"], desc: "報酬カード『焼き印狩り』を解禁。タップ系設備数でダメージ上昇。", effects: [{ type: "unlockReward", target: "brandHunt" }] },
-  { id: "unlock_reward_deepPursuit", name: "深追いの契約", branchId: "reward", cost: 2.40669e113, x: 1540, y: 2000, icon: "✧", prereqs: ["unlock_reward_huntingCore", "upgrade_universe"], desc: "報酬カード『深追いの契約』を解禁。出現が速くなり、HPも報酬Lvも増える。", effects: [{ type: "unlockReward", target: "deepPursuit" }] },
+  { id: "unlock_reward_crackedFang", name: "割れた牙", branchId: "reward", cost: 1.39471e71, x: 1360, y: 1360, icon: "✧", prereqs: ["monster_4"], desc: "報酬カード『割れた牙』を解禁。モンスターへのダメージが上がる。", effects: [{ type: "unlockReward", target: "crackedFang" }] },
+  { id: "unlock_reward_chainPrep", name: "連戦準備", branchId: "reward", cost: 2.383e86, x: 1540, y: 1520, icon: "✧", prereqs: ["unlock_reward_crackedFang"], desc: "報酬カード『連戦準備』を解禁。撃破後、次出現が早くなるが次HPも上がる。", effects: [{ type: "unlockReward", target: "chainPrep" }] },
+  { id: "unlock_reward_huntFocus", name: "狩猟集中", branchId: "reward", cost: 1.20639e95, x: 1360, y: 1520, icon: "✧", prereqs: ["unlock_reward_crackedFang", "hunt_analysis"], desc: "報酬カード『狩猟集中』を解禁。成功・失敗で次の狩り方が変わる。", effects: [{ type: "unlockReward", target: "huntFocus" }] },
+  { id: "unlock_reward_biteRecovery", name: "甘噛み回収", branchId: "reward", cost: 5.18727e111, x: 1360, y: 1680, icon: "✧", prereqs: ["unlock_reward_huntFocus", "reward_1"], desc: "報酬カード『甘噛み回収』を解禁。攻撃ごとに少量のクッキーを得る。", effects: [{ type: "unlockReward", target: "biteRecovery" }] },
+  { id: "unlock_reward_beastHeatFerment", name: "獣熱発酵", branchId: "reward", cost: 3.60227e107, x: 1540, y: 1680, icon: "✧", prereqs: ["unlock_reward_chainPrep", "reward_2"], desc: "報酬カード『獣熱発酵』を解禁。撃破数で全生産が上がる。", effects: [{ type: "unlockReward", target: "beastHeatFerment" }] },
+  { id: "unlock_reward_huntingCore", name: "狩猟炉心", branchId: "reward", cost: 7.46967e115, x: 1540, y: 1840, icon: "✧", prereqs: ["unlock_reward_beastHeatFerment", "auto_4"], desc: "報酬カード『狩猟炉心』を解禁。撃破数で毎秒生産が上がる。", effects: [{ type: "unlockReward", target: "huntingCore" }] },
+  { id: "unlock_reward_brandHunt", name: "焼き印狩り", branchId: "reward", cost: 8.9636e117, x: 1360, y: 1840, icon: "✧", prereqs: ["unlock_reward_biteRecovery", "click_4"], desc: "報酬カード『焼き印狩り』を解禁。タップ系設備数でダメージ上昇。", effects: [{ type: "unlockReward", target: "brandHunt" }] },
+  { id: "unlock_reward_deepPursuit", name: "深追いの契約", branchId: "reward", cost: 1.29076e122, x: 1540, y: 2000, icon: "✧", prereqs: ["unlock_reward_huntingCore", "upgrade_universe"], desc: "報酬カード『深追いの契約』を解禁。出現が速くなり、HPも報酬Lvも増える。", effects: [{ type: "unlockReward", target: "deepPursuit" }] },
 
-  { id: "unlock_reward_goldenChain", name: "黄金連鎖", branchId: "reward", cost: 1.64625e73, x: 640, y: 1360, icon: "✧", prereqs: ["monster_4", "golden_4"], desc: "報酬カード『黄金連鎖』を解禁。金クッキー後、次のモンスターへのダメージが上がる。", effects: [{ type: "unlockReward", target: "goldenChain" }] },
-  { id: "unlock_reward_goldenTarget", name: "金色標的", branchId: "reward", cost: 4.70186e81, x: 460, y: 1520, icon: "✧", prereqs: ["unlock_reward_goldenChain"], desc: "報酬カード『金色標的』を解禁。金ブースト中、モンスターダメージが上がる。", effects: [{ type: "unlockReward", target: "goldenTarget" }] },
-  { id: "unlock_reward_goldenFirstHit", name: "金粉の初撃", branchId: "reward", cost: 1.3429e90, x: 640, y: 1520, icon: "✧", prereqs: ["unlock_reward_goldenChain"], desc: "報酬カード『金粉の初撃』を解禁。金クッキー後、次の初撃が強くなる。", effects: [{ type: "unlockReward", target: "goldenFirstHit" }] },
-  { id: "unlock_reward_beastScent", name: "獣の嗅覚", branchId: "reward", cost: 2.2695e94, x: 460, y: 1680, icon: "✧", prereqs: ["unlock_reward_goldenChain", "reward_1"], desc: "報酬カード『獣の嗅覚』を解禁。撃破後、次の金クッキーが早くなる。", effects: [{ type: "unlockReward", target: "beastScent" }] },
-  { id: "unlock_reward_goldenBeastMutation", name: "金獣変異", branchId: "reward", cost: 3.1287e115, x: 640, y: 1840, icon: "✧", prereqs: ["unlock_reward_deepPursuit", "golden_4"], desc: "報酬カード『金獣変異』を解禁。金ブースト中撃破で、まれに報酬Lvが増える。", effects: [{ type: "unlockReward", target: "goldenBeastMutation" }] },
-  { id: "unlock_reward_crushedMill", name: "砕粉ミル", branchId: "reward", cost: 1.8513e111, x: 820, y: 1840, icon: "✧", prereqs: ["reward_2", "upgrade_universe"], desc: "報酬カード『砕粉ミル』を解禁。設備個別強化の効果が上がる。", effects: [{ type: "unlockReward", target: "crushedMill" }] },
+  { id: "unlock_reward_goldenChain", name: "黄金連鎖", branchId: "reward", cost: 1.05911e82, x: 640, y: 1360, icon: "✧", prereqs: ["monster_4", "golden_4"], desc: "報酬カード『黄金連鎖』を解禁。金クッキー後、次のモンスターへのダメージが上がる。", effects: [{ type: "unlockReward", target: "goldenChain" }] },
+  { id: "unlock_reward_goldenTarget", name: "金色標的", branchId: "reward", cost: 5.36175e90, x: 460, y: 1520, icon: "✧", prereqs: ["unlock_reward_goldenChain"], desc: "報酬カード『金色標的』を解禁。金ブースト中、モンスターダメージが上がる。", effects: [{ type: "unlockReward", target: "goldenTarget" }] },
+  { id: "unlock_reward_goldenFirstHit", name: "金粉の初撃", branchId: "reward", cost: 1.73721e99, x: 640, y: 1520, icon: "✧", prereqs: ["unlock_reward_goldenChain"], desc: "報酬カード『金粉の初撃』を解禁。金クッキー後、次の初撃が強くなる。", effects: [{ type: "unlockReward", target: "goldenFirstHit" }] },
+  { id: "unlock_reward_beastScent", name: "獣の嗅覚", branchId: "reward", cost: 2.50158e103, x: 460, y: 1680, icon: "✧", prereqs: ["unlock_reward_goldenChain", "reward_1"], desc: "報酬カード『獣の嗅覚』を解禁。撃破後、次の金クッキーが早くなる。", effects: [{ type: "unlockReward", target: "beastScent" }] },
+  { id: "unlock_reward_goldenBeastMutation", name: "金獣変異", branchId: "reward", cost: 1.54891e124, x: 640, y: 1840, icon: "✧", prereqs: ["unlock_reward_deepPursuit", "golden_4"], desc: "報酬カード『金獣変異』を解禁。金ブースト中撃破で、まれに報酬Lvが増える。", effects: [{ type: "unlockReward", target: "goldenBeastMutation" }] },
+  { id: "unlock_reward_crushedMill", name: "砕粉ミル", branchId: "reward", cost: 1.07563e120, x: 820, y: 1840, icon: "✧", prereqs: ["reward_2", "upgrade_universe"], desc: "報酬カード『砕粉ミル』を解禁。設備個別強化の効果が上がる。", effects: [{ type: "unlockReward", target: "crushedMill" }] },
 
   // 周回支援
-  { id: "start_1", name: "帰還貯蔵", branchId: "start", cost: 2.5327e70, x: 260, y: 2060, icon: "▣", prereqs: ["golden_4"], desc: "転生後に50万クッキーから開始。次周回の立ち上がりを早める。", effects: [{ type: "startCookies", value: 500000 }] },
-  { id: "offline_1", name: "長期保存", branchId: "start", cost: 1.08708e45, x: 1740, y: 2060, icon: "▣", prereqs: ["auto_4"], desc: "放置上限 +4時間。", effects: [{ type: "offlineHours", value: 4 }] },
-  { id: "start_2", name: "帰還神殿", branchId: "start", cost: 2.5327e70, x: 1000, y: 2220, icon: "▣", prereqs: ["start_1", "offline_1"], desc: "転生後に合計1000万クッキーから開始、放置上限 +4時間。", effects: [{ type: "startCookies", value: 9500000 }, { type: "offlineHours", value: 4 }] },
+  { id: "start_1", name: "帰還貯蔵", branchId: "start", cost: 1.41215e79, x: 260, y: 2060, icon: "▣", prereqs: ["golden_4"], desc: "転生後に750,000クッキーから開始。次周回の立ち上がりを早める。", effects: [{ type: "startCookies", value: 750000 }] },
+  { id: "offline_1", name: "長期保存", branchId: "start", cost: 3.89239e26, x: 1740, y: 2060, icon: "▣", prereqs: ["auto_4"], desc: "放置上限 +4時間。", effects: [{ type: "offlineHours", value: 4 }] },
+  { id: "start_2", name: "帰還神殿", branchId: "start", cost: 2.8243e78, x: 1000, y: 2220, icon: "▣", prereqs: ["start_1", "offline_1"], desc: "転生後に合計15,000,000クッキーから開始、放置上限 +4時間。", effects: [{ type: "startCookies", value: 14250000 }, { type: "offlineHours", value: 4 }] },
 
   // 後半設備
-  { id: "upgrade_universe", name: "宇宙炉心", branchId: "upgrade", cost: 7.49319e66, x: 1000, y: 1900, icon: "✺", prereqs: ["upgrade_blackhole", "reward_2"], desc: "宇宙焼成炉を解放。後半設備解放の主軸。", effects: [{ type: "unlockUpgrade", target: "universeOven" }] },
-  { id: "upgrade_godfinger", name: "神指契約", branchId: "upgrade", cost: 6.11242e83, x: 640, y: 2060, icon: "◆", prereqs: ["upgrade_universe", "click_4"], desc: "神の指を解放。会心タップ型の後半解放。", effects: [{ type: "unlockUpgrade", target: "godFinger" }] },
-  { id: "upgrade_singularity", name: "特異点管理", branchId: "upgrade", cost: 3.61682e79, x: 1360, y: 2060, icon: "◎", prereqs: ["upgrade_universe", "research_portalGlobal"], desc: "クッキー特異点を解放、全生産 +31317%。", effects: [{ type: "unlockUpgrade", target: "cookieSingularity" }, { type: "all", value: 313.1735 }] },
-  { id: "upgrade_quantum", name: "量子厨房", branchId: "upgrade", cost: 1.74577e92, x: 1000, y: 2380, icon: "✺", prereqs: ["upgrade_singularity", "research_blackhole"], desc: "量子ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "quantumBakery" }] },
-  { id: "research_quantum", name: "量子酵母", branchId: "research", cost: 2.95035e96, x: 820, y: 2540, icon: "⌬", prereqs: ["upgrade_quantum", "upgrade_godfinger"], desc: "量子発酵研究を解放。", effects: [{ type: "unlockResearch", target: "quantumProofing" }] },
-  { id: "upgrade_antimatter", name: "反物質炉", branchId: "upgrade", cost: 4.98609e100, x: 1180, y: 2540, icon: "✹", prereqs: ["upgrade_quantum", "upgrade_singularity"], desc: "反物質オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "antimatterOven" }] },
-  { id: "research_antimatter", name: "反物質配合論", branchId: "research", cost: 8.42649e104, x: 1000, y: 2700, icon: "⌬", prereqs: ["upgrade_antimatter", "research_quantum"], desc: "反物質配合研究を解放。", effects: [{ type: "unlockResearch", target: "antimatterRecipe" }] },
+  { id: "upgrade_universe", name: "宇宙炉心", branchId: "upgrade", cost: 3.13811e75, x: 1000, y: 1900, icon: "✺", prereqs: ["upgrade_blackhole", "reward_2"], desc: "宇宙焼成炉を解放。後半設備解放の主軸。", effects: [{ type: "unlockUpgrade", target: "universeOven" }] },
+  { id: "upgrade_godfinger", name: "神指契約", branchId: "upgrade", cost: 8.04262e92, x: 640, y: 2060, icon: "◆", prereqs: ["upgrade_universe", "click_4"], desc: "神の指を解放。会心タップ型の後半解放。", effects: [{ type: "unlockUpgrade", target: "godFinger" }] },
+  { id: "upgrade_singularity", name: "特異点管理", branchId: "upgrade", cost: 3.5745e88, x: 1360, y: 2060, icon: "◎", prereqs: ["upgrade_universe", "research_portalGlobal"], desc: "クッキー特異点を解放、全生産 x6992324.5。", effects: [{ type: "unlockUpgrade", target: "cookieSingularity" }, { type: "all", value: 6992323.52 }] },
+  { id: "upgrade_quantum", name: "量子厨房", branchId: "upgrade", cost: 2.08465e101, x: 1000, y: 2380, icon: "✺", prereqs: ["upgrade_singularity", "research_blackhole"], desc: "量子ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "quantumBakery" }] },
+  { id: "research_quantum", name: "量子酵母", branchId: "research", cost: 3.00189e105, x: 820, y: 2540, icon: "⌬", prereqs: ["upgrade_quantum", "upgrade_godfinger"], desc: "量子発酵研究を解放。", effects: [{ type: "unlockResearch", target: "quantumProofing" }] },
+  { id: "upgrade_antimatter", name: "反物質炉", branchId: "upgrade", cost: 4.32273e109, x: 1180, y: 2540, icon: "✹", prereqs: ["upgrade_quantum", "upgrade_singularity"], desc: "反物質オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "antimatterOven" }] },
+  { id: "research_antimatter", name: "反物質配合論", branchId: "research", cost: 6.22472e113, x: 1000, y: 2700, icon: "⌬", prereqs: ["upgrade_antimatter", "research_quantum"], desc: "反物質配合研究を解放。", effects: [{ type: "unlockResearch", target: "antimatterRecipe" }] },
 
-  { id: "master_final", name: "超越体", branchId: "master", cost: 4.06731e117, x: 1000, y: 2920, icon: "✹", prereqs: ["research_antimatter", "start_2"], desc: "最終到達点。全生産 +87689%、タップ +20%、毎秒 +20%、報酬選択肢数の期待値 +40%。", effects: [{ type: "all", value: 876.8858 }, { type: "click", value: 0.2 }, { type: "cps", value: 0.2 }, { type: "rewardBonus", value: 0.4 }] }
+  { id: "master_final", name: "超越体", branchId: "master", cost: 1.85869e126, x: 1000, y: 2920, icon: "✹", prereqs: ["research_antimatter", "start_2"], desc: "最終到達点。全生産 x97892530.3、タップ +20%、毎秒 +20%、報酬選択肢数の期待値 +80%。", effects: [{ type: "all", value: 97892529.28 }, { type: "click", value: 0.2 }, { type: "cps", value: 0.2 }, { type: "rewardBonus", value: 0.8 }] }
 ];
 
 const SKILLS = SKILL_NODES.map(skill => ({
   ...skill,
+  y: skill.y + SKILL_MAP_Y_OFFSET,
   branchName: SKILL_GROUPS[skill.branchId] || "スキル",
   prereqs: skill.prereqs || []
 }));
@@ -3286,7 +3279,7 @@ let selectedSkillId = null;
 let skillMapZoom = 0.72;
 
 const SKILL_MAP_WIDTH = 2000;
-const SKILL_MAP_HEIGHT = 3060;
+const SKILL_MAP_HEIGHT = 3320;
 const SKILL_ZOOM_MIN = 0.45;
 const SKILL_ZOOM_MAX = 1.65;
 const SKILL_ZOOM_STEP = 0.12;
@@ -4396,7 +4389,7 @@ function moonLayerGlobalMultiplier() {
   if (stage < 3) return 1;
 
   const moon = state.upgrades.moonBakery || 0;
-  return levelGrowth(Math.max(0, stage - 2), 0.004) * levelGrowth(moon, 0.002);
+  return levelGrowth(Math.max(0, stage - 2), 0.003) * levelGrowth(moon, 0.001);
 }
 
 function galaxyAssemblyMultiplier() {
@@ -4405,7 +4398,7 @@ function galaxyAssemblyMultiplier() {
   const types = ownedUpgradeTypeCount();
   const galaxy = state.upgrades.galaxyFactory || 0;
 
-  return levelGrowth(types, 0.07) * levelGrowth(galaxy, 0.020);
+  return levelGrowth(types, 0.8) * levelGrowth(galaxy, 0.019);
 }
 
 function blackHoleQuotaCompressionMultiplier() {
@@ -4582,20 +4575,20 @@ function challengeMultiplier() {
 function runRewardAllMultiplier() {
   const killCount = Math.max(0, state.quotaMonsterKills || 0);
   const lv = state.perks.beastHeatFerment || 0;
-  return 1 + killCount * lv * 0.03;
+  return 1 + killCount * lv * 0.05;
 }
 
 function runRewardCpsMultiplier() {
   const killCount = Math.max(0, state.quotaMonsterKills || 0);
   const lv = state.perks.huntingCore || 0;
-  return 1 + killCount * lv * 0.04;
+  return 1 + killCount * lv * 0.20;
 }
 
 function upgradeBoostRate(u) {
   const index = UPGRADES.findIndex(x => x.id === u.id);
-  const base = Math.max(0.055, 0.22 - index * 0.010);
+  const base = Math.max(0.055, 0.30 - index * 0.010);
   const skillBonus = skillEffect("upgradePerkPower");
-  const runRewardBonus = (state.perks.crushedMill || 0) * 0.50;
+  const runRewardBonus = (state.perks.crushedMill || 0) * 1.5;
   const categoryBonus = rewardCategoryBonus("equipment");
   return base * (1 + skillBonus + runRewardBonus + categoryBonus);
 }
@@ -4641,7 +4634,7 @@ function fingerCritChance() {
 
   const f = state.upgrades.finger || 0;
   const policy = runPolicyIs("click") ? 0.010 : 0;
-  const score = 0.08 + Math.sqrt(f) * 0.016 + policy;
+  const score = 0.30 + Math.sqrt(f) * 0.09 + policy;
 
   return 1 - Math.exp(-score);
 }
@@ -4651,8 +4644,8 @@ function fingerCritMultiplier() {
 
   const f = state.upgrades.finger || 0;
   const policy = runPolicyIs("click") ? 0.010 : 0;
-  const score = 0.08 + Math.sqrt(f) * 0.016 + policy;
-  return 2 + score * 4;
+  const score = 0.30 + Math.sqrt(f) * 0.09 + policy;
+  return 2 + score * 10;
 }
 
 function fingerDoubleChance() {
@@ -4667,15 +4660,15 @@ function supportUpgradeMultiplier(u) {
     const g = state.upgrades.grandma || 0;
 
     if (u.id === "finger") {
-      m *= levelGrowth(g, 0.009);
+      m *= levelGrowth(g, 0.007);
     }
 
     if (u.id === "oven") {
-      m *= levelGrowth(g, 0.010);
+      m *= levelGrowth(g, 0.008);
     }
 
     if (u.id === "factory") {
-      m *= levelGrowth(g, 0.011);
+      m *= levelGrowth(g, 0.009);
     }
   }
 
@@ -4690,7 +4683,7 @@ function ovenStageMultiplier() {
   const stage = currentQuotaStageNumber();
   const policyBonus = runPolicyIs("bake") ? 1.10 : 1;
 
-  return levelGrowth(owned, 0.062) * levelGrowth(Math.max(0, stage - 1), 0.012) * policyBonus;
+  return levelGrowth(owned, 0.060) * levelGrowth(Math.max(0, stage - 1), 0.012) * policyBonus;
 }
 
 
@@ -4704,7 +4697,7 @@ function factoryNetworkMultiplier() {
 
   const factory = state.upgrades.factory || 0;
 
-  return levelGrowth(low, 0.006) * levelGrowth(factory, 0.064);
+  return levelGrowth(low, 0.006) * levelGrowth(factory, 0.060);
 }
 
 
@@ -4723,7 +4716,7 @@ function deepPursuitHpPenalty() {
 
 
 function deepPursuitRewardBonus() {
-  return Math.pow(1.15, state.perks.deepPursuit || 0);
+  return Math.pow(1.6, state.perks.deepPursuit || 0);
 }
 
 
@@ -4748,10 +4741,10 @@ function spiceRackMultiplier() {
   const goldenActive = Date.now() < (state.spiceBoostUntil || 0);
   const policyBonus = runPolicyIs("golden") ? 1.08 : 1;
 
-  let m = levelGrowth(owned, 0.066) * policyBonus;
+  let m = levelGrowth(owned, 0.062) * policyBonus;
 
   if (goldenActive) {
-    m *= 2.3 * levelGrowth(owned, 0.010);
+    m *= 25 * levelGrowth(owned, 0.010);
   }
 
   m *= orderSpiceMultiplier();
@@ -4762,11 +4755,11 @@ function spiceRackMultiplier() {
 function researchUpgradeMultiplier(u) {
   let m = 1;
 
-  if (u.id === "grandma" && state.research.grandmaCrowd) m *= 2.8;
-  if (u.id === "oven" && state.research.ovenBatch) m *= 2.0 * ovenStageMultiplier();
-  if (u.id === "factory" && state.research.factoryNetwork) m *= 2.0 * factoryNetworkMultiplier();
+  if (u.id === "grandma" && state.research.grandmaCrowd) m *= 60;
+  if (u.id === "oven" && state.research.ovenBatch) m *= 60 * ovenStageMultiplier();
+  if (u.id === "factory" && state.research.factoryNetwork) m *= 60 * factoryNetworkMultiplier();
   if (u.id === "spiceRack" && state.research.spiceBlend) m *= spiceRackMultiplier();
-  if (u.id === "portal" && state.research.portalNetwork) m *= 2.3;
+  if (u.id === "portal" && state.research.portalNetwork) m *= 50;
   if (u.id === "galaxyFactory" && state.research.galaxyAssembly) m *= galaxyAssemblyMultiplier();
   if (u.id === "quantumBakery" && state.research.quantumProofing) m *= quantumProofingMultiplier();
 
@@ -4793,8 +4786,8 @@ function bankClickMultiplier() {
   const bank = state.upgrades.bank || 0;
   const saved = Math.log10(state.cookies + 10);
 
-  const bankM = levelGrowth(bank, 0.030);
-  const savedM = 1 + Math.log1p(saved) * 0.35;
+  const bankM = levelGrowth(bank, 0.028);
+  const savedM = 1 + Math.log1p(saved) * 8.0;
   const policyM = runPolicyIs("click") ? 1.08 : 1;
 
   return bankM * savedM * policyM;
@@ -4806,9 +4799,9 @@ function portalGlobalFoldMultiplier() {
 
   const portal = state.upgrades.portal || 0;
   const activeMonsterCount = monsters.length;
-  const goldenM = goldenBoostActive() ? 1.5 : 1;
+  const goldenM = goldenBoostActive() ? 12 : 1;
 
-  return levelGrowth(portal, 0.002) * levelGrowth(activeMonsterCount, 0.40) * goldenM;
+  return levelGrowth(portal, 0.002) * levelGrowth(activeMonsterCount, 2.5) * goldenM;
 }
 
 function quantumProofingMultiplier() {
@@ -4817,22 +4810,22 @@ function quantumProofingMultiplier() {
   const researchCount = RESEARCH.filter(r => state.research[r.id]).length;
   const quantum = state.upgrades.quantumBakery || 0;
 
-  return levelGrowth(researchCount, 0.14) * levelGrowth(quantum, 0.020);
+  return levelGrowth(researchCount, 1.6) * levelGrowth(quantum, 0.019);
 }
 
 function antimatterRecipeMultiplier() {
   if (!state.research.antimatterRecipe) return 1;
 
   const antimatter = state.upgrades.antimatterOven || 0;
-  return levelGrowth(antimatter, 0.005) * levelGrowth(boughtSkillCount(), 0.022);
+  return levelGrowth(antimatter, 0.002) * levelGrowth(boughtSkillCount(), 0.045);
 }
 
 function globalResearchMultiplier() {
   let m = 1;
 
-  if (state.research.moonGlobalYeast) m *= 2.5 * moonLayerGlobalMultiplier();
+  if (state.research.moonGlobalYeast) m *= 50 * moonLayerGlobalMultiplier();
   if (state.research.portalGlobalFold) m *= portalGlobalFoldMultiplier();
-  if (state.research.blackHoleCompression) m *= 1.8;
+  if (state.research.blackHoleCompression) m *= 50;
   if (state.research.antimatterRecipe) m *= antimatterRecipeMultiplier();
 
   return m;
@@ -4846,11 +4839,11 @@ function monsterBaseDamage() {
 
 function monsterDamageMultiplier(mon) {
   const currentMonster = mon || monster;
-  const rewardPower = state.perks.monsterDamage * 1.0;
-  const crackedFangBonus = (state.perks.crackedFang || 0) * 1.0;
-  const goldenTargetBonus = goldenBoostActive() ? (state.perks.goldenTarget || 0) * 1.0 : 0;
+  const rewardPower = state.perks.monsterDamage * 4.5;
+  const crackedFangBonus = (state.perks.crackedFang || 0) * 4.5;
+  const goldenTargetBonus = goldenBoostActive() ? (state.perks.goldenTarget || 0) * 2.2 : 0;
   const goldenChainBonus = currentMonster ? ((currentMonster.goldenChainMultiplier || 1) - 1) : 0;
-  const brandHuntBonus = Math.sqrt(clickUpgradeOwnedCount()) * (state.perks.brandHunt || 0) * 0.15;
+  const brandHuntBonus = Math.sqrt(clickUpgradeOwnedCount()) * (state.perks.brandHunt || 0) * 0.45;
   const categoryBonus = rewardCategoryBonus("hunt");
   const policyBonus = runPolicyIs("hunt") ? 0.14 : 0;
 
@@ -4869,8 +4862,8 @@ function monsterDamageMultiplier(mon) {
 
 
 function goldenAmountMultiplier() {
-  const gaLv = Math.max(0, state.perks.goldenAmount) / (1 + Math.max(0, state.perks.goldenAmount) / 60);
-  return 1 + gaLv * 0.5 + skillEffect("goldenAmount") + rewardCategoryBonus("golden") + (runPolicyIs("golden") ? 0.10 : 0);
+  const gaLv = Math.max(0, state.perks.goldenAmount) / (1 + Math.max(0, state.perks.goldenAmount) / 45);
+  return 1 + gaLv * 0.45 + skillEffect("goldenAmount") + rewardCategoryBonus("golden") + (runPolicyIs("golden") ? 0.10 : 0);
 }
 
 function goldenSpawnFactor() {
@@ -4885,7 +4878,7 @@ function goldenSpawnFactor() {
 
 function monsterSpawnFactor() {
   return Math.exp(
-    -(Math.max(0, state.perks.monsterRate) / (1 + Math.max(0, state.perks.monsterRate) / 80)) * 0.055
+    -(Math.max(0, state.perks.monsterRate) / (1 + Math.max(0, state.perks.monsterRate) / 80)) * 0.12
     -Math.max(0, skillEffect("monsterRate")) * 1.8
     -rewardCategoryBonus("hunt") * 1.0
     -(runPolicyIs("hunt") ? 0.10 : 0)
@@ -4920,9 +4913,9 @@ function costOf(u) {
   const owned = state.upgrades[u.id];
 
   return Math.max(1, Math.floor(
-    900
+    600
     * Math.pow(u.base, 0.60)
-    * Math.pow(u.growth, owned * 0.25)
+    * Math.pow(u.growth, owned <= 5500 ? owned * 0.25 : 5500 * 0.25 + (owned - 5500) * 0.60)
     * upgradeDiscount()
   ));
 }
@@ -5583,7 +5576,7 @@ function skillLinePoints(from, to) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const d = Math.max(1, Math.hypot(dx, dy));
-  const radius = 58;
+  const radius = 46;
 
   return {
     x1: from.x + dx / d * radius,
@@ -5644,12 +5637,13 @@ function renderSkillChoiceScreen() {
       if (!from || !skillVisible(from)) return "";
 
       const done = hasSkill(reqId) && hasSkill(skill.id);
-      const ready = hasSkill(reqId) && !hasSkill(skill.id);
+      if (!done) return "";
+
       const p = skillLinePoints(from, skill);
 
       return `
         <line
-          class="skillLine branch-${skill.branchId} ${done ? "done" : ""} ${ready ? "ready" : ""}"
+          class="skillLine branch-${skill.branchId} done"
           x1="${p.x1.toFixed(1)}"
           y1="${p.y1.toFixed(1)}"
           x2="${p.x2.toFixed(1)}"
@@ -5886,74 +5880,74 @@ function researchFormulaText(r) {
 
   if (r.id === "fingerTechnique") {
     const f = state.upgrades.finger || 0;
-    return `式：会心率 = 1 - e^-score、score = 0.08 + √強い指 × 0.016 + 方針補正 / 会心倍率 = 2 + score × 4(会心率と同じscoreで上昇) / 現在：強い指 ${fmt(f)}個、会心率 ${(fingerCritChance() * 100).toFixed(2)}%、会心倍率 x${fingerCritMultiplier().toFixed(2)}`;
+    return `式：会心率 = 1 - e^-score、score = 0.30 + √強い指 × 0.09 + 方針補正 / 会心倍率 = 2 + score × 10(会心率と同じscoreで上昇) / 現在：強い指 ${fmt(f)}個、会心率 ${(fingerCritChance() * 100).toFixed(2)}%、会心倍率 x${fingerCritMultiplier().toFixed(2)}`;
   }
 
   if (r.id === "grandmaCrowd") {
     const g = state.upgrades.grandma || 0;
-    return `式：強い指補助 = 1.009^おばあちゃん / オーブン補助 = 1.010^おばあちゃん / 工場補助 = 1.011^おばあちゃん / 現在：おばあちゃん ${fmt(g)}人、指 x${levelGrowth(g, 0.009).toFixed(3)}、炉 x${levelGrowth(g, 0.010).toFixed(3)}、工場 x${levelGrowth(g, 0.011).toFixed(3)}`;
+    return `式：強い指補助 = 1.007^おばあちゃん / オーブン補助 = 1.008^おばあちゃん / 工場補助 = 1.009^おばあちゃん / 現在：おばあちゃん ${fmt(g)}人、指 x${levelGrowth(g, 0.007).toFixed(3)}、炉 x${levelGrowth(g, 0.008).toFixed(3)}、工場 x${levelGrowth(g, 0.009).toFixed(3)}`;
   }
 
   if (r.id === "ovenBatch") {
     const oven = state.upgrades.oven || 0;
     const stage = currentQuotaStageNumber();
-    return `式：オーブン研究倍率 = 2.0 × 1.062^オーブン数 × 1.012^(ノルマ層 - 1) × 方針補正 / 現在：オーブン ${fmt(oven)}個、第${fmt(stage)}層、倍率 x${(2.0 * ovenStageMultiplier()).toFixed(3)}`;
+    return `式：オーブン研究倍率 = 60 × 1.060^オーブン数 × 1.012^(ノルマ層 - 1) × 方針補正 / 現在：オーブン ${fmt(oven)}個、第${fmt(stage)}層、倍率 x${(60 * ovenStageMultiplier()).toFixed(3)}`;
   }
 
   if (r.id === "factoryNetwork") {
     const low = (state.upgrades.finger || 0) + (state.upgrades.grandma || 0) + (state.upgrades.oven || 0);
     const factory = state.upgrades.factory || 0;
-    return `式：工場倍率 = 2.0 × 1.006^(強い指+おばあちゃん+オーブン) × 1.064^工場数 / 現在：低ランク設備 ${fmt(low)}個、工場 ${fmt(factory)}個、倍率 x${(2.0 * factoryNetworkMultiplier()).toFixed(3)}`;
+    return `式：工場倍率 = 60 × 1.006^(強い指+おばあちゃん+オーブン) × 1.060^工場数 / 現在：低ランク設備 ${fmt(low)}個、工場 ${fmt(factory)}個、倍率 x${(60 * factoryNetworkMultiplier()).toFixed(3)}`;
   }
 
   if (r.id === "spiceBlend") {
     const spice = state.upgrades.spiceRack || 0;
     const active = Date.now() < (state.spiceBoostUntil || 0);
-    return `式：香料棚倍率 = 1.066^香料棚数 × 方針補正 × 金クッキー後補正 / 金クッキー後補正 = 2.3 × 1.010^香料棚数 / 現在：香料棚 ${fmt(spice)}個、${active ? "金クッキー後効果中" : "通常"}、倍率 x${spiceRackMultiplier().toFixed(3)}`;
+    return `式：香料棚倍率 = 1.062^香料棚数 × 方針補正 × 金クッキー後補正 / 金クッキー後補正 = 25 × 1.010^香料棚数 / 現在：香料棚 ${fmt(spice)}個、${active ? "金クッキー後効果中" : "通常"}、倍率 x${spiceRackMultiplier().toFixed(3)}`;
   }
 
   if (r.id === "portalNetwork") {
     const portal = state.upgrades.portal || 0;
-    return `式：異世界炉生産 = 基礎x2.3 / 金クッキー後の効果時間 = 20秒 × 1.0042^異世界炉数 / 出現倍率 = 0.990^異世界炉数 / 現在：異世界炉 ${fmt(portal)}個、効果時間 ${fmtShort(portalHuntDurationMs() / 1000)}秒、出現 x${portalHuntSpawnMultiplier().toFixed(3)}`;
+    return `式：異世界炉生産 = 基礎x50 / 金クッキー後の効果時間 = 20秒 × 1.0042^異世界炉数 / 出現倍率 = 0.990^異世界炉数 / 現在：異世界炉 ${fmt(portal)}個、効果時間 ${fmtShort(portalHuntDurationMs() / 1000)}秒、出現 x${portalHuntSpawnMultiplier().toFixed(3)}`;
   }
 
   if (r.id === "bankClickDividend") {
     const bank = state.upgrades.bank || 0;
     const saved = Math.log10(state.cookies + 10);
-    return `式：クリック倍率 = 1.030^銀行数 × (1 + log(log10(所持クッキー + 10) + 1) × 0.35) × 方針補正 / 現在：銀行 ${fmt(bank)}個、所持指数 ${saved.toFixed(2)}、倍率 x${bankClickMultiplier().toFixed(3)}`;
+    return `式：クリック倍率 = 1.028^銀行数 × (1 + log(log10(所持クッキー + 10) + 1) × 8.0) × 方針補正 / 現在：銀行 ${fmt(bank)}個、所持指数 ${saved.toFixed(2)}、倍率 x${bankClickMultiplier().toFixed(3)}`;
   }
 
   if (r.id === "moonGlobalYeast") {
     const moon = state.upgrades.moonBakery || 0;
     const stage = currentQuotaStageNumber();
-    return `式：全体倍率 = 2.5 × 1.004^(ノルマ層 - 2) × 1.002^月面ベーカリー数 ※第3層以上 / 現在：第${fmt(stage)}層、月面 ${fmt(moon)}個、月面層倍率 x${moonLayerGlobalMultiplier().toFixed(3)}`;
+    return `式：全体倍率 = 50 × 1.003^(ノルマ層 - 2) × 1.001^月面ベーカリー数 ※第3層以上 / 現在：第${fmt(stage)}層、月面 ${fmt(moon)}個、月面層倍率 x${moonLayerGlobalMultiplier().toFixed(3)}`;
   }
 
   if (r.id === "portalGlobalFold") {
     const portal = state.upgrades.portal || 0;
-    return `式：異世界増幅 = 1.002^異世界炉数 × 1.40^出現中モンスター数 × 金ブースト補正 / 現在：異世界炉 ${fmt(portal)}個、出現中 ${fmt(monsters.length)}体、倍率 x${portalGlobalFoldMultiplier().toFixed(3)}`;
+    return `式：異世界増幅 = 1.002^異世界炉数 × 3.5^出現中モンスター数 × 金ブースト補正(x12) / 現在：異世界炉 ${fmt(portal)}個、出現中 ${fmt(monsters.length)}体、倍率 x${portalGlobalFoldMultiplier().toFixed(3)}`;
   }
 
   if (r.id === "galaxyAssembly") {
     const types = ownedUpgradeTypeCount();
     const galaxy = state.upgrades.galaxyFactory || 0;
-    return `式：銀河工場倍率 = 1.07^所持設備種類数 × 1.020^銀河工場数 / 現在：${fmt(types)}種類、銀河工場 ${fmt(galaxy)}個、倍率 x${galaxyAssemblyMultiplier().toFixed(3)}`;
+    return `式：銀河工場倍率 = 1.8^所持設備種類数 × 1.019^銀河工場数 / 現在：${fmt(types)}種類、銀河工場 ${fmt(galaxy)}個、倍率 x${galaxyAssemblyMultiplier().toFixed(3)}`;
   }
 
   if (r.id === "blackHoleCompression") {
     const blackHole = state.upgrades.blackHoleMixer || 0;
-    return `式：圧縮後ノルマ = 必要ノルマ × 0.9982^ブラックホール数 / 全体生産は固定でx1.8 / 現在：ブラックホール ${fmt(blackHole)}個、圧縮倍率 x${blackHoleQuotaCompressionMultiplier().toFixed(3)}、${state.blackHoleCompressionUsed ? "この周回は発動済み" : "未発動"}`;
+    return `式：圧縮後ノルマ = 必要ノルマ × 0.9982^ブラックホール数 / 全体生産は固定でx50 / 現在：ブラックホール ${fmt(blackHole)}個、圧縮倍率 x${blackHoleQuotaCompressionMultiplier().toFixed(3)}、${state.blackHoleCompressionUsed ? "この周回は発動済み" : "未発動"}`;
   }
 
   if (r.id === "quantumProofing") {
     const researchCount = RESEARCH.filter(x => state.research[x.id]).length;
     const quantum = state.upgrades.quantumBakery || 0;
-    return `式：量子ベーカリー倍率 = 1.14^取得済み研究数 × 1.020^量子ベーカリー数 / 現在：研究 ${fmt(researchCount)}個、量子 ${fmt(quantum)}個、倍率 x${quantumProofingMultiplier().toFixed(3)}`;
+    return `式：量子ベーカリー倍率 = 2.6^取得済み研究数 × 1.019^量子ベーカリー数 / 現在：研究 ${fmt(researchCount)}個、量子 ${fmt(quantum)}個、倍率 x${quantumProofingMultiplier().toFixed(3)}`;
   }
 
   if (r.id === "antimatterRecipe") {
     const antimatter = state.upgrades.antimatterOven || 0;
-    return `式：全体倍率 = 1.005^反物質オーブン数 × 1.022^取得済みスキル数 / 現在：反物質 ${fmt(antimatter)}個、スキル ${fmt(boughtSkillCount())}個、倍率 x${antimatterRecipeMultiplier().toFixed(3)}`;
+    return `式：全体倍率 = 1.002^反物質オーブン数 × 1.045^取得済みスキル数 / 現在：反物質 ${fmt(antimatter)}個、スキル ${fmt(boughtSkillCount())}個、倍率 x${antimatterRecipeMultiplier().toFixed(3)}`;
   }
 
   return r.detail ? `式の要点：${r.detail}` : "";
@@ -6056,8 +6050,7 @@ function totalPrestigeFromCookies(totalCookies) {
   if (total < 10000) return 0;
 
   return Math.max(1, Math.floor(
-    0.4 * (1 - Math.exp(-total / 5000))
-    + 0.4 * Math.pow(total / 10000, 0.8)
+    0.4 * Math.pow(total / 10000, 0.60)
   ));
 }
 
@@ -6114,7 +6107,7 @@ function renderPrestige() {
   }
 
   const gain = prestigeGain();
-  const canPrestige = gain > 0 && !pausedForSkillChoice();
+  const canPrestige = gain > 0 && !pausedForSkillChoice() && state.cookies >= 1000000;
   const policyBox = runPolicyUnlocked() ? `
     <div class="infoBox">
       <h3>周回方針</h3>
@@ -6141,7 +6134,8 @@ function renderPrestige() {
       <div class="infoRow">今回のノルマ維持記録：${fmtTime(state.quotaHoldSeconds || 0)} / ノルマ中討伐 ${fmt(state.quotaMonsterKills || 0)}体</div>
       <div class="infoRow">獲得済み総PT：${fmt(state.prestigeTotal)}</div>
       <div class="infoRow">今回獲得できるPT：+${fmt(gain)}</div>
-      <button id="prestigeBtn" class="item ${canPrestige ? "canBuy" : "locked"}">${canPrestige ? "転生する" : "未獲得PTなし"}</button>
+      <div class="infoRow">転生には所持クッキー 1,000,000 を消費します(現在:${fmt(state.cookies)})</div>
+      <button id="prestigeBtn" class="item ${canPrestige ? "canBuy" : "locked"}">${canPrestige ? "転生する(100万クッキー消費)" : (gain <= 0 ? "未獲得PTなし" : "クッキー100万が必要")}</button>
       <button id="resetBtn" class="item danger">完全リセット</button>
     </div>
   `;
@@ -6584,6 +6578,8 @@ document.querySelectorAll(".tab").forEach(btn => {
 function prestigeReset() {
   const gain = prestigeGain();
   if (gain <= 0 || pausedForSkillChoice()) return;
+  if (state.cookies < 1000000) return;
+  state.cookies -= 1000000;
 
   const keepTotal = state.totalCookies;
   const keepClicks = state.totalClicks;
@@ -7064,7 +7060,7 @@ function collectGoldenCookie() {
 
   if (r < 0.5) {
     const gained = earn(
-      Math.max(100, currentCps() * 60, currentClickPower() * 60) * goldenAmountMultiplier()
+      Math.max(100, currentCps() * 4, currentClickPower() * 4) * goldenAmountMultiplier()
     );
     showMessage(`金 +${fmt(gained)}${effectSuffix}`);
   } else {
@@ -7159,7 +7155,7 @@ function showMonster() {
     id,
     level,
     goldenChainMultiplier: state.goldenChainReady
-      ? 1 + (state.perks.goldenChain || 0) * 1.5
+      ? 1 + (state.perks.goldenChain || 0) * 2.0
       : 1,
     goldenFirstHitReady: state.goldenFirstHitReady,
     firstHitUsed: false,
@@ -7284,14 +7280,14 @@ function hitMonster(id) {
   }
 
   if (mon.goldenFirstHitReady && !mon.firstHitUsed) {
-    damage = Math.ceil(damage * (1 + (state.perks.goldenFirstHit || 0) * 2.0));
+    damage = Math.ceil(damage * (1 + (state.perks.goldenFirstHit || 0) * 2.5));
     mon.firstHitUsed = true;
   }
 
   const biteRecoveryLv = state.perks.biteRecovery || 0;
 
   if (biteRecoveryLv > 0) {
-    const rawRecovery = damage * currentClickPower() * 0.30 * biteRecoveryLv;
+    const rawRecovery = damage * currentClickPower() * 0.50 * biteRecoveryLv;
     const softLine = Math.max(1, currentCps() * 2);
 
     // 以前のようにCPSで打ち止めにせず、CPS付近から逓減しながら伸び続ける。
@@ -7331,7 +7327,7 @@ function defeatMonster(id) {
   const beastScentLv = state.perks.beastScent || 0;
 
   if (beastScentLv > 0) {
-    state.nextGoldenSpawnMultiplier *= Math.exp(-beastScentLv * 0.25);
+    state.nextGoldenSpawnMultiplier *= Math.exp(-beastScentLv * 0.30);
 
     if (!goldenVisible) {
       clearGoldenSpawnTimer();
@@ -7351,7 +7347,7 @@ function defeatMonster(id) {
   let message = focusLv > 0 ? "狩猟集中成功：報酬Lv+1" : "撃破";
 
   if (mutationLv > 0 && goldenBoostActive()) {
-    const chance = 1 - Math.exp(-(0.20 + mutationLv * 0.04));
+    const chance = 1 - Math.exp(-(0.5 + mutationLv * 0.1));
 
     if (Math.random() < chance) {
       state.nextRewardCountBonus += 1;
@@ -7383,7 +7379,7 @@ function upgradeRewardDesc(u, count) {
 }
 
 function buildMonsterRewardChoices(level) {
-  const baseCount = 1 + Math.floor(level / 26);
+  const baseCount = 1 + Math.floor(level / 18);
   const deepPursuitBonus = deepPursuitRewardBonus();
   const penalty = Math.max(0, state.huntFocusRewardPenalty || 0);
   const count = Math.max(
@@ -7479,7 +7475,7 @@ function rewardPreviewText(choice) {
 
   if (choice.id === "goldenAmount") {
     const before = goldenAmountMultiplier();
-    const after = 1 + (lvNext / (1 + lvNext / 60)) * 0.5 + skillEffect("goldenAmount");
+    const after = 1 + (lvNext / (1 + lvNext / 45)) * 0.45 + skillEffect("goldenAmount");
 
     return `
       <div class="desc">系統：即時収入</div>
@@ -7492,7 +7488,7 @@ function rewardPreviewText(choice) {
 
   if (choice.id === "monsterDamage") {
     const before = monsterDamageMultiplier();
-    const after = before + choice.count * 1.0;
+    const after = before + choice.count * 4.5;
 
     return `
       <div class="desc">系統：討伐火力</div>
@@ -7555,7 +7551,7 @@ function rewardPreviewText(choice) {
   if (choice.id === "deepPursuit") {
     const spawnNext = Math.exp(-lvNext * 0.045);
     const hpNext = Math.pow(1.035, lvNext);
-    const rewardNext = Math.pow(1.15, lvNext);
+    const rewardNext = Math.pow(1.6, lvNext);
 
     return `
       <div class="desc">系統：高リスク狩猟</div>
