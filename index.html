@@ -65,11 +65,15 @@
 
     body {
       padding: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     body.skillChoiceMode,
     body.titleScreenMode {
       padding: 0;
+      display: block;
     }
 
     body.skillChoiceMode .game,
@@ -88,12 +92,17 @@
     }
 
     .game {
-      max-width: 430px;
-      height: calc(100dvh - 16px);
+      /* どの端末でも縦横比を390:844に固定し、余った領域はレターボックスにする。
+         幅・高さの両方を明示計算し、中身のmin-widthに比率を崩されないようにする */
+      height: min(calc(100dvh - 16px), calc((100vw - 16px) * 844 / 390));
+      width: min(calc(100vw - 16px), calc((100dvh - 16px) * 390 / 844));
+      max-width: none;
       margin: auto;
       display: flex;
       flex-direction: column;
       min-height: 0;
+      min-width: 0;
+      flex: 0 0 auto;
     }
 
     .top {
@@ -1021,16 +1030,14 @@
       box-shadow: 0 0 34px 10px rgba(37,155,255,0.14);
     }
 
+    /* ズーム操作列。以前はマップ上に重なるオーバーレイで、マップ上端のノードを
+       隠してしまっていたため、マップの外(上)の独立した列に変更 */
     .skillFloatingControls {
-      position: sticky;
-      top: 8px;
-      left: 8px;
-      z-index: 25;
-      width: max-content;
+      flex: 0 0 auto;
       display: flex;
       gap: 6px;
-      padding: 8px;
-      pointer-events: none;
+      margin-top: 8px;
+      justify-content: flex-start;
     }
 
     .skillFloatingControls button {
@@ -1072,9 +1079,9 @@
 
     .skillMap {
       position: relative;
-      width: 2000px;
+      width: 2120px;
       height: 3320px;
-      min-width: 2000px;
+      min-width: 2120px;
       min-height: 3320px;
       transform-origin: 0 0;
       background:
@@ -1112,7 +1119,7 @@
     .skillLines {
       position: absolute;
       inset: 0;
-      width: 2000px;
+      width: 2120px;
       height: 3320px;
       pointer-events: none;
       z-index: 2;
@@ -1121,28 +1128,30 @@
 
     .skillLine {
       --branch-color: rgba(120, 185, 255, 0.74);
+      fill: none;
       stroke: var(--branch-color);
-      stroke-width: 3.2;
+      stroke-width: 2.4;
       stroke-linecap: round;
-      opacity: 0.34;
-      stroke-dasharray: 10 14;
-      animation: electricDash 1.45s linear infinite;
-      filter: drop-shadow(0 0 3px var(--branch-color));
+      /* 未解放先への線はうっすら見せるだけにして、画面全体が線だらけにならないようにする */
+      opacity: 0.14;
+      stroke-dasharray: 4 10;
     }
 
     .skillLine.done {
-      opacity: 0.98;
-      stroke-width: 4.6;
-      stroke-dasharray: 16 8;
-      filter:
-        drop-shadow(0 0 4px var(--branch-color))
-        drop-shadow(0 0 10px var(--branch-color));
+      /* 取得済み同士の線は落ち着いた流れ。ゆっくり流れて「開通済み」を表す */
+      opacity: 0.46;
+      stroke-width: 3;
+      stroke-dasharray: 14 10;
+      animation: electricDash 3.8s linear infinite;
+      filter: drop-shadow(0 0 3px var(--branch-color));
     }
 
     .skillLine.ready {
-      opacity: 0.88;
-      stroke-width: 4.2;
+      /* 次に取れるスキルへの線だけを明るく速く光らせ、進む先を目立たせる */
+      opacity: 0.95;
+      stroke-width: 4.4;
       stroke-dasharray: 8 7;
+      animation: electricDash 0.9s linear infinite;
       filter:
         drop-shadow(0 0 5px var(--branch-color))
         drop-shadow(0 0 12px var(--branch-color));
@@ -1218,13 +1227,35 @@
     }
 
     .skillNode.selected {
+      z-index: 8;
+      transform: translate(-50%, -50%) scale(1.16);
+      border-color: rgba(255, 255, 255, 0.96);
       outline: 3px solid rgba(255,255,255,0.92);
       outline-offset: 4px;
       box-shadow:
-        inset 0 0 14px rgba(var(--branch-rgb),0.26),
-        0 0 16px rgba(255,255,255,0.50),
-        0 0 28px rgba(var(--branch-rgb),0.55),
+        inset 0 0 14px rgba(var(--branch-rgb),0.34),
+        0 0 22px rgba(255,255,255,0.65),
+        0 0 44px rgba(var(--branch-rgb),0.75),
         0 12px 26px rgba(0,0,0,0.55);
+      animation: selectedBreath 1.15s ease-in-out infinite alternate;
+    }
+
+    /* 選択中ノードの周囲を回る白いリング */
+    .skillNode.selected::after {
+      inset: -15px;
+      background: conic-gradient(
+        from 0deg,
+        rgba(255,255,255,0.95), transparent 22%,
+        rgba(255,255,255,0.85) 50%, transparent 72%,
+        rgba(255,255,255,0.95) 100%
+      );
+      opacity: 0.85;
+      animation: nodeSpin 2.2s linear infinite;
+    }
+
+    @keyframes selectedBreath {
+      from { filter: brightness(1); }
+      to { filter: brightness(1.35); }
     }
 
     .skillNode.done {
@@ -1324,8 +1355,11 @@
     }
 
     #skillChoiceScreen.treeOnly .skillFloatingControls {
+      position: fixed;
       top: 10px;
       left: 10px;
+      z-index: 30;
+      margin: 0;
       padding: 10px;
       background: rgba(0,0,0,0.28);
       border-radius: 16px;
@@ -1524,7 +1558,8 @@
     #cookieMonster {
       border-radius: 28px;
       background: radial-gradient(circle at 50% 50%, rgba(255,119,54,0.22), transparent 68%), var(--monster-art);
-      background-size: 132% 132%;
+      background-size: contain;
+      background-repeat: no-repeat;
       background-position: center;
       box-shadow: 0 0 20px rgba(255,107,63,0.42), 0 11px 24px rgba(0,0,0,0.40), inset 0 0 14px rgba(255,214,141,0.08);
     }
@@ -1868,7 +1903,8 @@
     #cookieMonster {
       width: 112px !important;
       height: 112px !important;
-      background-size: 138% 138% !important;
+      background-size: contain !important;
+      background-repeat: no-repeat !important;
       background-position: center !important;
     }
 
@@ -2124,7 +2160,8 @@
       width: 118px !important;
       height: 118px !important;
       background: var(--monster-art) !important;
-      background-size: 146% 146% !important;
+      background-size: contain !important;
+      background-repeat: no-repeat !important;
       background-position: center !important;
     }
 
@@ -2502,7 +2539,8 @@
       border: none;
       border-radius: 28px;
       background: var(--monster-art);
-      background-size: 146% 146%;
+      background-size: contain;
+      background-repeat: no-repeat;
       background-position: center;
       box-shadow:
         0 0 20px rgba(255,107,63,0.42),
@@ -2581,8 +2619,9 @@
     }
 
     .tabPages {
-      flex: 0 1 40dvh !important;
-      max-height: 40dvh !important;
+      /* .gameの縦横比固定に合わせ、ビューポートではなくゲーム画面の高さ基準にする */
+      flex: 0 1 41% !important;
+      max-height: 41% !important;
       min-height: 90px !important;
     }
 
@@ -2821,6 +2860,110 @@
         0 24px 60px rgba(0, 0, 0, 0.55);
     }
 
+    .titleLogo {
+      animation: titleLogoFloat 5.2s ease-in-out infinite alternate;
+    }
+
+    @keyframes titleLogoFloat {
+      from { transform: translateY(-3px); }
+      to { transform: translateY(3px); }
+    }
+
+    /* 額縁の周囲をゆっくり流れる光の縁取り */
+    .titleScreenFrame::before {
+      content: "";
+      position: absolute;
+      inset: -2px;
+      border-radius: 24px;
+      padding: 2px;
+      background: conic-gradient(
+        from var(--title-ring-angle, 0deg),
+        transparent 0%,
+        rgba(255, 214, 130, 0.85) 8%,
+        transparent 18%,
+        transparent 50%,
+        rgba(255, 190, 90, 0.55) 58%,
+        transparent 68%
+      );
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask-composite: exclude;
+      animation: titleRingSpin 6s linear infinite;
+      pointer-events: none;
+    }
+
+    @property --title-ring-angle {
+      syntax: "<angle>";
+      initial-value: 0deg;
+      inherits: false;
+    }
+
+    @keyframes titleRingSpin {
+      to { --title-ring-angle: 360deg; }
+    }
+
+    /* ロゴ背後で回転する後光 */
+    .titleLogoHalo {
+      position: absolute;
+      left: 50%;
+      top: 86px;
+      width: 300px;
+      height: 300px;
+      margin: -150px 0 0 -150px;
+      background:
+        conic-gradient(from 0deg,
+          transparent, rgba(255, 196, 96, 0.14) 12%, transparent 24%,
+          transparent 36%, rgba(255, 214, 130, 0.10) 48%, transparent 60%,
+          transparent 72%, rgba(255, 176, 66, 0.12) 84%, transparent 96%),
+        radial-gradient(circle, rgba(255, 190, 90, 0.16), transparent 62%);
+      border-radius: 50%;
+      filter: blur(2px);
+      animation: titleHaloSpin 14s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes titleHaloSpin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* 舞い上がるクッキーの粒(かけら) */
+    .titleParticles {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      border-radius: 22px;
+      pointer-events: none;
+    }
+
+    .titleParticles span {
+      position: absolute;
+      bottom: -14px;
+      width: 8px;
+      height: 8px;
+      border-radius: 40% 60% 55% 45%;
+      background: radial-gradient(circle at 35% 30%, #ffdf9e, #c98b3f 65%, #7c4c1d);
+      box-shadow: 0 0 8px rgba(255, 196, 96, 0.55);
+      opacity: 0;
+      animation: crumbRise 5.4s linear infinite;
+    }
+
+    .titleParticles span:nth-child(1) { left: 8%; animation-delay: 0s; transform: scale(0.8); }
+    .titleParticles span:nth-child(2) { left: 22%; animation-delay: 1.3s; transform: scale(1.15); }
+    .titleParticles span:nth-child(3) { left: 37%; animation-delay: 2.6s; transform: scale(0.65); }
+    .titleParticles span:nth-child(4) { left: 55%; animation-delay: 0.8s; transform: scale(0.9); }
+    .titleParticles span:nth-child(5) { left: 68%; animation-delay: 3.4s; transform: scale(1.2); }
+    .titleParticles span:nth-child(6) { left: 81%; animation-delay: 1.9s; transform: scale(0.7); }
+    .titleParticles span:nth-child(7) { left: 92%; animation-delay: 4.2s; transform: scale(1.0); }
+    .titleParticles span:nth-child(8) { left: 46%; animation-delay: 4.8s; transform: scale(0.55); }
+
+    @keyframes crumbRise {
+      0% { opacity: 0; transform: translateY(0) rotate(0deg); }
+      12% { opacity: 0.9; }
+      82% { opacity: 0.55; }
+      100% { opacity: 0; transform: translateY(-430px) rotate(300deg); }
+    }
+
     .titleOrnament {
       color: rgba(255, 211, 138, 0.55);
       font-size: 13px;
@@ -2843,13 +2986,25 @@
     .titleLogoSub {
       display: block;
       font-weight: 900;
-      background: linear-gradient(180deg, #fff6df 0%, #ffd889 38%, #e8a545 68%, #b9752a 100%);
+      background: linear-gradient(
+        105deg,
+        #fff6df 0%, #ffd889 20%, #e8a545 38%, #b9752a 50%,
+        #fff8e6 58%, #b9752a 66%,
+        #e8a545 78%, #ffd889 90%, #fff6df 100%
+      );
+      background-size: 240% 100%;
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
       filter:
         drop-shadow(0 0 14px rgba(255, 194, 92, 0.55))
         drop-shadow(0 3px 2px rgba(0, 0, 0, 0.65));
+      animation: logoSheen 4.6s ease-in-out infinite;
+    }
+
+    @keyframes logoSheen {
+      0%, 55% { background-position: 120% 0; }
+      85%, 100% { background-position: -60% 0; }
     }
 
     .titleLogoMain {
@@ -2889,6 +3044,8 @@
     }
 
     .titleStartBtn {
+      position: relative;
+      overflow: hidden;
       border: 1px solid rgba(255, 224, 158, 0.55);
       background: linear-gradient(180deg, rgba(255, 200, 105, 0.98), rgba(180, 100, 30, 0.98));
       color: #2a1608;
@@ -2896,6 +3053,31 @@
         inset 0 1px 0 rgba(255, 246, 214, 0.55),
         0 0 22px rgba(255, 180, 70, 0.30),
         0 10px 20px rgba(0, 0, 0, 0.35);
+      animation: startGlow 2.4s ease-in-out infinite alternate;
+    }
+
+    @keyframes startGlow {
+      from { box-shadow: inset 0 1px 0 rgba(255,246,214,0.55), 0 0 14px rgba(255,180,70,0.24), 0 10px 20px rgba(0,0,0,0.35); }
+      to { box-shadow: inset 0 1px 0 rgba(255,246,214,0.55), 0 0 34px rgba(255,190,80,0.55), 0 10px 20px rgba(0,0,0,0.35); }
+    }
+
+    /* ボタン表面を走る光 */
+    .titleStartBtn::after {
+      content: "";
+      position: absolute;
+      top: -40%;
+      bottom: -40%;
+      left: -30%;
+      width: 34px;
+      background: linear-gradient(105deg, transparent, rgba(255, 252, 235, 0.75), transparent);
+      transform: skewX(-18deg);
+      animation: startSweep 3.2s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes startSweep {
+      0%, 55% { left: -30%; }
+      85%, 100% { left: 120%; }
     }
 
     .titleStartBtn:active {
@@ -2979,6 +3161,384 @@
       padding-right: 2px;
     }
 
+    /* ===== タップの視覚フィードバック ===== */
+    /* addTapがpointerdown時にpressedクラスを付ける。:activeも併用して確実に反応させる */
+    button {
+      transition: transform 0.08s ease, filter 0.12s ease;
+    }
+
+    button.pressed,
+    button:active {
+      transform: scale(0.94);
+      filter: brightness(0.72) saturate(1.05);
+    }
+
+    #cookie.pressed,
+    #cookie:active {
+      transform: scale(0.90);
+      filter: brightness(0.96);
+    }
+
+    .skillNode.pressed,
+    .skillNode:active {
+      transform: translate(-50%, -50%) scale(0.92);
+      filter: brightness(0.78);
+    }
+
+    .tabPageHead.pressed {
+      filter: brightness(0.8);
+    }
+
+    /* ===== 演出アニメーション ===== */
+    /* タップで得たクッキーの浮遊数字：ふわっと膨らんで舞い上がる */
+    .float {
+      animation: riseFancy 0.62s cubic-bezier(0.18, 0.72, 0.32, 1) forwards;
+    }
+
+    @keyframes riseFancy {
+      0% { opacity: 0; transform: translate(-50%, 6px) scale(0.6); }
+      18% { opacity: 1; transform: translate(-50%, -6px) scale(1.18); }
+      100% { opacity: 0; transform: translate(-50%, -54px) scale(0.92); }
+    }
+
+    /* タブ切り替え時にページがふわっと現れる */
+    .tabPage.active {
+      animation: tabFadeIn 0.20s ease-out;
+    }
+
+    @keyframes tabFadeIn {
+      from { opacity: 0.25; transform: translateY(7px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 報酬モーダルの登場演出 */
+    #rewardModal .rewardPanel {
+      animation: rewardPop 0.34s cubic-bezier(0.2, 1.4, 0.4, 1);
+    }
+
+    @keyframes rewardPop {
+      from { opacity: 0; transform: scale(0.82) translateY(16px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    /* モンスター被弾時の振動 */
+    .monsterInstance.hit {
+      animation: monsterShake 0.16s linear;
+    }
+
+    @keyframes monsterShake {
+      0% { margin-left: 0; }
+      25% { margin-left: -5px; }
+      50% { margin-left: 5px; }
+      75% { margin-left: -3px; }
+      100% { margin-left: 0; }
+    }
+
+    /* ===== 強化の複数購入バー ===== */
+    .buyModeBar {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      margin-bottom: 6px;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.22);
+      border: 1px solid rgba(255, 213, 138, 0.18);
+    }
+
+    .buyModeLabel {
+      font-size: 11px;
+      color: var(--sub);
+      font-weight: 800;
+      flex: 0 0 auto;
+    }
+
+    .buyModeBtn {
+      flex: 1 1 auto;
+      padding: 7px 4px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 213, 138, 0.34);
+      background: linear-gradient(180deg, rgba(64, 40, 24, 0.95), rgba(34, 20, 11, 0.97));
+      color: #e8cfa4;
+      font-size: 12px;
+      font-weight: 900;
+      box-shadow: inset 0 1px 0 rgba(255, 232, 168, 0.08), 0 2px 6px rgba(0, 0, 0, 0.3);
+      touch-action: manipulation;
+    }
+
+    .buyModeBtn.active {
+      background: linear-gradient(180deg, rgba(255, 200, 105, 0.95), rgba(180, 100, 30, 0.95));
+      border-color: rgba(255, 224, 158, 0.6);
+      color: #2a1608;
+      box-shadow: 0 0 10px rgba(255, 180, 70, 0.35);
+    }
+
+    /* 購入成功時のきらめき */
+    .item.justBought {
+      animation: buyFlash 0.42s ease-out;
+    }
+
+    @keyframes buyFlash {
+      0% { filter: brightness(1.9) saturate(1.4); }
+      100% { filter: brightness(1) saturate(1); }
+    }
+
+    /* ===== クッキーのタップ演出 ===== */
+    #cookie.tapped {
+      animation: cookieSquash 0.20s cubic-bezier(0.3, 1.6, 0.5, 1);
+    }
+
+    @keyframes cookieSquash {
+      0% { transform: scale(0.90, 0.94); }
+      55% { transform: scale(1.05, 1.02); }
+      100% { transform: scale(1); }
+    }
+
+    /* 会心タップは通常と違う専用演出(大きく弾んで金色に光る) */
+    #cookie.critTapped {
+      animation: cookieCrit 0.34s cubic-bezier(0.3, 1.6, 0.5, 1);
+    }
+
+    @keyframes cookieCrit {
+      0% { transform: scale(0.86); filter: brightness(1.7) saturate(1.4) drop-shadow(0 0 26px rgba(255,196,80,0.9)); }
+      45% { transform: scale(1.12); filter: brightness(1.35) saturate(1.2) drop-shadow(0 0 18px rgba(255,196,80,0.7)); }
+      100% { transform: scale(1); filter: none; }
+    }
+
+    .critRing {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 60px;
+      height: 60px;
+      margin: -30px 0 0 -30px;
+      border-radius: 50%;
+      border: 3px solid rgba(255, 214, 120, 0.95);
+      box-shadow: 0 0 18px rgba(255,190,80,0.8), inset 0 0 12px rgba(255,190,80,0.5);
+      pointer-events: none;
+      animation: critRingBoom 0.6s ease-out forwards;
+      z-index: 5;
+    }
+
+    @keyframes critRingBoom {
+      0% { transform: scale(0.5); opacity: 1; }
+      100% { transform: scale(3.1); opacity: 0; }
+    }
+
+    .float.critFloat {
+      font-size: 25px;
+      color: #ffd76e;
+      text-shadow: 0 0 12px rgba(255,170,40,0.85), 0 2px 3px rgba(0,0,0,0.5);
+      animation: critRise 0.85s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
+    }
+
+    @keyframes critRise {
+      0% { opacity: 0; transform: translate(-50%, 8px) scale(0.5) rotate(-6deg); }
+      16% { opacity: 1; transform: translate(-50%, -10px) scale(1.35) rotate(3deg); }
+      100% { opacity: 0; transform: translate(-50%, -72px) scale(1.0) rotate(0deg); }
+    }
+
+    .tapCrumb {
+      position: absolute;
+      left: 50%;
+      top: 45%;
+      width: 7px;
+      height: 7px;
+      border-radius: 40% 60% 55% 45%;
+      background: radial-gradient(circle at 35% 30%, #ffdf9e, #c98b3f 65%, #7c4c1d);
+      pointer-events: none;
+      animation: crumbFly 0.65s ease-out forwards;
+    }
+
+    .tapCrumb.critCrumb {
+      width: 9px;
+      height: 9px;
+      background: radial-gradient(circle at 35% 30%, #fff2c4, #ffbf58 60%, #a86420);
+      box-shadow: 0 0 8px rgba(255,196,96,0.8);
+    }
+
+    @keyframes crumbFly {
+      0% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0); }
+      100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.55) rotate(150deg); }
+    }
+
+    /* ===== ノルマ層の上昇・下降演出 ===== */
+    #quotaBox.layerUp {
+      animation: layerUp 0.9s ease-out;
+    }
+
+    @keyframes layerUp {
+      0% { filter: brightness(1); transform: scale(1); }
+      22% { filter: brightness(1.9) saturate(1.35) drop-shadow(0 0 18px rgba(255,214,120,0.85)); transform: scale(1.035); }
+      100% { filter: brightness(1); transform: scale(1); }
+    }
+
+    #quotaBox.layerDown {
+      animation: layerDown 0.9s ease-out;
+    }
+
+    @keyframes layerDown {
+      0% { filter: brightness(1); transform: translateY(0); }
+      25% { filter: brightness(0.55) saturate(0.6) drop-shadow(0 0 14px rgba(255,70,60,0.65)); transform: translateY(5px); }
+      100% { filter: brightness(1); transform: translateY(0); }
+    }
+
+    /* ===== 転生時の画面転移 ===== */
+    #transitionFx {
+      position: fixed;
+      inset: 0;
+      z-index: 12000;
+      pointer-events: none;
+      opacity: 0;
+      background:
+        radial-gradient(circle at 50% 46%, rgba(255,238,190,0.95), rgba(255,196,96,0.85) 34%, rgba(120,70,20,0.85) 70%, rgba(20,10,4,0.95) 100%);
+    }
+
+    #transitionFx.active {
+      animation: screenFlash 0.72s ease-in-out;
+    }
+
+    @keyframes screenFlash {
+      0% { opacity: 0; }
+      38% { opacity: 1; }
+      62% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    #skillChoiceScreen.active {
+      animation: screenEnter 0.5s ease-out;
+    }
+
+    @keyframes screenEnter {
+      from { opacity: 0; transform: scale(1.03); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* ===== 設定 ===== */
+    #settingsBtn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 40;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,213,138,0.4);
+      background: linear-gradient(180deg, rgba(64,40,24,0.92), rgba(30,18,10,0.95));
+      color: #ffd88a;
+      font-size: 17px;
+      touch-action: manipulation;
+    }
+
+    .settingsOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 11000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(4,2,1,0.72);
+      backdrop-filter: blur(3px);
+    }
+
+    .settingsOverlay.active {
+      display: flex;
+    }
+
+    .settingsPanel {
+      width: min(420px, 100%);
+      max-height: 86dvh;
+      overflow-y: auto;
+      border-radius: 18px;
+      padding: 16px;
+      background: linear-gradient(165deg, rgba(52,33,18,0.98), rgba(16,9,5,0.99));
+      border: 1px solid rgba(255,213,138,0.30);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.55);
+      text-align: left;
+      animation: rewardPop 0.30s cubic-bezier(0.2, 1.4, 0.4, 1);
+    }
+
+    .settingsHead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .settingsHead h2 {
+      margin: 0;
+    }
+
+    .settingRow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 4px;
+      border-top: 1px solid rgba(255,213,138,0.14);
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .settingRow input[type="range"] {
+      flex: 1 1 auto;
+      max-width: 46%;
+      accent-color: #ffb658;
+    }
+
+    .settingRow input[type="checkbox"] {
+      transform: scale(1.3);
+      accent-color: #ffb658;
+    }
+
+    .settingRow .settingVal {
+      min-width: 30px;
+      text-align: right;
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    /* ===== 設定による省略・軽量化 ===== */
+    body.artOff .artCard::before {
+      opacity: 0 !important;
+    }
+
+    body.compactCards #shop .item .desc,
+    body.compactCards #research .item .desc {
+      display: none;
+    }
+
+    body.fxOff .titleParticles,
+    body.fxOff .titleLogoHalo,
+    body.fxOff .titleScreenFrame::before,
+    body.fxOff .critRing,
+    body.fxOff .tapCrumb {
+      display: none !important;
+    }
+
+    body.fxOff .titleLogo,
+    body.fxOff .titleLogoMain,
+    body.fxOff .titleLogoSub,
+    body.fxOff .titleStartBtn,
+    body.fxOff .titleStartBtn::after,
+    body.fxOff .skillNode::before,
+    body.fxOff .skillNode::after,
+    body.fxOff .skillLine,
+    body.fxOff .tabPage.active,
+    body.fxOff #rewardModal .rewardPanel,
+    body.fxOff .item.justBought,
+    body.fxOff .monsterInstance.hit,
+    body.fxOff #quotaBox.layerUp,
+    body.fxOff #quotaBox.layerDown,
+    body.fxOff #skillChoiceScreen.active,
+    body.fxOff #transitionFx.active,
+    body.fxOff #cookie.tapped,
+    body.fxOff #cookie.critTapped {
+      animation: none !important;
+    }
+
   </style>
 </head>
 
@@ -2986,6 +3546,12 @@
 
 <section id="titleScreen" class="titleScreen">
   <div class="titleScreenFrame">
+    <div class="titleParticles" aria-hidden="true">
+      <span></span><span></span><span></span><span></span>
+      <span></span><span></span><span></span><span></span>
+    </div>
+    <div class="titleLogoHalo" aria-hidden="true"></div>
+
     <div class="titleOrnament" aria-hidden="true">❖ ✦ ❖</div>
 
     <h1 class="titleLogo">
@@ -3047,8 +3613,26 @@
   </div>
 </section>
 
+<div id="transitionFx" aria-hidden="true"></div>
+
+<div id="settingsOverlay" class="settingsOverlay">
+  <div class="settingsPanel">
+    <div class="settingsHead">
+      <h2>設定</h2>
+      <button id="settingsCloseBtn" type="button" class="titleAboutCloseBtn" aria-label="閉じる">✕</button>
+    </div>
+    <div class="settingRow">効果音の音量<input type="range" id="setSeVol" min="0" max="100" step="5"><span class="settingVal" id="setSeVolVal">100</span></div>
+    <div class="settingRow">BGMの音量<input type="range" id="setBgmVol" min="0" max="100" step="5"><span class="settingVal" id="setBgmVolVal">35</span></div>
+    <div class="settingRow">タップ演出(数字・かけら)<input type="checkbox" id="setTapFx"></div>
+    <div class="settingRow">画面の装飾アニメーション<input type="checkbox" id="setFancyFx"></div>
+    <div class="settingRow">カードの画像表示<input type="checkbox" id="setCardArt"></div>
+    <div class="settingRow">カードの説明を省略表示<input type="checkbox" id="setCompact"></div>
+  </div>
+</div>
+
 <main class="game">
   <section class="top">
+    <button id="settingsBtn" type="button" aria-label="設定">⚙</button>
 
     <div class="cookieCount">
       <span id="cookies">0</span>
@@ -3094,6 +3678,13 @@
     <section id="shopTab" class="tabPage active">
       <div class="tabPageHead" data-full-target="shopTab">
         <h2>強化</h2>
+      </div>
+      <div id="buyModeBar" class="buyModeBar">
+        <span class="buyModeLabel">購入数</span>
+        <button type="button" class="buyModeBtn active" data-buymode="1">×1</button>
+        <button type="button" class="buyModeBtn" data-buymode="10">×10</button>
+        <button type="button" class="buyModeBtn" data-buymode="100">×100</button>
+        <button type="button" class="buyModeBtn" data-buymode="max">MAX</button>
       </div>
       <div id="shop" class="pageScroll"></div>
     </section>
@@ -3148,13 +3739,13 @@
       </div>
     </div>
 
+    <div class="skillFloatingControls">
+      <button id="skillZoomOutBtn" type="button" aria-label="縮小">－</button>
+      <button id="skillZoomResetBtn" type="button" aria-label="倍率リセット">100%</button>
+      <button id="skillZoomInBtn" type="button" aria-label="拡大">＋</button>
+      <button id="skillTreeOnlyBtn" type="button" aria-label="スキルツリーのみ全画面">全画面</button>
+    </div>
     <div class="skillMapFrame">
-      <div class="skillFloatingControls">
-        <button id="skillZoomOutBtn" type="button" aria-label="縮小">－</button>
-        <button id="skillZoomResetBtn" type="button" aria-label="倍率リセット">100%</button>
-        <button id="skillZoomInBtn" type="button" aria-label="拡大">＋</button>
-        <button id="skillTreeOnlyBtn" type="button" aria-label="スキルツリーのみ全画面">全画面</button>
-      </div>
       <div id="skillMapStage" class="skillMapStage">
         <div id="skillMap" class="skillMap"></div>
       </div>
@@ -3327,13 +3918,13 @@ const UPGRADES = [
 
 const RESEARCH = [
   // 序盤は体感しやすい研究。研究改造室以降は、設備ごとの特殊効果を一つずつ広げる。
-  { id: "fingerTechnique", name: "指先の型", cost: 30000, detail: "会心率は強い指数で上がり、会心倍率はlogで永久に伸びる。", desc: "タップ時、会心が発生するようになる。強い指が多いほど会心率と会心倍率が伸びる" },
-  { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 120000, detail: "おばあちゃん数の平方根で、強い指・オーブン・工場を補助する。", desc: "おばあちゃんが強い指・オーブン・工場を支援する" },
-  { id: "ovenBatch", name: "オーブン大量焼成", cost: 300000, detail: "現在ノルマ層が高いほど、オーブン倍率がlogで伸びる。", desc: "ノルマ層が進んでいる周回ほどオーブンが安定して強くなる" },
+  { id: "fingerTechnique", name: "指先の型", cost: 30000, detail: "会心率は強い指の数で上がる。会心倍率は上限なく伸び続けるが、伸び方はだんだん緩やかになる。", desc: "タップ時、会心が発生するようになる。強い指が多いほど会心率と会心倍率が伸びる" },
+  { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 120000, detail: "おばあちゃんの数が多いほど強い指・オーブン・工場を補助する。数が増えるほど1人あたりの効果は小さくなる。", desc: "おばあちゃんが強い指・オーブン・工場を支援する" },
+  { id: "ovenBatch", name: "オーブン大量焼成", cost: 300000, detail: "現在のノルマ層が高いほどオーブン倍率が上がる。層が進むほど1層あたりの伸びは緩やかになる。", desc: "ノルマ層が進んでいる周回ほどオーブンが安定して強くなる" },
   { id: "factoryNetwork", name: "工場ネットワーク", cost: 1600000, advanced: true, skill: "research_factory", detail: "強い指・おばあちゃん・オーブンの所持数と工場数で、工場倍率が伸びる。", desc: "強い指・おばあちゃん・オーブンの所持数に応じて工場が強化される" },
-  { id: "spiceBlend", name: "香料調合", cost: 8000000, advanced: true, skill: "research_spice", detail: "金クッキー取得後しばらく香料棚が強化される。金色型と自動型をつなぐ研究。", desc: "金クッキー取得後、一定時間だけ香料棚の生産倍率が上がる" },
+  { id: "spiceBlend", name: "香料調合", cost: 8000000, advanced: true, skill: "research_spice", detail: "金クッキー取得後しばらく香料棚が強化される。", desc: "金クッキー取得後、一定時間だけ香料棚の生産倍率が上がる" },
   { id: "portalNetwork", name: "異世界接続網", cost: 24000000, advanced: true, skill: "research_portal", detail: "金クッキー取得後、異世界クッキー炉の数に応じて一定時間モンスター出現間隔を短縮する。", desc: "金クッキー取得後、一定時間だけモンスター出現が少し早くなる" },
-  { id: "bankClickDividend", name: "銀行クリック配当", cost: 80000000, advanced: true, skill: "research_bank", detail: "銀行数と所持クッキー量でクリックが強くなる。買うか貯めるかの判断材料になる。", desc: "銀行数と所持クッキー量に応じてクリックが強化される" },
+  { id: "bankClickDividend", name: "銀行クリック配当", cost: 80000000, advanced: true, skill: "research_bank", detail: "銀行数と所持クッキー量が多いほどクリックが強くなる。", desc: "銀行数と所持クッキー量に応じてクリックが強化される" },
   { id: "moonGlobalYeast", name: "月面発酵", cost: 800000000, advanced: true, skill: "research_moon", detail: "第3層以降のノルマ層と月面ベーカリー数に応じて全体生産が伸び、ノルマ上昇も少し抑える。", desc: "ノルマ第3層以降で全体生産が少し伸び、ノルマ上昇も少し抑える" },
   { id: "portalGlobalFold", name: "異世界増幅", cost: 8000000000, advanced: true, skill: "research_portalGlobal", detail: "異世界炉数、金ブースト、出現中モンスター数に応じて全体生産が伸びる。", desc: "異世界炉・金ブースト・モンスター数がかみ合うほど全体生産が伸びる" },
   { id: "galaxyAssembly", name: "銀河分業", cost: 120000000000, advanced: true, skill: "research_galaxy", detail: "所持している設備種類数と銀河工場数に応じて銀河工場倍率が伸びる。", desc: "所持設備の種類数が多いほど銀河工場が強くなる" },
@@ -3343,27 +3934,27 @@ const RESEARCH = [
 ].sort((a, b) => a.cost - b.cost);
 
 const REWARD_POOL = [
-  { id: "goldenRate", name: "金クッキー出現率アップ", category: "golden", desc: n => `金クッキー出現間隔を指数式で短縮 Lv.${n}` },
-  { id: "goldenPower", name: "金ブースト倍率アップ", category: "golden", desc: n => `金ブースト倍率 +${(0.25 * n / (1 + n / 60)).toFixed(2)}(逓減式)、ブースト時間も逓減式で延長` },
-  { id: "goldenAmount", name: "金クッキー獲得量アップ", category: "golden", desc: n => `金クッキー即時獲得量 +${Math.round(45 * n / (1 + n / 45))}%(逓減式)、ブースト時間も延長` },
+  { id: "goldenRate", name: "金クッキー出現率アップ", category: "golden", desc: n => `金クッキーの出現間隔を短縮。取るたびにさらに短くなる Lv.${n}` },
+  { id: "goldenPower", name: "金ブースト倍率アップ", category: "golden", desc: n => `金ブースト倍率 +${(0.25 * n / (1 + n / 60)).toFixed(2)}、ブースト時間も延長(どちらも重ねるほど1回分の伸びは緩やか)` },
+  { id: "goldenAmount", name: "金クッキー獲得量アップ", category: "golden", desc: n => `金クッキー即時獲得量 +${Math.round(45 * n / (1 + n / 45))}%、ブースト時間も延長(重ねるほど1回分の伸びは緩やか)` },
   { id: "monsterDamage", name: "対モンスターダメージアップ", category: "hunt", desc: n => `モンスターへの最終ダメージ +${450 * n}%相当` },
-  { id: "monsterRate", name: "モンスター出現率アップ", category: "hunt", desc: n => `モンスター出現間隔を指数式で短縮 Lv.${n}` },
+  { id: "monsterRate", name: "モンスター出現率アップ", category: "hunt", desc: n => `モンスターの出現間隔を短縮。取るたびにさらに短くなる Lv.${n}` },
   { id: "monsterStay", name: "濃い餌", category: "hunt", desc: n => `モンスター滞在時間が伸びる Lv.${n}` },
 
   { id: "goldenChain", name: "黄金連鎖", category: "golden", unlockSkill: "unlock_reward_goldenChain", desc: n => `金クッキー取得後、次のモンスターへのダメージ +${200 * n}%` },
   { id: "crackedFang", name: "割れた牙", category: "hunt", unlockSkill: "unlock_reward_crackedFang", desc: n => `モンスターへのダメージ +${450 * n}%` },
-  { id: "chainPrep", name: "連戦準備", category: "risk", unlockSkill: "unlock_reward_chainPrep", desc: n => `撃破後、次のモンスター出現を指数式で短縮。ただし次のHPも増加 Lv.${n}` },
+  { id: "chainPrep", name: "連戦準備", category: "risk", unlockSkill: "unlock_reward_chainPrep", desc: n => `撃破後、次のモンスターがすぐ出るようになる。ただし次のHPも増加 Lv.${n}` },
   { id: "huntFocus", name: "狩猟集中", category: "risk", unlockSkill: "unlock_reward_huntFocus", desc: n => `次のモンスターへのダメージが大きく上がる。成功で報酬Lv+1、失敗で次HP低下・報酬Lv-1 Lv.${n}` },
   { id: "goldenTarget", name: "金色標的", category: "golden", unlockSkill: "unlock_reward_goldenTarget", desc: n => `金ブースト中、モンスターへのダメージ +${220 * n}%` },
   { id: "goldenFirstHit", name: "金粉の初撃", category: "golden", unlockSkill: "unlock_reward_goldenFirstHit", desc: n => `金クッキー取得後、次のモンスターへの初撃ダメージ +${250 * n}%` },
-  { id: "beastScent", name: "獣の嗅覚", category: "golden", unlockSkill: "unlock_reward_beastScent", desc: n => `モンスター撃破後、次の金クッキー出現を指数式で短縮 Lv.${n}` },
+  { id: "beastScent", name: "獣の嗅覚", category: "golden", unlockSkill: "unlock_reward_beastScent", desc: n => `モンスター撃破後、次の金クッキーが早く出る Lv.${n}` },
   { id: "beastHeatFerment", name: "獣熱発酵", category: "hunt", unlockSkill: "unlock_reward_beastHeatFerment", desc: n => `モンスター撃破数に応じて全生産上昇。撃破1体ごとに +${(5.0 * n).toFixed(1)}%` },
   { id: "biteRecovery", name: "甘噛み回収", category: "hunt", unlockSkill: "unlock_reward_biteRecovery", desc: n => `モンスターにダメージを与えるたび、少量のクッキーを獲得` },
   { id: "crushedMill", name: "砕粉ミル", category: "equipment", unlockSkill: "unlock_reward_crushedMill", desc: n => `設備個別強化の効果 +${150 * n}%` },
   { id: "huntingCore", name: "狩猟炉心", category: "hunt", unlockSkill: "unlock_reward_huntingCore", desc: n => `モンスター撃破数に応じて毎秒生産上昇。撃破1体ごとに +${(20 * n).toFixed(1)}%` },
   { id: "brandHunt", name: "焼き印狩り", category: "hunt", unlockSkill: "unlock_reward_brandHunt", desc: n => `タップ系設備の所持数に応じてモンスターダメージ上昇` },
   { id: "deepPursuit", name: "深追いの契約", category: "risk", unlockSkill: "unlock_reward_deepPursuit", desc: n => `モンスター出現が速くなり、HPも上がるが、報酬Lvも増えやすくなる Lv.${n}` },
-  { id: "goldenBeastMutation", name: "金獣変異", category: "risk", unlockSkill: "unlock_reward_goldenBeastMutation", desc: n => `金ブースト中の撃破時、逓減式の確率で報酬Lv +1` }
+  { id: "goldenBeastMutation", name: "金獣変異", category: "risk", unlockSkill: "unlock_reward_goldenBeastMutation", desc: n => `金ブースト中の撃破時、確率で報酬Lv +1(重ねるほど確率の上がり方は緩やか)` }
 ];
 
 const SKILL_GROUPS = {
@@ -3384,10 +3975,11 @@ const SKILL_GROUPS = {
 // 上(負の座標)に配置されるノードが出現して届かなくなるため、全ノードを
 // 一律で下にずらして必ずキャンバス内に収める
 const SKILL_MAP_Y_OFFSET = 220;
+const SKILL_MAP_X_OFFSET = 60;
 
 const SKILL_NODES = [
   // 座標規則：中央x=1000。左側はタップ/金色、右側は自動/怪物、上側は研究/設備、下側は報酬/周回。各列は原則x=200刻み、各段はy=140〜160刻み。
-  { id: "core", name: "分岐炉心", branchId: "core", cost: 15, x: 1000, y: 1120, icon: "◎", prereqs: [], desc: "転生後に周回方針を選べるようにする。スキルツリーの分岐を開く最初の特殊効果。", effects: [{ type: "unlockSystem", target: "runPolicy" }] },
+  { id: "core", name: "分岐炉心", branchId: "core", cost: 15, x: 1000, y: 1120, icon: "◎", prereqs: [], desc: "転生後に周回方針を選べるようにする。", effects: [{ type: "unlockSystem", target: "runPolicy" }] },
 
   // 左上：タップ型
   { id: "click_1", name: "会心の指", branchId: "click", cost: 337500, x: 800, y: 980, icon: "◆", prereqs: ["core"], desc: "タップ生産 +800%。会心タップ型への入口。", effects: [{ type: "click", value: 8 }] },
@@ -3439,7 +4031,7 @@ const SKILL_NODES = [
   { id: "research_analysis", name: "研究解析", branchId: "research", cost: 8.26497e63, x: 820, y: -120, icon: "⌬", prereqs: ["research_moon", "research_portal"], desc: "研究カードに現在効果・相性・弱点を表示する。経済分析も取得済みなら、強化カードの効率表示が研究効果込みになる。", effects: [{ type: "unlockSystem", target: "researchAnalysis" }] },
 
   // 下：報酬。選択肢数は有限スキルでのみ増える。
-  { id: "reward_1", name: "選択の目", branchId: "reward", cost: 1.23975e66, x: 1000, y: 1360, icon: "✧", prereqs: ["monster_4"], desc: "モンスター報酬の選択肢 +1。選択肢数を有限に増やす。", effects: [{ type: "rewardChoices", value: 1 }] },
+  { id: "reward_1", name: "選択の目", branchId: "reward", cost: 1.23975e66, x: 1000, y: 1360, icon: "✧", prereqs: ["monster_4"], desc: "モンスター報酬の選択肢 +1。", effects: [{ type: "rewardChoices", value: 1 }] },
   { id: "reward_synergy", name: "報酬系統化", branchId: "reward", cost: 2.47949e65, x: 1000, y: 1520, icon: "✧", prereqs: ["reward_1"], desc: "同じ系統の報酬を重ねるほど、系統ボーナスが発動する。", effects: [{ type: "unlockSystem", target: "rewardSynergy" }] },
   { id: "reward_choice_2", name: "選択の眼光", branchId: "reward", cost: 4.95898e64, x: 1000, y: 1680, icon: "✧", prereqs: ["reward_synergy"], desc: "モンスター報酬の選択肢 +1。選択肢増加はこの有限スキルで止める。", effects: [{ type: "rewardChoices", value: 1 }] },
   { id: "reward_2", name: "強化圧縮", branchId: "reward", cost: 2.09207e73, x: 820, y: 1680, icon: "✧", prereqs: ["reward_synergy", "research_galaxy"], desc: "アップグレード個別強化の効果 +120%。設備報酬系統の増幅先。", effects: [{ type: "upgradePerkPower", value: 1.2 }] },
@@ -3474,11 +4066,12 @@ const SKILL_NODES = [
   { id: "upgrade_antimatter", name: "反物質炉", branchId: "upgrade", cost: 4.32273e109, x: 1180, y: 2540, icon: "✹", prereqs: ["upgrade_quantum", "upgrade_singularity"], desc: "反物質オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "antimatterOven" }] },
   { id: "research_antimatter", name: "反物質配合論", branchId: "research", cost: 6.22472e113, x: 1000, y: 2700, icon: "⌬", prereqs: ["upgrade_antimatter", "research_quantum"], desc: "反物質配合研究を解放。", effects: [{ type: "unlockResearch", target: "antimatterRecipe" }] },
 
-  { id: "master_final", name: "超越体", branchId: "master", cost: 1.85869e126, x: 1000, y: 2920, icon: "✹", prereqs: ["research_antimatter", "start_2"], desc: "最終到達点。全生産 x97892530.3、タップ +20%、毎秒 +20%、報酬選択肢数の期待値 +80%。", effects: [{ type: "all", value: 97892529.28 }, { type: "click", value: 0.2 }, { type: "cps", value: 0.2 }, { type: "rewardBonus", value: 0.8 }] }
+  { id: "master_final", name: "超越体", branchId: "master", cost: 1.85869e126, x: 1000, y: 2920, icon: "✹", prereqs: ["research_antimatter", "start_2"], desc: "全生産 x97892530.3、タップ +20%、毎秒 +20%、報酬選択肢数の期待値 +80%。", effects: [{ type: "all", value: 97892529.28 }, { type: "click", value: 0.2 }, { type: "cps", value: 0.2 }, { type: "rewardBonus", value: 0.8 }] }
 ];
 
 const SKILLS = SKILL_NODES.map(skill => ({
   ...skill,
+  x: skill.x + SKILL_MAP_X_OFFSET,
   y: skill.y + SKILL_MAP_Y_OFFSET,
   branchName: SKILL_GROUPS[skill.branchId] || "スキル",
   prereqs: skill.prereqs || []
@@ -3507,7 +4100,7 @@ let activeTab = "shopTab";
 let selectedSkillId = null;
 let skillMapZoom = 0.72;
 
-const SKILL_MAP_WIDTH = 2000;
+const SKILL_MAP_WIDTH = 2120;
 const SKILL_MAP_HEIGHT = 3320;
 const SKILL_ZOOM_MIN = 0.45;
 const SKILL_ZOOM_MAX = 1.65;
@@ -3757,13 +4350,17 @@ function addTap(el, handler) {
     startY = e.clientY;
     pointerId = e.pointerId;
     moved = false;
+    el.classList.add("pressed");
   });
 
   el.addEventListener("pointermove", e => {
     if (pointerId !== e.pointerId) return;
     const dx = Math.abs(e.clientX - startX);
     const dy = Math.abs(e.clientY - startY);
-    if (dx > 12 || dy > 12) moved = true;
+    if (dx > 12 || dy > 12) {
+      moved = true;
+      el.classList.remove("pressed");
+    }
   });
 
   el.addEventListener("pointerup", e => {
@@ -3771,6 +4368,7 @@ function addTap(el, handler) {
     const dx = Math.abs(e.clientX - startX);
     const dy = Math.abs(e.clientY - startY);
     pointerId = null;
+    el.classList.remove("pressed");
     if (moved || dx > 12 || dy > 12) return;
     e.preventDefault();
     handler(e);
@@ -3779,6 +4377,7 @@ function addTap(el, handler) {
   el.addEventListener("pointercancel", () => {
     pointerId = null;
     moved = true;
+    el.classList.remove("pressed");
   });
 }
 
@@ -4655,6 +5254,7 @@ function resetRunLimitedEffects() {
   state.orderTempSpiceUntil = 0;
   state.orderTempSpiceMultiplier = 1;
   state.nextBakeGoodBias = 0;
+  lastSeenQuotaStage = null;
 }
 
 function highestOwnedUpgradeIndex() {
@@ -5138,8 +5738,8 @@ function markFeatureUnlocked(kind, id) {
   state.everFeatures[featureKey(kind, id)] = true;
 }
 
-function costOf(u) {
-  const owned = state.upgrades[u.id];
+function costOf(u, ownedOverride) {
+  const owned = ownedOverride == null ? state.upgrades[u.id] : ownedOverride;
 
   return Math.max(1, Math.floor(
     600
@@ -5147,6 +5747,33 @@ function costOf(u) {
     * Math.pow(u.growth, owned <= 5500 ? owned * 0.25 : 5500 * 0.25 + (owned - 5500) * 0.60)
     * upgradeDiscount()
   ));
+}
+
+// 選択中の購入数モード(×1/×10/×100/MAX)での購入プラン(個数と合計コスト)
+function multiBuyPlan(u) {
+  const owned = state.upgrades[u.id];
+
+  if (buyMode === "max") {
+    let n = 0;
+    let total = 0;
+
+    while (n < 1000) {
+      const c = costOf(u, owned + n);
+      if (total + c > state.cookies) break;
+      total += c;
+      n += 1;
+    }
+
+    if (n === 0) return { count: 1, totalCost: costOf(u), affordable: false, isMax: true };
+    return { count: n, totalCost: total, affordable: true, isMax: true };
+  }
+
+  const want = parseInt(buyMode, 10) || 1;
+  let total = 0;
+
+  for (let i = 0; i < want; i++) total += costOf(u, owned + i);
+
+  return { count: want, totalCost: total, affordable: state.cookies >= total, isMax: false };
 }
 
 function researchCost(r) {
@@ -5459,10 +6086,128 @@ function renderQuota() {
   `;
 }
 
+// ===== 設定(音量・演出・画像・省略表示) =====
+const SETTINGS_KEY = "cookie_game_settings_v1";
+const settings = {
+  seVolume: 100,
+  bgmVolume: 35,
+  tapFx: true,
+  fancyFx: true,
+  cardArt: true,
+  compactCards: false
+};
+
+function loadSettings() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null");
+    if (raw && typeof raw === "object") Object.assign(settings, raw);
+  } catch (e) {}
+}
+
+function saveSettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {}
+}
+
+function applySettings() {
+  document.body.classList.toggle("fxOff", !settings.fancyFx);
+  document.body.classList.toggle("artOff", !settings.cardArt);
+  document.body.classList.toggle("compactCards", settings.compactCards);
+  if (seMasterGain) seMasterGain.gain.value = Math.max(0, Math.min(1, settings.seVolume / 100));
+  if (bgmGainNode) bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.16;
+}
+
+loadSettings();
+
+// 効果音をすべてマスターゲイン経由にし、設定の音量スライダーを効かせる
+let seMasterGain = null;
+
+function seBus() {
+  if (!seMasterGain) {
+    seMasterGain = audioCtx.createGain();
+    seMasterGain.connect(audioCtx.destination);
+  }
+  seMasterGain.gain.value = Math.max(0, Math.min(1, settings.seVolume / 100));
+  return seMasterGain;
+}
+
+// ===== 主張控えめなBGM(WebAudio生成、外部ファイル不要) =====
+let bgmGainNode = null;
+let bgmFilter = null;
+let bgmTimer = null;
+let bgmStarted = false;
+let bgmStep = 0;
+
+function startBgm() {
+  if (bgmStarted) return;
+
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!audioCtx) audioCtx = new AudioContext();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+
+    bgmGainNode = audioCtx.createGain();
+    bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.16;
+    bgmFilter = audioCtx.createBiquadFilter();
+    bgmFilter.type = "lowpass";
+    bgmFilter.frequency.value = 900;
+    bgmFilter.connect(bgmGainNode);
+    bgmGainNode.connect(audioCtx.destination);
+    bgmStarted = true;
+
+    // Fメジャー・ペンタトニック系のゆったりした音を約2.4秒ごとに1音ずつ鳴らす
+    const scale = [174.61, 196.00, 220.00, 261.63, 293.66, 349.23];
+
+    bgmTimer = setInterval(() => {
+      if ((settings.bgmVolume || 0) <= 0 || document.hidden) return;
+
+      try {
+        const now = audioCtx.currentTime;
+        const freq = scale[Math.floor(Math.random() * scale.length)];
+        const len = 2.6;
+
+        [[freq, 1], [freq * 2, 0.28]].forEach(([f, amp]) => {
+          const osc = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          osc.type = "sine";
+          osc.frequency.value = f;
+          g.gain.setValueAtTime(0.0001, now);
+          g.gain.linearRampToValueAtTime(amp, now + 0.9);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + len);
+          osc.connect(g);
+          g.connect(bgmFilter);
+          osc.start(now);
+          osc.stop(now + len);
+        });
+
+        bgmStep += 1;
+
+        // 4音ごとに5度上の音を静かに重ねて厚みを出す
+        if (bgmStep % 4 === 0) {
+          const osc = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          osc.type = "triangle";
+          osc.frequency.value = freq * 1.5;
+          g.gain.setValueAtTime(0.0001, now + 0.4);
+          g.gain.linearRampToValueAtTime(0.18, now + 1.3);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + len + 0.4);
+          osc.connect(g);
+          g.connect(bgmFilter);
+          osc.start(now + 0.4);
+          osc.stop(now + len + 0.4);
+        }
+      } catch (e) {}
+    }, 2400);
+  } catch (e) {}
+}
+
+// 自動再生制限のため、最初の操作(タップ)でBGMを開始する
+document.addEventListener("pointerdown", () => { try { startBgm(); } catch (e) {} }, { once: true });
+
 function playSound(kind) {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!audioCtx) audioCtx = new AudioContext();
+    if ((settings.seVolume || 0) <= 0) return;
 
     if (kind === "cookie" || kind === "monster") {
       const duration = kind === "monster" ? 0.13 : 0.075;
@@ -5493,7 +6238,7 @@ function playSound(kind) {
 
       source.connect(filter);
       filter.connect(gain);
-      gain.connect(audioCtx.destination);
+      gain.connect(seBus());
 
       source.start();
       source.stop(audioCtx.currentTime + duration);
@@ -5514,7 +6259,7 @@ function playSound(kind) {
         gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.055 + 0.12);
 
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(seBus());
 
         osc.start(now + i * 0.055);
         osc.stop(now + i * 0.055 + 0.12);
@@ -5537,10 +6282,122 @@ function playSound(kind) {
         gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.045 + 0.16);
 
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(seBus());
 
         osc.start(now + i * 0.045);
         osc.stop(now + i * 0.045 + 0.16);
+      });
+      return;
+    }
+
+    if (kind === "tab") {
+      // タブ切り替え・UI操作の軽いクリック音
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = "square";
+      osc.frequency.setValueAtTime(950, now);
+      osc.frequency.exponentialRampToValueAtTime(620, now + 0.05);
+
+      gain.gain.setValueAtTime(0.028, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+      osc.connect(gain);
+      gain.connect(seBus());
+      osc.start(now);
+      osc.stop(now + 0.06);
+      return;
+    }
+
+    if (kind === "crit") {
+      // 会心タップ：高めの弾ける音
+      const now = audioCtx.currentTime;
+      [1500, 2100].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(freq, now + i * 0.03);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.4, now + i * 0.03 + 0.09);
+
+        gain.gain.setValueAtTime(0.06, now + i * 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.03 + 0.11);
+
+        osc.connect(gain);
+        gain.connect(seBus());
+        osc.start(now + i * 0.03);
+        osc.stop(now + i * 0.03 + 0.11);
+      });
+      return;
+    }
+
+    if (kind === "defeat") {
+      // モンスター撃破：低いドスン+勝利チャイム
+      const now = audioCtx.currentTime;
+      const thud = audioCtx.createOscillator();
+      const thudGain = audioCtx.createGain();
+
+      thud.type = "sine";
+      thud.frequency.setValueAtTime(160, now);
+      thud.frequency.exponentialRampToValueAtTime(52, now + 0.16);
+      thudGain.gain.setValueAtTime(0.16, now);
+      thudGain.gain.exponentialRampToValueAtTime(0.001, now + 0.20);
+      thud.connect(thudGain);
+      thudGain.connect(seBus());
+      thud.start(now);
+      thud.stop(now + 0.20);
+
+      [660, 880, 1180].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = "triangle";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.05, now + 0.10 + i * 0.07);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.10 + i * 0.07 + 0.18);
+        osc.connect(gain);
+        gain.connect(seBus());
+        osc.start(now + 0.10 + i * 0.07);
+        osc.stop(now + 0.10 + i * 0.07 + 0.18);
+      });
+      return;
+    }
+
+    if (kind === "reward") {
+      // 報酬獲得：上昇ファンファーレ
+      const now = audioCtx.currentTime;
+      [523, 659, 784, 1047].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = "triangle";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.055, now + i * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.22);
+        osc.connect(gain);
+        gain.connect(seBus());
+        osc.start(now + i * 0.08);
+        osc.stop(now + i * 0.08 + 0.22);
+      });
+      return;
+    }
+
+    if (kind === "skill") {
+      // スキル取得：神秘的なチャイム
+      const now = audioCtx.currentTime;
+      [392, 587, 784, 1175].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.045, now + i * 0.06);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.30);
+        osc.connect(gain);
+        gain.connect(seBus());
+        osc.start(now + i * 0.06);
+        osc.stop(now + i * 0.06 + 0.30);
       });
     }
   } catch (e) {}
@@ -5552,12 +6409,81 @@ function showMessage(text) {
   showMessage.timer = setTimeout(() => $("message").textContent = "", 1500);
 }
 
-function showFloat(text) {
+function showFloat(text, critical = false) {
   const div = document.createElement("div");
-  div.className = "float";
+  div.className = critical ? "float critFloat" : "float";
   div.textContent = text;
   $("floatArea").appendChild(div);
-  setTimeout(() => div.remove(), 600);
+  setTimeout(() => div.remove(), critical ? 850 : 600);
+}
+
+// クッキー本体のタップ演出。会心時は専用の大きな弾み+金色リング+多めのかけら
+function playTapAnimation(critical) {
+  const cookieEl = $("cookie");
+
+  cookieEl.classList.remove("tapped", "critTapped");
+  void cookieEl.offsetWidth;
+  cookieEl.classList.add(critical ? "critTapped" : "tapped");
+
+  if (critical && settings.fancyFx) {
+    const wrap = document.querySelector(".cookieWrap");
+    if (wrap) {
+      const ring = document.createElement("div");
+      ring.className = "critRing";
+      wrap.appendChild(ring);
+      setTimeout(() => ring.remove(), 620);
+    }
+  }
+
+  if (!settings.tapFx) return;
+
+  const area = $("floatArea");
+  if (!area || area.childElementCount > 40) return;
+
+  const count = critical ? 7 : 4;
+
+  for (let i = 0; i < count; i++) {
+    const c = document.createElement("span");
+    c.className = critical ? "tapCrumb critCrumb" : "tapCrumb";
+    const ang = Math.random() * Math.PI * 2;
+    const dist = 34 + Math.random() * (critical ? 66 : 40);
+    c.style.setProperty("--dx", `${(Math.cos(ang) * dist).toFixed(1)}px`);
+    c.style.setProperty("--dy", `${(Math.sin(ang) * dist - 26).toFixed(1)}px`);
+    area.appendChild(c);
+    setTimeout(() => c.remove(), 700);
+  }
+}
+
+// 転生などの画面転移時に、金色のフラッシュで場面を切り替える
+function playScreenTransition() {
+  const el = $("transitionFx");
+  if (!el) return;
+  el.classList.remove("active");
+  void el.offsetWidth;
+  el.classList.add("active");
+}
+
+// ノルマ層が上がった/下がった瞬間にゲージへ演出を入れる
+let lastSeenQuotaStage = null;
+
+function checkQuotaStageTransition() {
+  const stage = currentQuotaStageNumber();
+
+  if (lastSeenQuotaStage == null) {
+    lastSeenQuotaStage = stage;
+    return;
+  }
+  if (stage === lastSeenQuotaStage) return;
+
+  const up = stage > lastSeenQuotaStage;
+  lastSeenQuotaStage = stage;
+
+  const box = $("quotaBox");
+  if (!box) return;
+
+  box.classList.remove("layerUp", "layerDown");
+  void box.offsetWidth;
+  box.classList.add(up ? "layerUp" : "layerDown");
 }
 
 function updateTopOnly() {
@@ -5571,6 +6497,7 @@ function updateTopOnly() {
   updatePrestigeTabLabel();
   checkPrestigeUnlockNotice();
   renderQuota();
+  checkQuotaStageTransition();
   renderBakeBox();
 
   if (monsterVisible) renderMonsterHp();
@@ -5596,8 +6523,9 @@ function tapCookie() {
 
   state.totalClicks += 1;
 
-  playSound("cookie");
-  showFloat((critical ? "会心 +" : "+") + fmt(gained));
+  playSound(critical ? "crit" : "cookie");
+  playTapAnimation(critical);
+  showFloat((critical ? "会心 +" : "+") + fmt(gained), critical);
   updateTopOnly();
 }
 
@@ -5614,7 +6542,7 @@ function buyUpgrade(id) {
   if (!u) return;
   if (!upgradeUnlocked(u)) return;
 
-  const target = 1;
+  const target = multiBuyPlan(u).count;
   let bought = 0;
 
   while (bought < target) {
@@ -5634,6 +6562,13 @@ function buyUpgrade(id) {
     saveGame();
     renderActiveTab();
     updateTopOnly();
+
+    const boughtEl = document.querySelector(`#shop [data-id="${id}"]`);
+    if (boughtEl) {
+      boughtEl.classList.remove("justBought");
+      void boughtEl.offsetWidth;
+      boughtEl.classList.add("justBought");
+    }
   }
 }
 
@@ -5674,6 +6609,31 @@ function skillCanBuy(skill) {
 function selectSkill(id) {
   selectedSkillId = id;
   renderSkillChoiceScreen();
+  scrollSelectedSkillIntoView();
+}
+
+// 選択したスキルが画面外・画面端にあるときだけ、マップを選択ノード中心へ滑らかに移動する
+function scrollSelectedSkillIntoView() {
+  const frame = document.querySelector(".skillMapFrame");
+  const skill = getSkill(selectedSkillId);
+  if (!frame || !skill) return;
+
+  const x = skill.x * skillMapZoom;
+  const y = skill.y * skillMapZoom;
+  const margin = 70;
+
+  const viewL = frame.scrollLeft;
+  const viewT = frame.scrollTop;
+  const viewR = viewL + frame.clientWidth;
+  const viewB = viewT + frame.clientHeight;
+
+  if (x < viewL + margin || x > viewR - margin || y < viewT + margin || y > viewB - margin) {
+    frame.scrollTo({
+      left: Math.max(0, x - frame.clientWidth / 2),
+      top: Math.max(0, y - frame.clientHeight / 2),
+      behavior: "smooth"
+    });
+  }
 }
 
 function takeSelectedSkill() {
@@ -5691,7 +6651,7 @@ function takeSelectedSkill() {
 
   state.skills[skill.id] = true;
 
-  playSound("upgrade");
+  playSound("skill");
   saveGame();
 
   const visibleCanBuy = SKILLS.find(s => skillVisible(s) && skillCanBuy(s));
@@ -5776,6 +6736,7 @@ function toggleSkillTreeOnly() {
 }
 
 function openSkillChoiceScreen() {
+  playScreenTransition();
   closeTabPageFullscreen();
   document.body.classList.add("skillChoiceMode");
   $("skillChoiceScreen").classList.add("active");
@@ -5813,6 +6774,21 @@ function skillLinePoints(from, to) {
     x2: to.x - dx / d * radius,
     y2: to.y - dy / d * radius
   };
+}
+
+// 直線が何本も交差して読みづらかったため、ゆるやかな曲線で描く。
+// 膨らむ向きはノード座標から決めて毎回同じにし、線同士を見分けやすくする。
+function skillLinePath(from, to) {
+  const p = skillLinePoints(from, to);
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const d = Math.max(1, Math.hypot(dx, dy));
+  const side = ((from.x * 7 + to.x * 11 + from.y * 5 + to.y * 3) % 2 === 0) ? 1 : -1;
+  const bend = Math.min(46, d * 0.16) * side;
+  const mx = (p.x1 + p.x2) / 2 - dy / d * bend;
+  const my = (p.y1 + p.y2) / 2 + dx / d * bend;
+
+  return `M ${p.x1.toFixed(1)} ${p.y1.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${p.x2.toFixed(1)} ${p.y2.toFixed(1)}`;
 }
 
 function renderSkillChoiceScreen() {
@@ -5866,19 +6842,10 @@ function renderSkillChoiceScreen() {
       if (!from || !skillVisible(from)) return "";
 
       const done = hasSkill(reqId) && hasSkill(skill.id);
-      if (!done) return "";
+      const ready = hasSkill(reqId) && !hasSkill(skill.id);
+      const tier = done ? "done" : ready ? "ready" : "";
 
-      const p = skillLinePoints(from, skill);
-
-      return `
-        <line
-          class="skillLine branch-${skill.branchId} done"
-          x1="${p.x1.toFixed(1)}"
-          y1="${p.y1.toFixed(1)}"
-          x2="${p.x2.toFixed(1)}"
-          y2="${p.y2.toFixed(1)}"
-        />
-      `;
+      return `<path class="skillLine branch-${skill.branchId} ${tier}" d="${skillLinePath(from, skill)}" />`;
     }).join("");
   }).join("");
 
@@ -5916,6 +6883,67 @@ function renderSkillChoiceScreen() {
   });
 }
 
+function syncSettingsUi() {
+  $("setSeVol").value = settings.seVolume;
+  $("setSeVolVal").textContent = settings.seVolume;
+  $("setBgmVol").value = settings.bgmVolume;
+  $("setBgmVolVal").textContent = settings.bgmVolume;
+  $("setTapFx").checked = settings.tapFx;
+  $("setFancyFx").checked = settings.fancyFx;
+  $("setCardArt").checked = settings.cardArt;
+  $("setCompact").checked = settings.compactCards;
+}
+
+addTap($("settingsBtn"), () => {
+  syncSettingsUi();
+  $("settingsOverlay").classList.add("active");
+  playSound("tab");
+});
+
+addTap($("settingsCloseBtn"), () => {
+  $("settingsOverlay").classList.remove("active");
+  playSound("tab");
+});
+
+$("settingsOverlay").addEventListener("pointerdown", e => {
+  if (e.target === $("settingsOverlay")) $("settingsOverlay").classList.remove("active");
+});
+
+$("setSeVol").addEventListener("input", () => {
+  settings.seVolume = Number($("setSeVol").value);
+  $("setSeVolVal").textContent = settings.seVolume;
+  saveSettings();
+  applySettings();
+});
+
+$("setSeVol").addEventListener("change", () => playSound("tab"));
+
+$("setBgmVol").addEventListener("input", () => {
+  settings.bgmVolume = Number($("setBgmVol").value);
+  $("setBgmVolVal").textContent = settings.bgmVolume;
+  saveSettings();
+  applySettings();
+});
+
+[["setTapFx", "tapFx"], ["setFancyFx", "fancyFx"], ["setCardArt", "cardArt"], ["setCompact", "compactCards"]].forEach(([id, key]) => {
+  $(id).addEventListener("change", () => {
+    settings[key] = $(id).checked;
+    saveSettings();
+    applySettings();
+    renderActiveTab();
+    playSound("tab");
+  });
+});
+
+document.querySelectorAll(".buyModeBtn").forEach(btn => {
+  addTap(btn, () => {
+    buyMode = btn.dataset.buymode;
+    document.querySelectorAll(".buyModeBtn").forEach(b => b.classList.toggle("active", b.dataset.buymode === buyMode));
+    playSound("tab");
+    renderShop();
+  });
+});
+
 addTap($("skillZoomOutBtn"), () => setSkillMapZoom(skillMapZoom - SKILL_ZOOM_STEP));
 addTap($("skillZoomInBtn"), () => setSkillMapZoom(skillMapZoom + SKILL_ZOOM_STEP));
 addTap($("skillZoomResetBtn"), () => {
@@ -5948,6 +6976,7 @@ addTap($("skillStartBtn"), () => {
   resetRunLimitedEffects();
 
   closeSkillChoiceScreen();
+  playScreenTransition();
 
   const startCookies = Math.floor(skillEffect("startCookies"));
   if (startCookies > 0) earn(startCookies);
@@ -5996,30 +7025,35 @@ function researchArt(r) {
 
 function upgradeShopEffectText(u) {
   const owned = state.upgrades[u.id];
-  const includeResearchEfficiency = economyAnalysisUnlocked() && researchAnalysisUnlocked();
   const before = upgradeEffectiveContributionAtCount(u, owned, true);
   const after = upgradeEffectiveContributionAtCount(u, owned + 1, true);
   const add = Math.max(0, after - before);
   const kind = u.type === "cps" ? "毎秒" : "タップ";
 
-  let text = `現在 ${kind} +${fmt(before)} / 次 +${fmt(add)}`;
+  return `1個買うと ${kind} +${fmt(add)} / いまの合計 ${kind} +${fmt(before)}`;
+}
 
-  if (economyAnalysisUnlocked()) {
-    const cost = costOf(u);
+// 経済分析スキル解放後のみ表示するコスパ行(表示条件・情報量は従来と同じ)
+function upgradeEfficiencyText(u) {
+  if (!economyAnalysisUnlocked()) return "";
 
-    if (includeResearchEfficiency) {
-      const ratio = cost / Math.max(0.001, add);
-      text += ` / 研究込み効率 ${fmt(ratio)}クッキーで+1`;
-    } else {
-      const baseBefore = upgradeEffectiveContributionAtCount(u, owned, false);
-      const baseAfter = upgradeEffectiveContributionAtCount(u, owned + 1, false);
-      const baseAdd = Math.max(0.001, baseAfter - baseBefore);
-      const baseRatio = cost / baseAdd;
-      text += ` / 基礎効率 ${fmt(baseRatio)}クッキーで+1`;
-    }
+  const owned = state.upgrades[u.id];
+  const cost = costOf(u);
+  const includeResearchEfficiency = researchAnalysisUnlocked();
+
+  if (includeResearchEfficiency) {
+    const before = upgradeEffectiveContributionAtCount(u, owned, true);
+    const after = upgradeEffectiveContributionAtCount(u, owned + 1, true);
+    const add = Math.max(0.001, after - before);
+    const ratio = cost / add;
+    return `お得度(研究込み)：約${fmt(ratio)}クッキーで+1 — 少ないほどお得`;
   }
 
-  return text;
+  const baseBefore = upgradeEffectiveContributionAtCount(u, owned, false);
+  const baseAfter = upgradeEffectiveContributionAtCount(u, owned + 1, false);
+  const baseAdd = Math.max(0.001, baseAfter - baseBefore);
+  const baseRatio = cost / baseAdd;
+  return `お得度：約${fmt(baseRatio)}クッキーで+1 — 少ないほどお得`;
 }
 
 function renderShop() {
@@ -6047,13 +7081,27 @@ function renderShop() {
 
   [...box.children].forEach((btn, i) => {
     const u = items[i];
-    const cost = costOf(u);
+    const plan = multiBuyPlan(u);
 
-    btn.classList.toggle("canBuy", state.cookies >= cost && !pausedForSkillChoice());
+    let priceText;
+    if (plan.isMax) {
+      priceText = plan.affordable
+        ? `MAX ×${fmt(plan.count)} — 合計 ${fmt(plan.totalCost)} クッキー`
+        : `次の1個 ${fmt(plan.totalCost)} クッキー`;
+    } else if (plan.count > 1) {
+      priceText = `×${plan.count} 合計 ${fmt(plan.totalCost)} クッキー`;
+    } else {
+      priceText = `${fmt(plan.totalCost)} クッキー`;
+    }
+
+    const efficiency = upgradeEfficiencyText(u);
+
+    btn.classList.toggle("canBuy", plan.affordable && !pausedForSkillChoice());
     btn.innerHTML = `
       <b>${u.name}</b>
-      <div class="price">${fmt(cost)} クッキー</div>
+      <div class="price">${priceText}</div>
       <div class="desc">${upgradeShopEffectText(u)} / 所持 ${fmt(state.upgrades[u.id])}</div>
+      ${efficiency ? `<div class="desc">${efficiency}</div>` : ""}
     `;
   });
 }
@@ -6222,10 +7270,12 @@ function appendResearchAnalysisPanel(box) {
 
 function renderResearch() {
   const box = $("research");
-  const list = RESEARCH.filter(r => researchUnlocked(r));
+  // 購入済みの研究は購入欄から消す(効果は「研究解析」パネルと一覧タブで確認できる)
+  const list = RESEARCH.filter(r => researchUnlocked(r) && !state.research[r.id]);
 
   if (list.length === 0) {
-    box.innerHTML = `<div class="desc">研究はまだない</div>`;
+    const anyBought = RESEARCH.some(r => state.research[r.id]);
+    box.innerHTML = `<div class="desc">${anyBought ? "解放できる研究はすべて取得済み" : "研究はまだない"}</div>`;
     appendResearchAnalysisPanel(box);
     return;
   }
@@ -6551,6 +7601,7 @@ function renderAllTabs() {
 }
 
 function switchTab(tabId) {
+  if (activeTab !== tabId) playSound("tab");
   activeTab = tabId;
   updatePrestigeTabLabel();
 
@@ -7536,6 +8587,12 @@ function hitMonster(id) {
   playSound("monster");
   renderMonsterHp(mon.id);
 
+  if (mon.el) {
+    mon.el.classList.remove("hit");
+    void mon.el.offsetWidth;
+    mon.el.classList.add("hit");
+  }
+
   if (mon.hp <= 0) defeatMonster(mon.id);
 }
 
@@ -7546,6 +8603,7 @@ function defeatMonster(id) {
   const defeatedLevel = mon.level;
 
   hideMonster(mon.id, false);
+  playSound("defeat");
 
   state.monstersDefeated += 1;
   if (!state.quotaFailed) state.quotaMonsterKills = Math.floor(Number(state.quotaMonsterKills) || 0) + 1;
@@ -7888,6 +8946,7 @@ function chooseReward(choice) {
   $("rewardModal").style.display = "none";
   finishQuotaPause();
 
+  playSound("reward");
   showMessage(`報酬を獲得：${choice.name}`);
   saveGame();
   updateTopOnly();
@@ -7905,6 +8964,7 @@ window.addEventListener("resize", () => {
 loadGame();
 ensureState();
 applyVisualAssets();
+applySettings();
 installBrowserZoomBlockers();
 installSkillTreePinchZoom();
 liftFloatingActors();
