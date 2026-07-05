@@ -1141,11 +1141,12 @@
     }
 
     .skillLine.done {
-      opacity: 0.68;
-      stroke-width: 3.4;
-      stroke-dasharray: none;
-      animation: none;
-      filter: drop-shadow(0 0 3px var(--branch-color));
+      opacity: 0.98;
+      stroke-width: 4.6;
+      stroke-dasharray: 16 8;
+      filter:
+        drop-shadow(0 0 4px var(--branch-color))
+        drop-shadow(0 0 10px var(--branch-color));
     }
 
     .skillLine.ready {
@@ -1243,20 +1244,6 @@
         linear-gradient(145deg, rgba(255,255,255,0.12), rgba(0,0,0,0.10)),
         rgba(2,18,26,0.98);
       border-color: rgba(var(--branch-rgb),0.92);
-    }
-
-    /* 完了済みノードは全開放時に画面全体が点滅・回転して見づらくならないよう、
-       常時アニメーションを止めて落ち着いた表示にする(取得可能ノードだけ目立たせる) */
-    .skillNode.done::before,
-    .skillNode.locked::before {
-      animation: none;
-      opacity: 0.6;
-    }
-
-    .skillNode.done::after,
-    .skillNode.locked::after {
-      animation: none;
-      opacity: 0;
     }
 
     .skillNode.canBuy {
@@ -5589,7 +5576,7 @@ function skillLinePoints(from, to) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const d = Math.max(1, Math.hypot(dx, dy));
-  const radius = 58;
+  const radius = 46;
 
   return {
     x1: from.x + dx / d * radius,
@@ -5650,12 +5637,13 @@ function renderSkillChoiceScreen() {
       if (!from || !skillVisible(from)) return "";
 
       const done = hasSkill(reqId) && hasSkill(skill.id);
-      const ready = hasSkill(reqId) && !hasSkill(skill.id);
+      if (!done) return "";
+
       const p = skillLinePoints(from, skill);
 
       return `
         <line
-          class="skillLine branch-${skill.branchId} ${done ? "done" : ""} ${ready ? "ready" : ""}"
+          class="skillLine branch-${skill.branchId} done"
           x1="${p.x1.toFixed(1)}"
           y1="${p.y1.toFixed(1)}"
           x2="${p.x2.toFixed(1)}"
