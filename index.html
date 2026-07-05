@@ -3763,31 +3763,17 @@
     /* ===== 実装追加：ステージ・工房・複数モンスター ===== */
 
     /* ステージバー(プレイ画面上部) */
+    /* ステージバーは現在地の表示のみ(切替は転生時のステージ選択画面で行う) */
     .stageBar {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
       gap: 6px;
       margin: 4px 0 2px;
     }
 
-    .stageBar button {
-      border: none;
-      border-radius: 8px;
-      background: var(--tab);
-      color: var(--text);
-      min-width: 36px;
-      min-height: 26px;
-      font-size: 12px;
-      touch-action: manipulation;
-    }
-
-    .stageBar button.locked {
-      opacity: 0.32;
-    }
-
     #stageNameLabel {
-      flex: 1 1 auto;
+      flex: 0 1 auto;
       min-width: 0;
       font-size: 11px;
       font-weight: 900;
@@ -3795,6 +3781,7 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      text-align: center;
       text-shadow: 0 2px 4px rgba(0,0,0,0.72);
     }
 
@@ -4028,6 +4015,18 @@
       mix-blend-mode: screen;
     }
 
+    /* 方針/ステージ選択画面：内容が縦に長いときも上端が切れずスクロールできるようにする
+       (align-items:center+overflowの組合せは先頭が届かなくなるため、子のmargin:autoで中央寄せ) */
+    .policyChoiceScreen.active {
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    .policyChoiceInner {
+      margin: auto 0;
+      padding-bottom: 12px;
+    }
+
   </style>
 </head>
 
@@ -4115,6 +4114,17 @@
   </div>
 </div>
 
+<div id="stageChoiceScreen" class="policyChoiceScreen">
+  <div class="policyChoiceInner">
+    <div class="policyChoiceHeader">
+      <div class="policyChoiceTitle">ステージを選択</div>
+      <div class="policyChoiceSub">この周回で狩るステージを1つ選んでください。<br>周回中は変更できません(次の転生でまた選べます)。</div>
+    </div>
+    <div id="stageChoiceRow" class="policyChoiceRow"></div>
+    <button id="stageChoiceBackBtn" type="button" class="policyChoiceBack">← スキル選択に戻る</button>
+  </div>
+</div>
+
 <div id="settingsOverlay" class="settingsOverlay">
   <div class="settingsPanel">
     <div class="settingsHead">
@@ -4140,9 +4150,7 @@
     </div>
 
     <div id="stageBar" class="stageBar">
-      <button id="stagePrevBtn" type="button" aria-label="前のステージ">◀</button>
       <span id="stageNameLabel">バター草原</span>
-      <button id="stageNextBtn" type="button" aria-label="次のステージ">▶</button>
     </div>
 
     <div id="quotaBox" class="quotaBox"></div>
@@ -4484,7 +4492,7 @@ const REWARD_POOL = [
 
 // ===== 実装追加：素材・工房(料理/作成)・複数モンスター・ステージ =====
 
-// 素材(転生持ち越し・所持上限9999/種。クッキー経済とは交差しない)
+// 素材(転生持ち越し・所持上限なし。クッキー経済とは交差しない)
 const MATERIALS = [
   { id: "butter", name: "濃厚バター", tier: "c" },
   { id: "flour", name: "石臼小麦粉", tier: "c" },
@@ -4509,7 +4517,7 @@ const MATERIALS = [
 
 // 料理(消費・時限バフ。転生で効果消滅、レシピは永続。同時3品・基本600秒)
 const DISHES = [
-  { id: "butterCookie", name: "バタークッキー生地", cost: { butter: 5, flour: 3 }, desc: "全生産 x(1+2%x今周回の最高ノルマ層。上限200層ぶん)" },
+  { id: "butterCookie", name: "バタークッキー生地", cost: { butter: 5, flour: 3 }, desc: "全生産 x(1+2%x今周回の最高ノルマ層。上限なし)" },
   { id: "chocoFondant", name: "濃厚ショコラ", cost: { cacao: 6, butter: 4 }, desc: "タップの毎秒生産連動係数 x2" },
   { id: "mintIce", name: "ミントアイスサンド", cost: { mint: 6, frostSugar: 3 }, desc: "金クッキー出現間隔 x0.75" },
   { id: "hunterStew", name: "狩人のシチュー", cost: { ironShard: 2, spice: 4 }, desc: "モンスター出現間隔 x0.75、モンスターダメージ x1.5" },
@@ -4525,7 +4533,7 @@ const EQUIPMENT_DEFS = [
   { id: "pressExtractor", name: "香料圧搾機", baseCost: { spice: 14, goldDust: 2 }, desc: lv => `金ブースト倍率 x${(1 + 0.04 * lv).toFixed(2)}` },
   { id: "monsterAlmanac", name: "モンスター図鑑", baseCost: { ironShard: 4, silentCore: 2 }, desc: lv => `素材ドロップ数 +${Math.floor(lv / 2)}、モンスターダメージ x${(1 + 0.06 * lv).toFixed(2)}` },
   { id: "stillFlask", name: "蒸留フラスコ", baseCost: { mint: 10, lavaSugar: 6 }, desc: lv => `料理の効果時間 x${(1 + 0.10 * lv).toFixed(2)}` },
-  { id: "dimensionCompass", name: "次元コンパス", baseCost: { bossCoreAny: 1, stardust: 12 }, desc: lv => `ステージ切替クールダウン -${60 * lv}秒、ボス出現に必要な討伐数 -${lv}` }
+  { id: "dimensionCompass", name: "次元コンパス", baseCost: { bossCoreAny: 1, stardust: 12 }, desc: lv => `ボス出現に必要な討伐数 -${lv}、選択中ステージの素材ドロップ x${(1 + 0.05 * lv).toFixed(2)}` }
 ];
 
 // モンスターの種類(HP・滞在・出現重み。表示は既存画像+CSSフィルタ+名前ラベル)
@@ -4545,7 +4553,9 @@ const STAGES = [
   { no: 2, name: "チョコレート火山", roster: ["normal", "swarm", "tank", "speedy"], hpMult: 3, dropAdd: 1, dropMult: 1, stayMult: 1, goldenGainMult: 1.10, goldenSpawnMult: 1, rewardLevelBonus: 0, goldenBeastBonus: 0, bossPeriodAdd: 0 },
   { no: 3, name: "ミントの氷河", roster: ["normal", "swarm", "tank", "speedy"], hpMult: 8, dropAdd: 0, dropMult: 2, stayMult: 0.85, goldenGainMult: 1, goldenSpawnMult: 1, rewardLevelBonus: 0, goldenBeastBonus: 0, bossPeriodAdd: 0 },
   { no: 4, name: "香料の砂丘", roster: ["normal", "swarm", "tank", "speedy"], hpMult: 20, dropAdd: 0, dropMult: 1, stayMult: 1, goldenGainMult: 1, goldenSpawnMult: 0.9, rewardLevelBonus: 8, goldenBeastBonus: 0.15, bossPeriodAdd: 0 },
-  { no: 5, name: "星屑の銀河", roster: ["normal", "swarm", "tank", "speedy"], hpMult: 60, dropAdd: 0, dropMult: 3, stayMult: 1, goldenGainMult: 1, goldenSpawnMult: 1, rewardLevelBonus: 0, goldenBeastBonus: 0, bossPeriodAdd: -10 }
+  { no: 5, name: "星屑の銀河", roster: ["normal", "swarm", "tank", "speedy"], hpMult: 60, dropAdd: 0, dropMult: 3, stayMult: 1, goldenGainMult: 1, goldenSpawnMult: 1, rewardLevelBonus: 0, goldenBeastBonus: 0, bossPeriodAdd: -10 },
+  // S6は有限の最終ステージ。内部に「層」(state.deepLayer、無限)を持ち、hp/ドロップはstageDefで層から算出する
+  { no: 6, name: "深層領域", deep: true, roster: ["normal", "swarm", "tank", "speedy"], hpMult: 240, dropAdd: 0, dropMult: 4, stayMult: 1, goldenGainMult: 1, goldenSpawnMult: 1, rewardLevelBonus: 0, goldenBeastBonus: 0, bossPeriodAdd: 0 }
 ];
 
 // ステージxモンスター種類 → 落とす素材(ボス核は撃破処理側で付与)
@@ -4829,6 +4839,7 @@ function freshState() {
     workshopUnlocked: false,
     stage: 1,
     stageUnlocked: 1,
+    deepLayer: 1,
     stageKills: {},
     stageBossKills: {},
     stageSwitchedAt: 0,
@@ -4904,7 +4915,7 @@ function ensureState() {
   // 素材・工房・ステージ(旧セーブには存在しないためデフォルト補完する)
   state.materials = state.materials && typeof state.materials === "object" ? state.materials : {};
   MATERIALS.forEach(m => {
-    state.materials[m.id] = Math.min(9999, Math.max(0, Math.floor(Number(state.materials[m.id]) || 0)));
+    state.materials[m.id] = Math.max(0, Math.floor(Number(state.materials[m.id]) || 0));
   });
   state.materialsEver = state.materialsEver && typeof state.materialsEver === "object" ? state.materialsEver : {};
   state.equipment = state.equipment && typeof state.equipment === "object" ? state.equipment : {};
@@ -4931,8 +4942,14 @@ function ensureState() {
     else delete state.parfaitBoosted[u.id];
   });
   state.workshopUnlocked = Boolean(state.workshopUnlocked);
-  // S6+は無限に続くため、解放ステージに上限クランプは掛けない
-  state.stageUnlocked = Math.max(1, Math.floor(Number(state.stageUnlocked) || 1));
+  // ステージは有限6個。旧セーブ(無限ステージ時代)の stageUnlocked>6 は深層の層に変換する
+  state.deepLayer = Math.max(1, Math.floor(Number(state.deepLayer) || 1));
+  let unlockedRaw = Math.max(1, Math.floor(Number(state.stageUnlocked) || 1));
+  if (unlockedRaw > STAGES.length) {
+    state.deepLayer = Math.max(state.deepLayer, unlockedRaw - 5);
+    unlockedRaw = STAGES.length;
+  }
+  state.stageUnlocked = unlockedRaw;
   state.stage = Math.min(state.stageUnlocked, Math.max(1, Math.floor(Number(state.stage) || 1)));
   state.stageKills = state.stageKills && typeof state.stageKills === "object" ? state.stageKills : {};
   state.stageBossKills = state.stageBossKills && typeof state.stageBossKills === "object" ? state.stageBossKills : {};
@@ -5368,12 +5385,13 @@ function runPolicyUnlocked() {
   return hasSkillEffect("unlockSystem", "runPolicy");
 }
 
+// 方針は素材ドロップにもバイアスを掛ける(工房の全解放には多様な方針の周回が必要になる)
 const RUN_POLICIES = [
-  { id: "balanced", name: "標準", desc: "補正なし。いつもの周回。" },
-  { id: "click", name: "会心型", desc: "タップと会心を伸ばし、手動クリック寄りにする。" },
-  { id: "bake", name: "焼成型", desc: "毎秒生産とオーブン・工場寄りにする。" },
-  { id: "hunt", name: "狩猟型", desc: "モンスター火力と滞在時間を伸ばす。" },
-  { id: "golden", name: "金色型", desc: "金クッキーの回転とブーストを伸ばす。" }
+  { id: "balanced", name: "標準", desc: "補正なし。いつもの周回。素材バイアス: 全素材ドロップ x1.25。" },
+  { id: "click", name: "会心型", desc: "タップと会心を伸ばし、手動クリック寄りにする。素材バイアス: こつぶ群れ出現 x2、共通素材 x2・レア素材 x0.5。" },
+  { id: "bake", name: "焼成型", desc: "毎秒生産とオーブン・工場寄りにする。素材バイアス: ボス周期 x0.8、ボス核 +1/撃破。" },
+  { id: "hunt", name: "狩猟型", desc: "モンスター火力と滞在時間を伸ばす。素材バイアス: 鉄焼きガード/はやての運び屋出現 x2、レア素材 x2・共通素材 x0.5。" },
+  { id: "golden", name: "金色型", desc: "金クッキーの回転とブーストを伸ばす。素材バイアス: 黄金獣の置換率 +20%、黄金獣ドロップと黄金粉 x2。" }
 ];
 
 function runPolicyIs(id) {
@@ -5934,10 +5952,10 @@ function resetRunLimitedEffects() {
   state.orderTempSpiceUntil = 0;
   state.orderTempSpiceMultiplier = 1;
   state.nextBakeGoodBias = 0;
-  // 料理バフ・パフェ強化・現在ステージは周回限定(転生でリセット)
+  // 料理バフ・パフェ強化は周回限定(転生でリセット)。
+  // 現在ステージはここでは触らない(転生時はfreshStateで1に戻り、周回開始前のステージ選択で決まる)
   state.dishBuffs = {};
   state.parfaitBoosted = {};
-  state.stage = 1;
   state.stageSwitchedAt = 0;
   state.runMaxQuotaStage = 0;
   lastSeenQuotaStage = null;
@@ -6532,7 +6550,7 @@ function addMaterials(id, n) {
 
   state.materials = state.materials && typeof state.materials === "object" ? state.materials : {};
   state.materialsEver = state.materialsEver && typeof state.materialsEver === "object" ? state.materialsEver : {};
-  state.materials[id] = Math.min(9999, materialCount(id) + count);
+  state.materials[id] = materialCount(id) + count;
   state.materialsEver[id] = true;
 
   return count;
@@ -6644,10 +6662,10 @@ function dishDurationMs() {
   return 600000 * (1 + 0.10 * equipmentLv("stillFlask"));
 }
 
-// バタークッキー生地：全生産 x(1+0.02x今周回の最高ノルマ層(上限200))
+// バタークッキー生地：全生産 x(1+0.02x今周回の最高ノルマ層。上限なし)
 function dishAllProductionMultiplier() {
   if (!dishActive("butterCookie")) return 1;
-  return 1 + 0.02 * Math.min(200, Math.max(0, state.runMaxQuotaStage || 0));
+  return 1 + 0.02 * Math.max(0, state.runMaxQuotaStage || 0);
 }
 
 // ミントアイスサンド：金クッキー出現間隔 x0.75
@@ -6707,39 +6725,35 @@ function godFingerClickMultiplier() {
 
 // ===== ステージ =====
 
-// S6以降(深層領域)は k=n-5 から動的生成する。ボス周期は既存式 25+10(n-1) がそのまま 65+10k になる
+// ステージは有限6個(S1〜S5+S6深層領域)。S6は内部の「層」(deepLayer、無限)で
+// HP 60x4^L・ドロップ3+Lがスケールする。層はS6ボス撃破ごとに+1(転生持ち越し)
 const DEEP_STAGE_CACHE = {};
 
-function stageDef(no) {
-  const n = Math.max(1, Math.floor(Number(no) || 1));
-  if (n <= STAGES.length) return STAGES[n - 1];
+function deepLayerNow() {
+  return Math.max(1, Math.floor(Number(state.deepLayer) || 1));
+}
 
-  if (!DEEP_STAGE_CACHE[n]) {
-    const k = n - STAGES.length;
-    DEEP_STAGE_CACHE[n] = {
-      no: n,
-      name: `深層領域 第${k}層`,
-      deep: true,
-      deepK: k,
-      roster: ["normal", "swarm", "tank", "speedy"],
-      hpMult: 60 * Math.pow(4, k),
-      dropAdd: 0,
-      dropMult: 3 + k,
-      stayMult: 1,
-      goldenGainMult: 1,
-      goldenSpawnMult: 1,
-      rewardLevelBonus: 0,
-      goldenBeastBonus: 0,
-      bossPeriodAdd: 0
+function stageDef(no) {
+  const n = Math.min(STAGES.length, Math.max(1, Math.floor(Number(no) || 1)));
+  const base = STAGES[n - 1];
+  if (!base.deep) return base;
+
+  const L = deepLayerNow();
+  if (!DEEP_STAGE_CACHE[L]) {
+    DEEP_STAGE_CACHE[L] = {
+      ...base,
+      name: `深層領域 第${L}層`,
+      deepK: L,
+      hpMult: 60 * Math.pow(4, L),
+      dropMult: 3 + L
     };
   }
 
-  return DEEP_STAGE_CACHE[n];
+  return DEEP_STAGE_CACHE[L];
 }
 
 function stageUnlockedMax() {
-  // S6+は無限に続くため上限クランプなし
-  return Math.max(1, Math.floor(Number(state.stageUnlocked) || 1));
+  return Math.min(STAGES.length, Math.max(1, Math.floor(Number(state.stageUnlocked) || 1)));
 }
 
 function currentStageNo() {
@@ -6782,19 +6796,13 @@ function killRecordDropBonus(typeId) {
   return Math.floor(killMilestonesAchieved(typeId) / 2);
 }
 
-// ステージ切替クールダウン(次元コンパスで-60秒/Lv)
-function stageSwitchCooldownMs() {
-  return Math.max(0, 180 - 60 * equipmentLv("dimensionCompass")) * 1000;
-}
-
-function stageSwitchRemainMs() {
-  return Math.max(0, (state.stageSwitchedAt || 0) + stageSwitchCooldownMs() - Date.now());
-}
-
-// ボス出現に必要な討伐数(周期)。コンパスとステージ補正で減る
+// ボス出現に必要な討伐数(周期)。コンパスとステージ補正で減り、焼成型方針でx0.8。
+// 深層領域(S6)は層に応じて 65+10L
 function bossKillPeriod(no) {
   const st = stageDef(no);
-  return Math.max(5, 25 + 10 * (st.no - 1) + (st.bossPeriodAdd || 0) - equipmentLv("dimensionCompass"));
+  const base = st.deep ? 65 + 10 * deepLayerNow() : 25 + 10 * (st.no - 1);
+  const period = base + (st.bossPeriodAdd || 0) - equipmentLv("dimensionCompass");
+  return Math.max(5, Math.round(period * (runPolicyIs("bake") ? 0.8 : 1)));
 }
 
 function bossDue(no) {
@@ -6832,42 +6840,13 @@ function syncWorkshopTabVisibility() {
   document.body.classList.toggle("workshopUnlocked", workshopUnlockedNow());
 }
 
-function switchStage(dir) {
-  if (pausedForSkillChoice()) return;
-
-  const cur = currentStageNo();
-  const next = cur + dir;
-  if (next < 1 || next > stageUnlockedMax()) return;
-
-  const remain = stageSwitchRemainMs();
-  if (remain > 0) {
-    showMessage(`ステージ切替まで あと${fmtTime(Math.ceil(remain / 1000))}`);
-    return;
-  }
-
-  state.stage = next;
-  state.stageSwitchedAt = Date.now();
-  applyStageTheme();
-  playSound("tab");
-  showMessage(`ステージ移動：${stageDef(next).name}`);
-  saveGame();
-  updateTopOnly();
-}
-
+// ステージバーは現在地の表示のみ(周回中の切替は廃止。ステージは転生時に選ぶ)
 function renderStageBar() {
   const label = $("stageNameLabel");
   if (!label) return;
 
   const no = currentStageNo();
-  const remain = Math.ceil(stageSwitchRemainMs() / 1000);
-  const suffix = remain > 0 && stageUnlockedMax() > 1 ? `(切替 ${fmtTime(remain)})` : "";
-
-  label.textContent = `S${no} ${stageDef(no).name}${suffix}`;
-
-  const prev = $("stagePrevBtn");
-  const next = $("stageNextBtn");
-  if (prev) prev.classList.toggle("locked", no <= 1);
-  if (next) next.classList.toggle("locked", no >= stageUnlockedMax());
+  label.textContent = `S${no} ${stageDef(no).name}`;
 }
 
 function renderDishBuffBar() {
@@ -8013,6 +7992,90 @@ function renderPolicyChoiceScreen() {
       state.runPolicyChosen = true;
       playSound("start");
       closePolicyChoiceScreen();
+      proceedToStageChoice();
+    });
+  });
+}
+
+// ===== ステージ選択画面(方針選択の後に表示。周回中は固定) =====
+
+// 解放がS1のみの間は選択画面を出さず自動でS1
+function proceedToStageChoice() {
+  if (stageUnlockedMax() <= 1) {
+    state.stage = 1;
+    beginRunAfterSkills();
+    return;
+  }
+  openStageChoiceScreen();
+}
+
+function openStageChoiceScreen() {
+  renderStageChoiceScreen();
+  $("stageChoiceScreen").classList.add("active");
+}
+
+function closeStageChoiceScreen() {
+  $("stageChoiceScreen").classList.remove("active");
+}
+
+const MONSTER_ROSTER_SHORT = {
+  normal: "通常",
+  swarm: "群れ",
+  tank: "ガード",
+  speedy: "運び屋"
+};
+
+// ステージカードの補正・素材要約。未入手の素材名は明かさない
+function stageChoiceSummary(st) {
+  const mods = [];
+  if ((st.hpMult || 1) !== 1) mods.push(`HP x${fmt(st.hpMult)}`);
+  if (st.dropAdd) mods.push(`ドロップ +${fmt(st.dropAdd)}`);
+  if ((st.dropMult || 1) !== 1) mods.push(`ドロップ x${fmt(st.dropMult)}`);
+  if ((st.stayMult || 1) !== 1) mods.push(`滞在 x${st.stayMult}`);
+  if ((st.goldenGainMult || 1) !== 1) mods.push(`金獲得 x${st.goldenGainMult}`);
+  if ((st.goldenSpawnMult || 1) !== 1) mods.push(`金出現間隔 x${st.goldenSpawnMult}`);
+  if (st.rewardLevelBonus) mods.push(`報酬Lv +${st.rewardLevelBonus}層`);
+  if (st.goldenBeastBonus) mods.push(`黄金獣率 +${Math.round(st.goldenBeastBonus * 100)}%`);
+  if (st.bossPeriodAdd) mods.push(`ボス周期 ${st.bossPeriodAdd}`);
+
+  const table = st.deep ? DEEP_STAGE_DROPS : (STAGE_DROPS[st.no] || {});
+  const matIds = [...new Set(Object.values(table).filter(v => typeof v === "string"))];
+  if (table.normalAlt) matIds.push(table.normalAlt.id);
+  if (table.anyAlt) matIds.push(table.anyAlt.id);
+  const mats = [...new Set(matIds)].map(id => materialEverObtained(id) ? materialName(id) : "未知の素材");
+
+  return {
+    roster: (st.roster || []).map(t => MONSTER_ROSTER_SHORT[t] || t).join("・"),
+    mods: mods.join(" / ") || "補正なし",
+    mats: [...new Set(mats)].join("、")
+  };
+}
+
+// 解放済みステージのみカード表示(未解放は項目ごと非表示)
+function renderStageChoiceScreen() {
+  const rows = STAGES
+    .filter(st => st.no <= stageUnlockedMax())
+    .map(base => {
+      const st = stageDef(base.no);
+      const sum = stageChoiceSummary(st);
+      return `
+        <button type="button" class="policyChoiceBtn" data-stageno="${base.no}">
+          <b>S${base.no} ${st.name}</b>
+          <span>出現：${sum.roster}</span>
+          <span>補正：${sum.mods}</span>
+          <span>素材：${sum.mats}</span>
+        </button>
+      `;
+    })
+    .join("");
+
+  $("stageChoiceRow").innerHTML = rows;
+
+  document.querySelectorAll("#stageChoiceRow [data-stageno]").forEach(btn => {
+    addTap(btn, () => {
+      state.stage = Math.min(stageUnlockedMax(), Math.max(1, Math.floor(Number(btn.dataset.stageno) || 1)));
+      playSound("start");
+      closeStageChoiceScreen();
       beginRunAfterSkills();
     });
   });
@@ -8152,6 +8215,11 @@ addTap($("policyChoiceBackBtn"), () => {
   closePolicyChoiceScreen();
 });
 
+addTap($("stageChoiceBackBtn"), () => {
+  playSound("tab");
+  closeStageChoiceScreen();
+});
+
 $("settingsOverlay").addEventListener("pointerdown", e => {
   if (e.target === $("settingsOverlay")) $("settingsOverlay").classList.remove("active");
 });
@@ -8223,6 +8291,8 @@ function beginRunAfterSkills() {
 
   closeSkillChoiceScreen();
   playScreenTransition();
+  applyStageTheme();
+  renderStageBar();
 
   const startCookies = Math.floor(skillEffect("startCookies"));
   if (startCookies > 0) earn(startCookies);
@@ -8233,19 +8303,19 @@ function beginRunAfterSkills() {
   switchTab("shopTab");
   scheduleGoldenCookie();
   scheduleMonster();
-  showMessage("周回開始");
+  showMessage(`周回開始：S${currentStageNo()} ${stageDef(currentStageNo()).name}`);
 }
 
 addTap($("skillStartBtn"), () => {
   if (!pausedForSkillChoice()) return;
 
-  // 周回方針が解禁されていて未選択なら、スタート後に方針選択画面を表示する
+  // 転生後の流れ: スキル選択 → 周回方針選択 → ステージ選択 → 周回開始
   if (runPolicyUnlocked() && !state.runPolicyChosen) {
     openPolicyChoiceScreen();
     return;
   }
 
-  beginRunAfterSkills();
+  proceedToStageChoice();
 });
 
 function upgradeArt(u) {
@@ -8815,7 +8885,8 @@ function renderInfo() {
       <h3>ステージ・工房</h3>
       <div class="infoRow">現在ステージ：S${currentStageNo()} ${stageDef(currentStageNo()).name}(解放済み：S${stageUnlockedMax()}まで)</div>
       <div class="infoRow">このステージの討伐数：${fmt(stageKillCount(currentStageNo()))} / 次のボスまで あと${fmt(killsUntilNextBoss(currentStageNo()))}体</div>
-      <div class="infoRow">画面上部の「◀ ▶」でステージを移動できる(切替クールダウン ${fmtTime(Math.round(stageSwitchCooldownMs() / 1000))})。ステージが進むほどモンスターは強くなり、落とす素材が変わる。</div>
+      <div class="infoRow">ステージは転生時(スキル選択→方針選択の後)に1つ選び、その周回中は固定。ステージが進むほどモンスターは強くなり、落とす素材が変わる。S6深層領域はボス撃破ごとに層が進む(現在 第${fmt(deepLayerNow())}層)。</div>
+      <div class="infoRow">周回方針は素材ドロップにもバイアスを掛ける：${RUN_POLICIES.find(p => p.id === state.runPolicy)?.desc || ""}</div>
       <div class="infoRow">モンスターには種類がある：こつぶ群れ(3体同時)・鉄焼きガード(高HP/高報酬)・はやての運び屋(短滞在/素材2倍)・黄金獣(金ブースト中のみ)・ステージボス(討伐数で出現)。</div>
       <div class="infoRow">タップ力には毎秒生産の一部が上乗せされる(強い指で強化、神の指は1個ごとにタップ全体x1.02)。</div>
       ${workshopUnlockedNow() ? `
@@ -8966,16 +9037,8 @@ function renderWorkshop() {
   purgeDishBuffs();
   const now = Date.now();
 
-  const dishRows = DISHES.map(d => {
-    if (!dishRecipeKnown(d)) {
-      return `
-        <div class="item wsCard locked">
-          <b>???</b>
-          <div class="desc">${d.requiresStage ? `未知のレシピ(S${d.requiresStage}に到達すると開示される)` : "未知のレシピ(対応する素材を入手すると開示される)"}</div>
-        </div>
-      `;
-    }
-
+  // 未開示のレシピは行ごと非表示(「???」行そのものを出さない)
+  const dishRows = DISHES.filter(d => dishRecipeKnown(d)).map(d => {
     const active = Number((state.dishBuffs || {})[d.id] || 0) > now;
     const can = !active && activeDishCount() < 3 && canPayMaterials(d.cost) && !pausedForSkillChoice();
 
@@ -8988,16 +9051,8 @@ function renderWorkshop() {
     `;
   }).join("");
 
-  const eqRows = EQUIPMENT_DEFS.map(eq => {
-    if (!recipeKnown(eq.baseCost)) {
-      return `
-        <div class="item wsCard locked">
-          <b>???</b>
-          <div class="desc">未知の設計図(対応する素材を入手すると開示される)</div>
-        </div>
-      `;
-    }
-
+  // 未開示の設計図は行ごと非表示
+  const eqRows = EQUIPMENT_DEFS.filter(eq => recipeKnown(eq.baseCost)).map(eq => {
     const lv = equipmentLv(eq.id);
     const maxLv = equipmentMaxLv(eq.id);
     const ascends = equipmentAscendCount(eq.id);
@@ -9060,24 +9115,19 @@ function renderWorkshop() {
     <div class="infoBox">
       <h3>料理(時限バフ・同時3品まで)</h3>
       <div class="desc">素材を消費して${fmtTime(Math.round(dishDurationMs() / 1000))}の間バフを得る。効果は転生で消えるが、レシピは残る。</div>
-      ${dishRows}
+      ${dishRows || `<div class="desc">素材を集めるとレシピが開示される。</div>`}
     </div>
 
     ${workshopCraftUnlocked() ? `
     <div class="infoBox">
       <h3>作成(永続装備・転生持ち越し)</h3>
       <div class="desc">コストはLvごとにx2.2で増える。Lv上限は限界突破で拡張できる。</div>
-      ${eqRows}
+      ${eqRows || `<div class="desc">素材を集めると設計図が開示される。</div>`}
     </div>
-    ` : `
-    <div class="infoBox">
-      <h3>作成</h3>
-      <div class="desc">スキル「工房の拡張」を取得すると、永続装備の作成が解放される。</div>
-    </div>
-    `}
+    ` : ``}
 
     <div class="infoBox">
-      <h3>素材庫(転生持ち越し・各9999まで)</h3>
+      <h3>素材庫(転生持ち越し)</h3>
       ${matRows || `<div class="desc">まだ素材なし。モンスターを倒すとステージと種類に応じた素材を落とす。</div>`}
     </div>
 
@@ -9404,6 +9454,7 @@ function prestigeReset() {
   const keepKillRecords = { ...(state.killRecords || {}) };
   const keepWorkshopUnlocked = Boolean(state.workshopUnlocked);
   const keepStageUnlocked = state.stageUnlocked;
+  const keepDeepLayer = state.deepLayer;
   const keepStageKills = { ...(state.stageKills || {}) };
   const keepStageBossKills = { ...(state.stageBossKills || {}) };
 
@@ -9433,6 +9484,7 @@ function prestigeReset() {
   state.killRecords = keepKillRecords;
   state.workshopUnlocked = keepWorkshopUnlocked;
   state.stageUnlocked = keepStageUnlocked;
+  state.deepLayer = keepDeepLayer;
   state.stageKills = keepStageKills;
   state.stageBossKills = keepStageBossKills;
   ensureState();
@@ -9982,22 +10034,32 @@ function monsterFootprint(typeId) {
   return { w: 236, h: 254 };
 }
 
+// 周回方針による出現バイアス(狩猟型: tank/speedy x2、会心型: swarm x2)
+function policyMonsterWeight(typeId) {
+  let w = (MONSTER_TYPES[typeId] || {}).weight || 0;
+  if (runPolicyIs("hunt") && (typeId === "tank" || typeId === "speedy")) w *= 2;
+  if (runPolicyIs("click") && typeId === "swarm") w *= 2;
+  return w;
+}
+
 // 出現する種類を決める。ボス周期到達→ボス、金ブースト中は確率で黄金獣、他はロスター抽選
+// 金色型方針は黄金獣の置換率+20%
 function pickMonsterTypeId(stageNo) {
   const st = stageDef(stageNo);
 
   if (bossDue(stageNo)) return "boss";
 
-  if (goldenBoostActive() && Math.random() < 0.35 + (st.goldenBeastBonus || 0)) {
+  const beastChance = 0.35 + (st.goldenBeastBonus || 0) + (runPolicyIs("golden") ? 0.20 : 0);
+  if (goldenBoostActive() && Math.random() < beastChance) {
     return "goldenBeast";
   }
 
   const roster = (st.roster || ["normal"]).filter(t => MONSTER_TYPES[t]);
-  const total = roster.reduce((sum, t) => sum + (MONSTER_TYPES[t].weight || 0), 0);
+  const total = roster.reduce((sum, t) => sum + policyMonsterWeight(t), 0);
   let r = Math.random() * Math.max(1, total);
 
   for (const t of roster) {
-    r -= MONSTER_TYPES[t].weight || 0;
+    r -= policyMonsterWeight(t);
     if (r <= 0) return t;
   }
 
@@ -10196,12 +10258,12 @@ function hitMonster(id) {
   if (mon.hp <= 0) defeatMonster(mon.id);
 }
 
-// ドロップ数：1+floor(√Lv/6)(上限4)x種類補正、ステージ補正、図鑑・記録・虚空タルトボーナス
+// ドロップ数：1+floor(√Lv/6)(上限なし)x種類補正、ステージ補正、図鑑・記録・コンパス・虚空タルトボーナス
 function monsterDropCount(mon) {
   const st = stageDef(mon.stageNo || 1);
   let n = mon.type === "swarm"
     ? 1
-    : Math.min(4, 1 + Math.floor(Math.sqrt(Math.max(1, mon.level)) / 6));
+    : 1 + Math.floor(Math.sqrt(Math.max(1, mon.level)) / 6);
 
   if (mon.type === "speedy") n *= 2;
 
@@ -10210,9 +10272,29 @@ function monsterDropCount(mon) {
   n += Math.floor(equipmentLv("monsterAlmanac") / 2);
   n += killRecordDropBonus(mon.type || "normal");
 
+  // 次元コンパス：選択中ステージのドロップ x(1+0.05xLv)
+  n *= 1 + 0.05 * equipmentLv("dimensionCompass");
+
   if (dishActive("voidTart")) n *= 2;
 
   return Math.max(1, Math.floor(n));
+}
+
+// 周回方針による素材バイアス倍率(tier別/黄金系)。工房全解放には多様な方針の周回が要る
+function policyMaterialBias(matId, mon) {
+  const tier = (materialDef(matId) || {}).tier || "c";
+
+  if (runPolicyIs("hunt")) return tier === "r" ? 2 : tier === "c" ? 0.5 : 1;
+  if (runPolicyIs("click")) return tier === "c" ? 2 : tier === "r" ? 0.5 : 1;
+  if (runPolicyIs("golden")) return (matId === "goldDust" || (mon && mon.type === "goldenBeast")) ? 2 : 1;
+  if (runPolicyIs("balanced")) return 1.25;
+  return 1;
+}
+
+// 端数は確率で切り上げる(期待値をバイアス倍率どおりにする)
+function probabilisticRound(v) {
+  const base = Math.floor(v);
+  return base + (Math.random() < v - base ? 1 : 0);
 }
 
 // 撃破時の素材ドロップ(ボス核はhandleBossDefeatで付与)。表示用テキストを返す
@@ -10239,7 +10321,9 @@ function dropMonsterMaterials(mon) {
 
   if (!matId) return "";
 
-  const count = monsterDropCount(mon);
+  const count = probabilisticRound(monsterDropCount(mon) * policyMaterialBias(matId, mon));
+  if (count <= 0) return "";
+
   addMaterials(matId, count);
 
   const text = `+${fmt(count)} ${materialName(matId)}`;
@@ -10247,7 +10331,8 @@ function dropMonsterMaterials(mon) {
   return text;
 }
 
-// ボス撃破：ボス核付与(S6+は共通の深層核+虚空糖)、初回なら次ステージ解放(S5以降も無限に続く)
+// ボス撃破：ボス核付与(S6は共通の深層核+虚空糖)、初回なら次ステージ解放。
+// S6のボスは撃破ごとに深層の層+1(転生持ち越し・無限)。焼成型方針はボス核+1
 function handleBossDefeat(stageNo) {
   state.stageBossKills = state.stageBossKills && typeof state.stageBossKills === "object" ? state.stageBossKills : {};
   state.stageBossKills[stageNo] = stageBossKillCount(stageNo) + 1;
@@ -10255,7 +10340,7 @@ function handleBossDefeat(stageNo) {
   const st = stageDef(stageNo);
   const first = state.stageBossKills[stageNo] === 1;
   const coreId = st.deep ? "deepCore" : "bossCore" + stageNo;
-  const coreCount = first ? 3 : 1;
+  const coreCount = (first ? 3 : 1) + (runPolicyIs("bake") ? 1 : 0);
 
   let text = "";
 
@@ -10272,9 +10357,16 @@ function handleBossDefeat(stageNo) {
     showFloat(text);
   }
 
-  if (first && stageUnlockedMax() < stageNo + 1) {
+  if (st.deep) {
+    // 深層領域：層が1つ進む(HP・ドロップ・ボス周期がスケール)。テーマも更新
+    state.deepLayer = deepLayerNow() + 1;
+    text += `${text ? " / " : ""}深層領域 第${fmt(deepLayerNow())}層 到達！`;
+    applyStageTheme();
+    renderStageBar();
+    playScreenTransition();
+  } else if (first && stageUnlockedMax() < stageNo + 1) {
     state.stageUnlocked = stageNo + 1;
-    text += `${text ? " / " : ""}新ステージ「${stageDef(stageNo + 1).name}」解放！`;
+    text += `${text ? " / " : ""}新ステージ「${stageDef(stageNo + 1).name}」解放！(次の転生から選択できる)`;
     playScreenTransition();
   }
 
@@ -10717,8 +10809,6 @@ liftFloatingActors();
 applyStageTheme();
 syncWorkshopTabVisibility();
 
-addTap($("stagePrevBtn"), () => switchStage(-1));
-addTap($("stageNextBtn"), () => switchStage(1));
 
 updateTopOnly();
 renderAllTabs();
