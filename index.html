@@ -65,6 +65,7 @@
 
     body {
       padding: 8px;
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
       display: flex;
       align-items: center;
       justify-content: center;
@@ -837,6 +838,9 @@
       flex: 0 0 auto;
       position: relative;
       z-index: 30;
+      /* 上部パネルは画面の4割までに抑え、残りをスキルマップに回す */
+      max-height: 40%;
+      overflow-y: auto;
       background:
         linear-gradient(135deg, rgba(37,155,255,0.14), rgba(176,72,255,0.08) 48%, rgba(255,185,62,0.09)),
         rgba(5, 8, 16, 0.94);
@@ -893,9 +897,9 @@
         rgba(2,8,18,0.92);
       border: 1px solid rgba(73,192,255,0.24);
       border-radius: 14px;
-      padding: 9px;
-      margin-top: 8px;
-      min-height: 92px;
+      padding: 8px;
+      margin-top: 6px;
+      min-height: 62px;
       box-shadow: inset 0 0 18px rgba(37,155,255,0.08);
     }
 
@@ -2528,18 +2532,18 @@
 
     .monsterInstance {
       display: block;
-      width: 142px;
+      width: 236px;
       text-align: center;
       pointer-events: auto;
       filter:
-        drop-shadow(0 0 18px rgba(255, 128, 63, 0.62))
-        drop-shadow(0 10px 18px rgba(0,0,0,0.42));
+        drop-shadow(0 0 22px rgba(255, 128, 63, 0.62))
+        drop-shadow(0 12px 22px rgba(0,0,0,0.42));
       touch-action: manipulation;
     }
 
     .monsterInstance .cookieMonsterButton {
-      width: 118px;
-      height: 118px;
+      width: 200px;
+      height: 200px;
       border: none;
       border-radius: 28px;
       background: var(--monster-art);
@@ -2554,8 +2558,8 @@
     }
 
     .monsterInstance .monsterHp {
-      width: 142px !important;
-      height: 12px !important;
+      width: 236px !important;
+      height: 14px !important;
       background: rgba(0,0,0,0.72) !important;
       border-radius: 999px;
       overflow: hidden;
@@ -2614,20 +2618,18 @@
     }
     .tab:first-child { border-left: none; }
 
-    /* 追加調整：タブ表示を画面の半分弱に固定し、上部エリアが残りを埋める */
+    /* 追加調整：タブを画面の半分に固定し、上部は残りを埋めつつ必ず縮む。
+       これで下タブがどんな端末でも画面外に押し出されない */
     .top {
-      flex: 1 1 auto !important;
-      /* 基底ルールのmin-height:0を打ち消し、クッキー本体などの中身より
-         小さく潰れてタブ側にはみ出すことがないようにする */
-      min-height: auto !important;
+      flex: 1 1 0 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
     }
 
     .tabPages {
-      /* タブ内の操作がしやすいよう、ゲーム画面の半分をタブに割り当てる。
-         flex-basis固定(0 0)にして、上部の情報量が変わっても境界が動かないようにする */
       flex: 0 0 50% !important;
       max-height: 50% !important;
-      min-height: 150px !important;
+      min-height: 140px !important;
     }
 
     body.sectionFullscreen .tabPages {
@@ -3546,6 +3548,19 @@
       accent-color: #ffb658;
     }
 
+    .settingsWideBtn {
+      width: 100%;
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 213, 138, 0.4);
+      background: linear-gradient(180deg, rgba(64, 40, 24, 0.95), rgba(34, 20, 11, 0.97));
+      color: #ffe3a6;
+      font-size: 14px;
+      font-weight: 900;
+      touch-action: manipulation;
+    }
+
     .settingRow .settingVal {
       min-width: 30px;
       text-align: right;
@@ -3602,63 +3617,103 @@
       padding: 5px 4px !important;
     }
 
-    /* ===== 転生直後の周回方針の強制選択 ===== */
-    .skillPolicyBox {
-      margin: 8px 0 2px;
-      padding: 8px;
-      border-radius: 12px;
-      background: rgba(3, 12, 24, 0.72);
-      border: 1px solid rgba(91, 200, 255, 0.28);
+    /* ===== 周回方針の選択画面(スタート後に表示) ===== */
+    .policyChoiceScreen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9500;
+      padding: 20px 16px;
+      overflow-y: auto;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(37,155,255,0.14), transparent 34%),
+        radial-gradient(circle at 12% 60%, rgba(255,70,190,0.10), transparent 30%),
+        radial-gradient(circle at 88% 55%, rgba(80,245,255,0.10), transparent 32%),
+        rgba(4, 8, 16, 0.97);
     }
 
-    .skillPolicyTitle {
-      font-size: 11px;
-      font-weight: 800;
-      color: #9fd8ff;
-      margin-bottom: 6px;
-      text-align: left;
-    }
-
-    .skillPolicyRow {
+    .policyChoiceScreen.active {
       display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
+      animation: screenEnter 0.4s ease-out;
     }
 
-    .skillPolicyBtn {
-      flex: 1 1 30%;
-      min-width: 96px;
-      padding: 7px 6px;
-      border-radius: 10px;
-      border: 1px solid rgba(120, 185, 255, 0.30);
-      background: linear-gradient(160deg, rgba(10, 24, 44, 0.95), rgba(3, 9, 18, 0.97));
-      color: #cfe8ff;
+    .policyChoiceInner {
+      width: min(460px, 100%);
+    }
+
+    .policyChoiceHeader {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .policyChoiceTitle {
+      font-size: 22px;
+      font-weight: 900;
+      color: #eaf7ff;
+      text-shadow: 0 0 12px rgba(84,210,255,0.6), 0 0 20px rgba(120,90,255,0.4);
+      margin-bottom: 8px;
+    }
+
+    .policyChoiceSub {
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: #bdd5e8;
+    }
+
+    .policyChoiceRow {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .policyChoiceBtn {
+      display: block;
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(120, 185, 255, 0.34);
+      background: linear-gradient(150deg, rgba(12, 28, 50, 0.96), rgba(4, 10, 20, 0.98));
+      color: #dcefff;
       text-align: left;
       touch-action: manipulation;
+      transition: transform 0.08s ease, filter 0.12s ease, border-color 0.15s ease;
     }
 
-    .skillPolicyBtn b {
+    .policyChoiceBtn b {
+      display: block;
+      font-size: 16px;
+      color: #fff;
+      margin-bottom: 3px;
+    }
+
+    .policyChoiceBtn span {
       display: block;
       font-size: 12px;
+      color: rgba(207, 232, 255, 0.72);
+      line-height: 1.45;
     }
 
-    .skillPolicyBtn span {
+    .policyChoiceBtn.pressed,
+    .policyChoiceBtn:active {
+      transform: scale(0.98);
+      filter: brightness(0.8);
+      border-color: rgba(255, 226, 154, 0.7);
+    }
+
+    .policyChoiceBack {
       display: block;
-      font-size: 10px;
-      color: rgba(207, 232, 255, 0.62);
-      line-height: 1.35;
-      margin-top: 2px;
-    }
-
-    .skillPolicyBtn.chosen {
-      border-color: rgba(255, 226, 154, 0.85);
-      background: linear-gradient(160deg, rgba(64, 44, 14, 0.96), rgba(30, 19, 6, 0.98));
-      color: #ffe9b8;
-      box-shadow: 0 0 12px rgba(255, 190, 80, 0.35), inset 0 0 10px rgba(255, 210, 120, 0.12);
-    }
-
-    .skillPolicyBtn.chosen span {
-      color: rgba(255, 233, 184, 0.72);
+      width: 100%;
+      margin-top: 16px;
+      padding: 11px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.05);
+      color: #ccd8e6;
+      font-size: 13px;
+      font-weight: 800;
+      touch-action: manipulation;
     }
 
     /* ===== 設定による省略・軽量化 ===== */
@@ -3818,17 +3873,17 @@
     }
 
     .monsterInstance.monType-swarm {
-      width: 104px;
+      width: 176px;
     }
 
     .monsterInstance.monType-swarm .cookieMonsterButton {
-      width: 78px;
-      height: 78px;
+      width: 132px;
+      height: 132px;
       filter: hue-rotate(70deg) saturate(1.25);
     }
 
     .monsterInstance.monType-swarm .monsterHp {
-      width: 104px !important;
+      width: 176px !important;
     }
 
     .monsterInstance.monType-tank .cookieMonsterButton {
@@ -3840,17 +3895,17 @@
     }
 
     .monsterInstance.monType-speedy {
-      width: 118px;
+      width: 200px;
     }
 
     .monsterInstance.monType-speedy .cookieMonsterButton {
-      width: 92px;
-      height: 92px;
+      width: 156px;
+      height: 156px;
       filter: hue-rotate(165deg) saturate(1.15) brightness(1.06);
     }
 
     .monsterInstance.monType-speedy .monsterHp {
-      width: 118px !important;
+      width: 200px !important;
     }
 
     .monsterInstance.monType-goldenBeast .cookieMonsterButton {
@@ -3862,12 +3917,12 @@
     }
 
     .monsterInstance.monType-boss {
-      width: 170px;
+      width: 280px;
     }
 
     .monsterInstance.monType-boss .cookieMonsterButton {
-      width: 146px;
-      height: 146px;
+      width: 240px;
+      height: 240px;
       filter: hue-rotate(300deg) saturate(1.30) brightness(0.92);
       box-shadow:
         0 0 30px rgba(255, 80, 120, 0.55),
@@ -3876,7 +3931,7 @@
     }
 
     .monsterInstance.monType-boss .monsterHp {
-      width: 170px !important;
+      width: 280px !important;
     }
 
     /* ステージ背景テーマ(既存の暗色トーンを踏襲し、色付きオーバーレイと色相で差をつける)
@@ -4049,6 +4104,17 @@
 
 <div id="transitionFx" aria-hidden="true"></div>
 
+<div id="policyChoiceScreen" class="policyChoiceScreen">
+  <div class="policyChoiceInner">
+    <div class="policyChoiceHeader">
+      <div class="policyChoiceTitle">周回方針を選択</div>
+      <div class="policyChoiceSub">この周回の戦略を1つ選んでください。<br>選ぶとその方針で周回が始まり、途中では変更できません。</div>
+    </div>
+    <div id="policyChoiceRow" class="policyChoiceRow"></div>
+    <button id="policyChoiceBackBtn" type="button" class="policyChoiceBack">← スキル選択に戻る</button>
+  </div>
+</div>
+
 <div id="settingsOverlay" class="settingsOverlay">
   <div class="settingsPanel">
     <div class="settingsHead">
@@ -4061,6 +4127,7 @@
     <div class="settingRow">画面の装飾アニメーション<input type="checkbox" id="setFancyFx"></div>
     <div class="settingRow">カードの画像表示<input type="checkbox" id="setCardArt"></div>
     <div class="settingRow">カードの説明を省略表示<input type="checkbox" id="setCompact"></div>
+    <button id="settingsToTitleBtn" type="button" class="settingsWideBtn">タイトル画面に戻る</button>
   </div>
 </div>
 
@@ -4181,11 +4248,6 @@
       </div>
 
       <div id="selectedSkillPanel" class="selectedSkillPanel"></div>
-
-      <div id="skillPolicyBox" class="skillPolicyBox">
-        <div class="skillPolicyTitle">周回方針を選択(この周回の間は変更できません)</div>
-        <div id="skillPolicyRow" class="skillPolicyRow"></div>
-      </div>
 
       <div class="skillActionRow">
         <button id="takeSelectedSkillBtn" class="takeSkillBtn">この効果を取る</button>
@@ -4648,7 +4710,7 @@ let activeGoldenAfterheats = [];
 let goldenAfterheatTimers = [];
 let activeTab = "shopTab";
 let selectedSkillId = null;
-let skillMapZoom = 0.72;
+let skillMapZoom = 0.92;
 
 const SKILL_MAP_WIDTH = 2120;
 const SKILL_MAP_HEIGHT = 3320;
@@ -7233,7 +7295,7 @@ function startBgm() {
       osc.stop(audioCtx.currentTime + len);
     }
 
-    bgmTimer = setInterval(() => {
+    function bgmTick() {
       if ((settings.bgmVolume || 0) <= 0 || document.hidden) return;
 
       try {
@@ -7267,7 +7329,12 @@ function startBgm() {
           playBgmNote(freq * 1.5, 6.5, 3.0, 0.10, "sine");
         }
       } catch (e) {}
-    }, 1150);
+    }
+
+    // 最初のインターバルを待たず即座に1音鳴らす(タイトルで開始ボタンを
+    // すぐ押しても、その時点のモードのBGMが一音は必ず聞こえる)
+    bgmTick();
+    bgmTimer = setInterval(bgmTick, 1150);
   } catch (e) {}
 }
 
@@ -7923,28 +7990,30 @@ function skillLinePath(from, to) {
   return `M ${p.x1.toFixed(1)} ${p.y1.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${p.x2.toFixed(1)} ${p.y2.toFixed(1)}`;
 }
 
-// 転生直後の方針選択列。周回中(選択済み)のときは表示しない
-function renderSkillPolicyRow() {
-  const box = $("skillPolicyBox");
-  if (!box) return;
+// 周回方針の選択画面(スタート後に表示)。1つ選ぶとその方針で周回が始まる
+function openPolicyChoiceScreen() {
+  renderPolicyChoiceScreen();
+  $("policyChoiceScreen").classList.add("active");
+}
 
-  const show = runPolicyUnlocked() && pausedForSkillChoice();
-  box.style.display = show ? "" : "none";
-  if (!show) return;
+function closePolicyChoiceScreen() {
+  $("policyChoiceScreen").classList.remove("active");
+}
 
-  $("skillPolicyRow").innerHTML = RUN_POLICIES.map(p => `
-    <button type="button" class="skillPolicyBtn ${state.runPolicyChosen && state.runPolicy === p.id ? "chosen" : ""}" data-runpolicy="${p.id}">
+function renderPolicyChoiceScreen() {
+  $("policyChoiceRow").innerHTML = RUN_POLICIES.map(p => `
+    <button type="button" class="policyChoiceBtn" data-runpolicy="${p.id}">
       <b>${p.name}</b><span>${p.desc}</span>
     </button>
   `).join("");
 
-  document.querySelectorAll("[data-runpolicy]").forEach(btn => {
+  document.querySelectorAll("#policyChoiceRow [data-runpolicy]").forEach(btn => {
     addTap(btn, () => {
       state.runPolicy = btn.dataset.runpolicy;
       state.runPolicyChosen = true;
-      playSound("tab");
-      saveGame();
-      renderSkillChoiceScreen();
+      playSound("start");
+      closePolicyChoiceScreen();
+      beginRunAfterSkills();
     });
   });
 }
@@ -7953,8 +8022,7 @@ function renderSkillChoiceScreen() {
   $("skillScreenPoints").textContent = fmt(state.prestige);
 
   const visibleSkills = SKILLS.filter(skillVisible);
-  const policyPending = pausedForSkillChoice() && runPolicyUnlocked() && !state.runPolicyChosen;
-  const canStart = pausedForSkillChoice() && !policyPending;
+  const canStart = pausedForSkillChoice();
 
   if (!selectedSkillId || !visibleSkills.some(s => s.id === selectedSkillId)) {
     const firstCanBuy = visibleSkills.find(skillCanBuy);
@@ -7993,9 +8061,7 @@ function renderSkillChoiceScreen() {
   const startBtn = $("skillStartBtn");
   startBtn.classList.toggle("locked", !canStart);
   startBtn.disabled = !canStart;
-  startBtn.textContent = policyPending ? "周回方針を選んでください" : "この構成でスタート";
-
-  renderSkillPolicyRow();
+  startBtn.textContent = "この構成でスタート";
 
   const lines = visibleSkills.flatMap(skill => {
     return skill.prereqs.map(reqId => {
@@ -8066,6 +8132,26 @@ addTap($("settingsCloseBtn"), () => {
   playSound("tab");
 });
 
+addTap($("settingsToTitleBtn"), () => {
+  $("settingsOverlay").classList.remove("active");
+  returnToTitleScreen();
+});
+
+addTap($("policyChoiceBackBtn"), () => {
+  playSound("tab");
+  closePolicyChoiceScreen();
+});
+
+addTap($("settingsToTitleBtn"), () => {
+  $("settingsOverlay").classList.remove("active");
+  returnToTitleScreen();
+});
+
+addTap($("policyChoiceBackBtn"), () => {
+  playSound("tab");
+  closePolicyChoiceScreen();
+});
+
 $("settingsOverlay").addEventListener("pointerdown", e => {
   if (e.target === $("settingsOverlay")) $("settingsOverlay").classList.remove("active");
 });
@@ -8128,10 +8214,8 @@ document.addEventListener("fullscreenchange", () => {
 
 addTap($("takeSelectedSkillBtn"), takeSelectedSkill);
 
-addTap($("skillStartBtn"), () => {
-  if (!pausedForSkillChoice()) return;
-  if (runPolicyUnlocked() && !state.runPolicyChosen) return;
-
+// スキル選択を終えてから実際に周回を開始する処理
+function beginRunAfterSkills() {
   state.awaitingSkillChoice = false;
   state.skillChoiceStartCount = boughtSkillCount();
   state.runStart = Date.now();
@@ -8150,6 +8234,18 @@ addTap($("skillStartBtn"), () => {
   scheduleGoldenCookie();
   scheduleMonster();
   showMessage("周回開始");
+}
+
+addTap($("skillStartBtn"), () => {
+  if (!pausedForSkillChoice()) return;
+
+  // 周回方針が解禁されていて未選択なら、スタート後に方針選択画面を表示する
+  if (runPolicyUnlocked() && !state.runPolicyChosen) {
+    openPolicyChoiceScreen();
+    return;
+  }
+
+  beginRunAfterSkills();
 });
 
 function upgradeArt(u) {
@@ -9680,15 +9776,14 @@ function placeFixedElement(el, width, height, minY) {
     return best;
   }
 
-  // まず等身大で置き場所を探し、クッキー本体などとどうしても重なる場合は
-  // 段階的に縮小しながら再挑戦して、隠したり枠外に出したりせず収める
-  let scale = 1;
-  let best = tryPlace(naturalW, naturalH);
-
-  while (best.score > 0 && scale > 0.4) {
-    scale = Math.max(0.4, scale * 0.85);
-    best = tryPlace(naturalW * scale, naturalH * scale);
-  }
+  // 出現物は「.topの内側に収まる」ためだけに縮小し、クッキー本体との重なりを
+  // 避けるためには縮小しない(大きさを優先)。位置はできるだけ重ならない場所を選ぶ。
+  // これでモンスターは常に大きく表示され、狭い端末でも枠内には必ず収まる
+  const availW = Math.max(1, hostW - pad * 2);
+  const availH = Math.max(1, hostH - minYFixed - pad);
+  const fitScale = Math.min(1, availW / naturalW, availH / naturalH);
+  const scale = Math.max(0.5, fitScale);
+  const best = tryPlace(naturalW * scale, naturalH * scale);
 
   el.style.transform = scale < 0.999 ? `translateZ(0) scale(${scale.toFixed(3)})` : "translateZ(0)";
   el.style.transformOrigin = "top left";
@@ -9879,11 +9974,12 @@ function findMonster(id) {
 }
 
 // 種類ごとの表示サイズ(配置計算用。CSS側の幅と揃える)
+// モンスター拡大対応: 基本サイズ236x254(ボタン200px)に合わせ、種別も同率で拡大
 function monsterFootprint(typeId) {
-  if (typeId === "swarm") return { w: 104, h: 122 };
-  if (typeId === "speedy") return { w: 118, h: 136 };
-  if (typeId === "boss") return { w: 170, h: 200 };
-  return { w: 142, h: 172 };
+  if (typeId === "swarm") return { w: 176, h: 192 };
+  if (typeId === "speedy") return { w: 200, h: 216 };
+  if (typeId === "boss") return { w: 280, h: 300 };
+  return { w: 236, h: 254 };
 }
 
 // 出現する種類を決める。ボス周期到達→ボス、金ブースト中は確率で黄金獣、他はロスター抽選
