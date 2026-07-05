@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>クッキー工房｜無料ブラウザで遊べるクッキークリッカー系放置ゲーム</title>
-  <meta name="description" content="クッキー工房は、インストール不要・無料でブラウザから遊べるクッキークリッカー系の放置ゲームです。クッキーをタップして強化・研究を進め、金のクッキーやクッキーモンスター、転生スキルツリーでどこまでも生産量を伸ばそう。">
+  <title>クッキーストラテジャー｜無料ブラウザで遊べるクッキークリッカー系放置ゲーム</title>
+  <meta name="description" content="クッキーストラテジャーは、インストール不要・無料でブラウザから遊べるクッキークリッカー系の放置ゲームです。クッキーをタップして強化・研究を進め、金のクッキーやクッキーモンスター、転生スキルツリーでどこまでも生産量を伸ばそう。">
   <meta name="theme-color" content="#1d130d">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="クッキー工房｜無料ブラウザクッキークリッカー">
+  <meta property="og:title" content="クッキーストラテジャー｜無料ブラウザクッキークリッカー">
   <meta property="og:description" content="インストール不要・無料でブラウザから遊べるクッキークリッカー系放置ゲーム。強化・研究・転生スキルツリーでクッキー生産を極めよう。">
   <meta property="og:locale" content="ja_JP">
   <link rel="canonical" href="https://bachikoljunior-blip.github.io/Simple-browser-cookie-clicker-game/">
@@ -67,14 +67,19 @@
       padding: 8px;
     }
 
-    body.skillChoiceMode {
+    body.skillChoiceMode,
+    body.titleScreenMode {
       padding: 0;
     }
 
     body.skillChoiceMode .game,
     body.skillChoiceMode #goldenCookie,
     body.skillChoiceMode #monsterWrap,
-    body.skillChoiceMode #rewardModal {
+    body.skillChoiceMode #rewardModal,
+    body.titleScreenMode .game,
+    body.titleScreenMode #goldenCookie,
+    body.titleScreenMode #monsterWrap,
+    body.titleScreenMode #rewardModal {
       display: none !important;
     }
 
@@ -2280,13 +2285,7 @@
 
   
 
-    /* 追加修正：ゲーム名をコンパクト表示 / ノルマ階層ゲージ / ブラウザ拡大抑制 */
-    .top h1 {
-      font-size: 15px;
-      line-height: 1.1;
-      margin: 0 0 3px;
-      letter-spacing: 0.08em;
-    }
+    /* 追加修正：ノルマ階層ゲージ / ブラウザ拡大抑制 */
 
     .quotaBox {
       padding-top: 8px !important;
@@ -2783,14 +2782,275 @@
       font-weight: 900;
     }
 
+
+    /* タイトル画面 */
+    body:not(.titleScreenMode) #titleScreen {
+      display: none;
+    }
+
+    .titleScreen {
+      position: fixed;
+      inset: 0;
+      z-index: 9000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 16px;
+      overflow-y: auto;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(255, 200, 110, 0.16), transparent 46%),
+        radial-gradient(circle at 50% 100%, rgba(0, 0, 0, 0.60), transparent 55%),
+        linear-gradient(180deg, rgba(14, 8, 4, 0.80), rgba(6, 3, 1, 0.94)),
+        var(--screen-play);
+      background-size: cover;
+      background-position: center 30%;
+    }
+
+    .titleScreenFrame {
+      position: relative;
+      width: min(420px, 100%);
+      text-align: center;
+      padding: 34px 22px 26px;
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(255, 205, 120, 0.14), transparent 55%),
+        linear-gradient(165deg, rgba(58, 37, 19, 0.92), rgba(19, 11, 6, 0.96));
+      border: 1px solid rgba(255, 213, 138, 0.32);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 232, 168, 0.06),
+        inset 0 0 60px rgba(255, 172, 67, 0.05),
+        0 24px 60px rgba(0, 0, 0, 0.55);
+    }
+
+    .titleOrnament {
+      color: rgba(255, 211, 138, 0.55);
+      font-size: 13px;
+      letter-spacing: 0.5em;
+      text-indent: 0.5em;
+      margin-bottom: 10px;
+      text-shadow: 0 0 10px rgba(255, 189, 89, 0.35);
+    }
+
+    .titleOrnamentBottom {
+      margin: 14px 0 22px;
+    }
+
+    .titleLogo {
+      margin: 0;
+      line-height: 1.05;
+    }
+
+    .titleLogoMain,
+    .titleLogoSub {
+      display: block;
+      font-weight: 900;
+      background: linear-gradient(180deg, #fff6df 0%, #ffd889 38%, #e8a545 68%, #b9752a 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter:
+        drop-shadow(0 0 14px rgba(255, 194, 92, 0.55))
+        drop-shadow(0 3px 2px rgba(0, 0, 0, 0.65));
+    }
+
+    .titleLogoMain {
+      font-size: clamp(40px, 12vw, 54px);
+      letter-spacing: 0.06em;
+    }
+
+    .titleLogoSub {
+      margin-top: 2px;
+      font-size: clamp(26px, 8vw, 36px);
+      letter-spacing: 0.14em;
+    }
+
+    .titleTagline {
+      margin: 14px 0 0;
+      color: var(--sub);
+      font-size: 13px;
+      letter-spacing: 0.05em;
+    }
+
+    .titleButtons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .titleStartBtn,
+    .titleAboutBtn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      touch-action: manipulation;
+    }
+
+    .titleStartBtn {
+      border: 1px solid rgba(255, 224, 158, 0.55);
+      background: linear-gradient(180deg, rgba(255, 200, 105, 0.98), rgba(180, 100, 30, 0.98));
+      color: #2a1608;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 246, 214, 0.55),
+        0 0 22px rgba(255, 180, 70, 0.30),
+        0 10px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .titleStartBtn:active {
+      transform: scale(0.98);
+    }
+
+    .titleAboutBtn {
+      border: 1px solid rgba(255, 213, 132, 0.30);
+      background: rgba(255, 255, 255, 0.04);
+      color: #f3dcb4;
+    }
+
+    .titleFooter {
+      margin-top: 16px;
+      font-size: 11px;
+    }
+
+    .titleFooter a {
+      color: rgba(255, 213, 132, 0.75);
+    }
+
+    .titleAboutOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9100;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(4, 2, 1, 0.72);
+      backdrop-filter: blur(3px);
+    }
+
+    .titleAboutOverlay.active {
+      display: flex;
+    }
+
+    .titleAboutPanel {
+      width: min(460px, 100%);
+      max-height: min(640px, 86dvh);
+      display: flex;
+      flex-direction: column;
+      border-radius: 18px;
+      padding: 16px;
+      background: linear-gradient(165deg, rgba(52, 33, 18, 0.98), rgba(16, 9, 5, 0.99));
+      border: 1px solid rgba(255, 213, 138, 0.30);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+    }
+
+    .titleAboutHead {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .titleAboutHead h2 {
+      margin: 0;
+    }
+
+    .titleAboutCloseBtn {
+      flex: 0 0 auto;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 213, 132, 0.34);
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff4de;
+      font-size: 14px;
+      font-weight: 900;
+      touch-action: manipulation;
+    }
+
+    .titleAboutBody {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-right: 2px;
+    }
+
   </style>
 </head>
 
-<body>
+<body class="titleScreenMode">
+
+<section id="titleScreen" class="titleScreen">
+  <div class="titleScreenFrame">
+    <div class="titleOrnament" aria-hidden="true">❖ ✦ ❖</div>
+
+    <h1 class="titleLogo">
+      <span class="titleLogoMain">クッキー</span>
+      <span class="titleLogoSub">ストラテジャー</span>
+    </h1>
+
+    <p class="titleTagline">タップして焼いて、育てて極める放置ゲーム</p>
+
+    <div class="titleOrnament titleOrnamentBottom" aria-hidden="true">❖ ✦ ❖</div>
+
+    <div class="titleButtons">
+      <button id="titleStartBtn" type="button" class="titleStartBtn">ゲームをはじめる</button>
+      <button id="titleAboutBtn" type="button" class="titleAboutBtn">このゲームについて</button>
+    </div>
+
+    <div class="titleFooter">
+      <a href="privacy.html">プライバシーポリシー</a>
+    </div>
+  </div>
+
+  <div id="titleAboutOverlay" class="titleAboutOverlay">
+    <div class="titleAboutPanel">
+      <div class="titleAboutHead">
+        <h2>このゲームについて</h2>
+        <button id="titleAboutCloseBtn" type="button" class="titleAboutCloseBtn" aria-label="閉じる">✕</button>
+      </div>
+
+      <div class="titleAboutBody">
+        <div class="infoBox">
+          <h3>このゲームについて</h3>
+          <p>「クッキーストラテジャー」は、インストール不要・完全無料でブラウザからそのまま遊べるクッキークリッカー系の放置ゲームです。クッキーをタップして焼き上げ、稼いだクッキーで強化や研究を購入し、毎秒の自動生産をどんどん伸ばしていきます。プレイデータはお使いのブラウザ内（ローカルストレージ）にのみ保存されるため、会員登録や個人情報の入力は一切不要です。</p>
+        </div>
+
+        <div class="infoBox">
+          <h3>遊び方</h3>
+          <p>1. 画面中央の大きなクッキーをタップすると、クッキーが手に入ります。</p>
+          <p>2. 「強化」タブで、おばあちゃんやオーブンなどの設備を購入すると、タップの威力や毎秒の自動生産量が増えます。</p>
+          <p>3. 「研究」タブでは、特定の設備をさらに強くする研究を解放できます。</p>
+          <p>4. ときどき現れる金のクッキーをタップすると、一定時間すべての生産がブーストされます。</p>
+          <p>5. クッキーモンスターが現れたら、連打して撃退しましょう。撃破すると好きな報酬を1つ選べます。</p>
+          <p>6. 生産ノルマを維持しながら周回を進め、「転生」でスキルポイントを獲得すると、スキルツリーで恒久的な強化を取得して次の周回をさらに有利に進められます。</p>
+        </div>
+
+        <div class="infoBox">
+          <h3>よくある質問</h3>
+          <p><b>Q. 料金はかかりますか？</b><br>A. 完全無料です。アプリのインストールや会員登録も不要で、ブラウザだけで遊べます。</p>
+          <p><b>Q. セーブデータはどこに保存されますか？</b><br>A. お使いのブラウザのローカルストレージに自動保存されます。同じ端末・同じブラウザで開けば続きから遊べます。ブラウザのデータを削除するとセーブデータも消えるのでご注意ください。</p>
+          <p><b>Q. 放置していても進みますか？</b><br>A. はい。ゲームを閉じている間も一定時間分のクッキーが自動で生産され、次に開いたときにまとめて受け取れます。</p>
+          <p><b>Q. スマートフォンでも遊べますか？</b><br>A. はい。スマートフォン・タブレット・パソコンのブラウザに対応しています。</p>
+        </div>
+
+        <div class="infoBox">
+          <h3>サイト情報</h3>
+          <p>本サイトのご利用にあたっては、<a href="privacy.html">プライバシーポリシー</a>をご確認ください。</p>
+          <p>ゲームへのご意見・ご感想・不具合のご報告は、メール（<a href="mailto:bachikoljunior@gmail.com">bachikoljunior@gmail.com</a>）までお気軽にお寄せください。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <main class="game">
   <section class="top">
-
-    <h1>クッキー工房</h1>
 
     <div class="cookieCount">
       <span id="cookies">0</span>
@@ -2864,7 +3124,7 @@
         <div class="siteInfo">
           <div class="infoBox">
             <h3>このゲームについて</h3>
-            <p>「クッキー工房」は、インストール不要・完全無料でブラウザからそのまま遊べるクッキークリッカー系の放置ゲームです。クッキーをタップして焼き上げ、稼いだクッキーで強化や研究を購入し、毎秒の自動生産をどんどん伸ばしていきます。プレイデータはお使いのブラウザ内（ローカルストレージ）にのみ保存されるため、会員登録や個人情報の入力は一切不要です。</p>
+            <p>「クッキーストラテジャー」は、インストール不要・完全無料でブラウザからそのまま遊べるクッキークリッカー系の放置ゲームです。クッキーをタップして焼き上げ、稼いだクッキーで強化や研究を購入し、毎秒の自動生産をどんどん伸ばしていきます。プレイデータはお使いのブラウザ内（ローカルストレージ）にのみ保存されるため、会員登録や個人情報の入力は一切不要です。</p>
           </div>
 
           <div class="infoBox">
@@ -6747,10 +7007,15 @@ function loadGame() {
   }
 }
 
+function titleScreenActive() {
+  return document.body.classList.contains("titleScreenMode");
+}
+
 function normalPlayScreenActive() {
   const rewardOpen = $("rewardModal") && $("rewardModal").style.display === "flex";
-  // クッキー本体が見えている通常画面なら、下タブが強化以外でも出現物は残す。全画面・スキル画面・報酬画面では出さない。
+  // クッキー本体が見えている通常画面なら、下タブが強化以外でも出現物は残す。全画面・スキル画面・報酬画面・タイトル画面では出さない。
   return !pausedForSkillChoice()
+    && !titleScreenActive()
     && !document.body.classList.contains("sectionFullscreen")
     && !rewardOpen;
 }
@@ -7689,7 +7954,34 @@ if (pausedForSkillChoice()) {
   scheduleMonster();
 }
 
+function startGameFromTitle() {
+  if (!titleScreenActive()) return;
+
+  document.body.classList.remove("titleScreenMode");
+  $("titleAboutOverlay").classList.remove("active");
+  scheduleGoldenCookie();
+  scheduleMonster();
+  updateTopOnly();
+  renderAllTabs();
+}
+
+addTap($("titleStartBtn"), startGameFromTitle);
+
+addTap($("titleAboutBtn"), () => {
+  $("titleAboutOverlay").classList.add("active");
+});
+
+addTap($("titleAboutCloseBtn"), () => {
+  $("titleAboutOverlay").classList.remove("active");
+});
+
+$("titleAboutOverlay").addEventListener("click", e => {
+  if (e.target === $("titleAboutOverlay")) $("titleAboutOverlay").classList.remove("active");
+});
+
 setInterval(() => {
+  if (titleScreenActive()) return;
+
   updateQuotaPauseState();
   updateSpawnTimerPauseState();
   if (!pausedForSkillChoice()) {
