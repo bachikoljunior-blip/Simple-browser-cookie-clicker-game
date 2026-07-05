@@ -96,6 +96,10 @@
          幅・高さの両方を明示計算し、中身のmin-widthに比率を崩されないようにする */
       height: min(calc(100dvh - 16px), calc((100vw - 16px) * 844 / 390));
       width: min(calc(100vw - 16px), calc((100dvh - 16px) * 390 / 844));
+      /* svh対応ブラウザでは、URLバーの開閉で変わらない安定した高さを使う
+         (プレイ中にゲーム全体が伸縮しないようにする) */
+      height: min(calc(100svh - 16px), calc((100vw - 16px) * 844 / 390));
+      width: min(calc(100vw - 16px), calc((100svh - 16px) * 390 / 844));
       max-width: none;
       margin: auto;
       display: flex;
@@ -2620,8 +2624,8 @@
 
     .tabPages {
       /* タブ内の操作がしやすいよう、ゲーム画面の半分をタブに割り当てる。
-         (ゲーム画面基準の%なので、縦横比固定によりどの端末でも同じ配分になる) */
-      flex: 0 1 50% !important;
+         flex-basis固定(0 0)にして、上部の情報量が変わっても境界が動かないようにする */
+      flex: 0 0 50% !important;
       max-height: 50% !important;
       min-height: 150px !important;
     }
@@ -3502,14 +3506,35 @@
     }
 
     /* ===== タブ操作域の拡大: 上部エリアをひとまわりコンパクトに ===== */
+    /* 上部エリアは縦flexにし、情報欄(ノルマ・焼き加減)の増減はクッキー欄の
+       伸縮だけで吸収する。タブとの境界やゲーム全体の比率は変わらない */
+    .top {
+      display: flex !important;
+      flex-direction: column !important;
+    }
+
     #cookie {
-      width: 116px !important;
       height: 116px !important;
+      max-height: 100% !important;
+      aspect-ratio: 1 / 1 !important;
+      width: auto !important;
     }
 
     .cookieWrap {
-      min-height: 122px !important;
+      flex: 1 1 auto !important;
+      min-height: 84px !important;
       margin-top: 0 !important;
+    }
+
+    /* メッセージはフロー外のトースト表示にして、出ても配分に影響させない */
+    #message {
+      position: absolute !important;
+      left: 10px;
+      right: 10px;
+      bottom: 4px;
+      margin-top: 0 !important;
+      pointer-events: none;
+      z-index: 20;
     }
 
     .cookieCount {
@@ -6580,6 +6605,10 @@ function checkQuotaStageTransition() {
   const up = stage > lastSeenQuotaStage;
   lastSeenQuotaStage = stage;
 
+  // 全画面・タイトル表示中はゲージが非表示。クラスを付けると復帰した瞬間に
+  // アニメーションが再生されて誤作動に見えるため、演出自体を行わない
+  if (document.body.classList.contains("sectionFullscreen") || titleScreenActive()) return;
+
   const box = $("quotaBox");
   if (!box) return;
 
@@ -6861,6 +6890,12 @@ function closeSkillChoiceScreen() {
 
   if (document.fullscreenElement && document.exitFullscreen) {
     document.exitFullscreen().catch(() => {});
+  }
+
+  // 通常画面に戻ったら出現タイマーを再開する(閲覧だけして戻った場合の停止防止)
+  if (normalPlayScreenActive()) {
+    scheduleGoldenCookie();
+    scheduleMonster();
   }
 }
 
@@ -7940,6 +7975,12 @@ function closeTabPageFullscreen() {
   pageFullscreenId = null;
   syncTabPageFullscreen();
   renderActiveTab();
+
+  // 全画面に入るときに出現タイマーを止めているため、通常画面に戻ったら再開する
+  if (normalPlayScreenActive()) {
+    scheduleGoldenCookie();
+    scheduleMonster();
+  }
 }
 
 function toggleTabPageFullscreen(targetId) {
@@ -9086,6 +9127,14 @@ loadGame();
 ensureState();
 applyVisualAssets();
 applySettings();
+
+// 層演出のクラスは再生し終わったら外す。付けたままだと全画面から戻って
+// ゲージが再表示された瞬間にアニメーションが再生されてしまう
+$("quotaBox").addEventListener("animationend", e => {
+  if (e.animationName === "layerUp" || e.animationName === "layerDown") {
+    $("quotaBox").classList.remove("layerUp", "layerDown");
+  }
+});
 installBrowserZoomBlockers();
 installSkillTreePinchZoom();
 liftFloatingActors();
