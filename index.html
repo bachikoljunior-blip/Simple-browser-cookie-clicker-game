@@ -3598,6 +3598,246 @@
       animation: none !important;
     }
 
+    /* ===== 実装追加：ステージ・工房・複数モンスター ===== */
+
+    /* ステージバー(プレイ画面上部) */
+    .stageBar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin: 4px 0 2px;
+    }
+
+    .stageBar button {
+      border: none;
+      border-radius: 8px;
+      background: var(--tab);
+      color: var(--text);
+      min-width: 36px;
+      min-height: 26px;
+      font-size: 12px;
+      touch-action: manipulation;
+    }
+
+    .stageBar button.locked {
+      opacity: 0.32;
+    }
+
+    #stageNameLabel {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-size: 11px;
+      font-weight: 900;
+      color: var(--accent);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.72);
+    }
+
+    /* 料理バフの残り時間表示 */
+    .dishBuffBar {
+      display: none;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 4px;
+      margin: 3px 0 0;
+    }
+
+    .dishBuffBar.active {
+      display: flex;
+    }
+
+    .dishBuffChip {
+      background: rgba(18, 9, 4, 0.60);
+      border: 1px solid rgba(255, 213, 132, 0.32);
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 800;
+      color: #ffe9c0;
+      white-space: nowrap;
+    }
+
+    /* 工房タブは初素材ドロップまで非表示 */
+    .tab[data-tab="workshopTab"] {
+      display: none;
+    }
+
+    body.workshopUnlocked .tab[data-tab="workshopTab"] {
+      display: grid;
+    }
+
+    body.workshopUnlocked .tabs {
+      grid-template-columns: repeat(5, 1fr);
+    }
+
+    .wsCard {
+      display: block;
+      width: 100%;
+      text-align: left;
+      margin: 6px 0;
+    }
+
+    .wsCard.done {
+      background: linear-gradient(145deg, #31502c, #263f22);
+    }
+
+    .wsMatRow {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 4px 2px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 12px;
+    }
+
+    .wsMatRow b {
+      color: var(--accent);
+    }
+
+    /* モンスターの種類表示(既存画像+CSSフィルタ+名前ラベル) */
+    .monsterTypeName {
+      margin-bottom: 2px;
+      font-size: 11px;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 2px 4px #000, 0 0 8px #000;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .monsterInstance.monType-swarm {
+      width: 104px;
+    }
+
+    .monsterInstance.monType-swarm .cookieMonsterButton {
+      width: 78px;
+      height: 78px;
+      filter: hue-rotate(70deg) saturate(1.25);
+    }
+
+    .monsterInstance.monType-swarm .monsterHp {
+      width: 104px !important;
+    }
+
+    .monsterInstance.monType-tank .cookieMonsterButton {
+      filter: grayscale(0.55) brightness(0.82) contrast(1.18);
+      box-shadow:
+        0 0 20px rgba(150, 160, 175, 0.42),
+        0 11px 24px rgba(0,0,0,0.40),
+        inset 0 0 14px rgba(210, 220, 235, 0.10);
+    }
+
+    .monsterInstance.monType-speedy {
+      width: 118px;
+    }
+
+    .monsterInstance.monType-speedy .cookieMonsterButton {
+      width: 92px;
+      height: 92px;
+      filter: hue-rotate(165deg) saturate(1.15) brightness(1.06);
+    }
+
+    .monsterInstance.monType-speedy .monsterHp {
+      width: 118px !important;
+    }
+
+    .monsterInstance.monType-goldenBeast .cookieMonsterButton {
+      filter: sepia(0.65) saturate(2.2) hue-rotate(-12deg) brightness(1.18);
+      box-shadow:
+        0 0 26px rgba(255, 215, 100, 0.65),
+        0 11px 24px rgba(0,0,0,0.40),
+        inset 0 0 14px rgba(255, 240, 170, 0.16);
+    }
+
+    .monsterInstance.monType-boss {
+      width: 170px;
+    }
+
+    .monsterInstance.monType-boss .cookieMonsterButton {
+      width: 146px;
+      height: 146px;
+      filter: hue-rotate(300deg) saturate(1.30) brightness(0.92);
+      box-shadow:
+        0 0 30px rgba(255, 80, 120, 0.55),
+        0 12px 26px rgba(0,0,0,0.44),
+        inset 0 0 16px rgba(255, 170, 200, 0.12);
+    }
+
+    .monsterInstance.monType-boss .monsterHp {
+      width: 170px !important;
+    }
+
+    /* ステージ背景テーマ(既存の暗色トーンを踏襲し、色付きオーバーレイと色相で差をつける)
+       後方の背景画像ルールが!importantのため、ここでも!important+高い詳細度で上書きする */
+    body.stageTheme-2 {
+      background:
+        radial-gradient(circle at 50% -10%, rgba(255, 138, 110, 0.10), transparent 35%),
+        linear-gradient(180deg, #2a1310, #200d0a 50%, #140705) !important;
+    }
+
+    body.stageTheme-2::before {
+      filter: hue-rotate(-16deg) saturate(1.12) brightness(0.94) !important;
+    }
+
+    body.stageTheme-2 .top {
+      background-image:
+        linear-gradient(180deg, rgba(128, 28, 12, 0.55), rgba(52, 10, 4, 0.68)),
+        var(--screen-play) !important;
+    }
+
+    body.stageTheme-3 {
+      background:
+        radial-gradient(circle at 50% -10%, rgba(140, 255, 230, 0.08), transparent 35%),
+        linear-gradient(180deg, #0f211d, #0c1a17 50%, #060f0d) !important;
+    }
+
+    body.stageTheme-3::before {
+      filter: hue-rotate(140deg) saturate(0.82) brightness(0.92) !important;
+    }
+
+    body.stageTheme-3 .top {
+      background-image:
+        linear-gradient(180deg, rgba(8, 92, 84, 0.58), rgba(3, 40, 36, 0.70)),
+        var(--screen-play) !important;
+    }
+
+    body.stageTheme-4 {
+      background:
+        radial-gradient(circle at 50% -10%, rgba(255, 226, 130, 0.11), transparent 35%),
+        linear-gradient(180deg, #2a2110, #201a0b 50%, #131006) !important;
+    }
+
+    body.stageTheme-4::before {
+      filter: hue-rotate(12deg) saturate(1.20) brightness(1.02) !important;
+    }
+
+    body.stageTheme-4 .top {
+      background-image:
+        linear-gradient(180deg, rgba(148, 112, 16, 0.50), rgba(66, 50, 10, 0.64)),
+        var(--screen-play) !important;
+    }
+
+    body.stageTheme-5 {
+      background:
+        radial-gradient(circle at 50% -10%, rgba(190, 150, 255, 0.10), transparent 35%),
+        linear-gradient(180deg, #191226, #130d1e 50%, #0a0612) !important;
+    }
+
+    body.stageTheme-5::before {
+      filter: hue-rotate(230deg) saturate(0.92) brightness(0.88) !important;
+    }
+
+    body.stageTheme-5 .top {
+      background-image:
+        linear-gradient(180deg, rgba(76, 38, 150, 0.56), rgba(32, 14, 66, 0.70)),
+        var(--screen-play) !important;
+    }
+
   </style>
 </head>
 
@@ -3697,8 +3937,15 @@
       <span id="cookies">0</span>
     </div>
 
+    <div id="stageBar" class="stageBar">
+      <button id="stagePrevBtn" type="button" aria-label="前のステージ">◀</button>
+      <span id="stageNameLabel">バター草原</span>
+      <button id="stageNextBtn" type="button" aria-label="次のステージ">▶</button>
+    </div>
+
     <div id="quotaBox" class="quotaBox"></div>
     <div id="bakeBox" class="bakeBox"></div>
+    <div id="dishBuffBar" class="dishBuffBar"></div>
 
     <div class="cookieWrap">
       <button id="cookie" aria-label="クッキー">
@@ -3731,6 +3978,7 @@
     <button class="tab" data-tab="researchTab">研究</button>
     <button class="tab" data-tab="prestigeTab">?</button>
     <button class="tab" data-tab="infoTab">一覧</button>
+    <button class="tab" data-tab="workshopTab">工房</button>
   </nav>
 
   <div class="tabPages">
@@ -3768,6 +4016,13 @@
       </div>
       <button id="backToTitleBtn" type="button" class="backToTitleBtn">タイトル画面に戻る</button>
       <div id="infoPanel" class="pageScroll"></div>
+    </section>
+
+    <section id="workshopTab" class="tabPage">
+      <div class="tabPageHead" data-full-target="workshopTab">
+        <h2>工房</h2>
+      </div>
+      <div id="workshopPanel" class="pageScroll"></div>
     </section>
   </div>
 </main>
@@ -3962,7 +4217,7 @@ const ASSETS = {
 
 const UPGRADES = [
   // クリックとおばあちゃんは基礎値1。香料棚を銀行〜異世界炉の中間に追加し、工場以降は緩やかに重くなる。
-  { id: "finger", name: "強い指", type: "click", value: 1, base: 0.0506, growth: 1.32, desc: "1タップ +1" },
+  { id: "finger", name: "強い指", type: "click", value: 1, base: 0.0506, growth: 1.32, desc: "1タップ +1。さらに所持数が多いほど、毎秒生産連動タップ(毎秒生産の一部がタップ力に乗る)が強くなる" },
   { id: "grandma", name: "おばあちゃん", type: "cps", value: 1, base: 40, growth: 1.30, desc: "毎秒 +1" },
   { id: "oven", name: "オーブン", type: "cps", value: 8, base: 520, growth: 1.35, desc: "毎秒 +8" },
   { id: "factory", name: "工場", type: "cps", value: 45, base: 7200, growth: 1.37, desc: "毎秒 +45" },
@@ -3974,7 +4229,7 @@ const UPGRADES = [
   { id: "galaxyFactory", name: "銀河工場", type: "cps", value: 450000, base: 2800000000, growth: 1.47, desc: "毎秒 +45万" },
   { id: "blackHoleMixer", name: "ブラックホールミキサー", type: "cps", value: 3300000, base: 46000000000, growth: 1.49, desc: "毎秒 +330万" },
   { id: "universeOven", name: "宇宙焼成炉", type: "cps", value: 26000000, base: 820000000000, growth: 1.51, desc: "毎秒 +2600万" },
-  { id: "godFinger", name: "神の指", type: "click", value: 2600000, base: 1500000000000, growth: 1.51, desc: "1タップ +260万" },
+  { id: "godFinger", name: "神の指", type: "click", value: 2600000, base: 1500000000000, growth: 1.51, desc: "1タップ +260万。さらに1個ごとにタップ力全体 x1.02" },
   { id: "cookieSingularity", name: "クッキー特異点", type: "cps", value: 230000000, base: 16000000000000, growth: 1.53, desc: "毎秒 +2.3億" },
   { id: "quantumBakery", name: "量子ベーカリー", type: "cps", value: 2100000000, base: 320000000000000, growth: 1.55, desc: "毎秒 +21億" },
   { id: "antimatterOven", name: "反物質オーブン", type: "cps", value: 22000000000, base: 7000000000000000, growth: 1.57, desc: "毎秒 +220億" }
@@ -4020,6 +4275,78 @@ const REWARD_POOL = [
   { id: "deepPursuit", name: "深追いの契約", category: "risk", unlockSkill: "unlock_reward_deepPursuit", desc: n => `モンスター出現が速くなり、HPも上がるが、報酬Lvも増えやすくなる Lv.${n}` },
   { id: "goldenBeastMutation", name: "金獣変異", category: "risk", unlockSkill: "unlock_reward_goldenBeastMutation", desc: n => `金ブースト中の撃破時、確率で報酬Lv +1(重ねるほど確率の上がり方は緩やか)` }
 ];
+
+// ===== 実装追加：素材・工房(料理/作成)・複数モンスター・ステージ =====
+
+// 素材(転生持ち越し・所持上限9999/種。クッキー経済とは交差しない)
+const MATERIALS = [
+  { id: "butter", name: "濃厚バター", tier: "c" },
+  { id: "flour", name: "石臼小麦粉", tier: "c" },
+  { id: "cacao", name: "カカオ塊", tier: "c" },
+  { id: "lavaSugar", name: "溶岩糖", tier: "c" },
+  { id: "ironShard", name: "黒鉄の欠片", tier: "r" },
+  { id: "mint", name: "氷結ミント", tier: "c" },
+  { id: "frostSugar", name: "霜砂糖", tier: "c" },
+  { id: "silentCore", name: "静寂の氷核", tier: "r" },
+  { id: "spice", name: "火炎香料", tier: "c" },
+  { id: "goldDust", name: "黄金粉", tier: "r" },
+  { id: "stardust", name: "星屑糖", tier: "c" },
+  { id: "cometShard", name: "彗星の欠片", tier: "r" },
+  { id: "bossCore1", name: "ボス核・草原", tier: "b" },
+  { id: "bossCore2", name: "ボス核・火山", tier: "b" },
+  { id: "bossCore3", name: "ボス核・氷河", tier: "b" },
+  { id: "bossCore4", name: "ボス核・砂丘", tier: "b" },
+  { id: "bossCore5", name: "ボス核・銀河", tier: "b" }
+];
+
+// 料理(消費・時限バフ。転生で効果消滅、レシピは永続。同時3品・基本600秒)
+const DISHES = [
+  { id: "butterCookie", name: "バタークッキー生地", cost: { butter: 5, flour: 3 }, desc: "全生産 x(1+2%x今周回の最高ノルマ層。上限200層ぶん)" },
+  { id: "chocoFondant", name: "濃厚ショコラ", cost: { cacao: 6, butter: 4 }, desc: "タップの毎秒生産連動係数 x2" },
+  { id: "mintIce", name: "ミントアイスサンド", cost: { mint: 6, frostSugar: 3 }, desc: "金クッキー出現間隔 x0.75" },
+  { id: "hunterStew", name: "狩人のシチュー", cost: { ironShard: 2, spice: 4 }, desc: "モンスター出現間隔 x0.75、モンスターダメージ x1.5" },
+  { id: "frostCake", name: "霜降りケーキ", cost: { frostSugar: 5, silentCore: 1 }, desc: "ノルマ要求量の増加 x0.85" },
+  { id: "stardustParfait", name: "星屑パフェ", cost: { stardust: 8, cometShard: 1 }, desc: "効果中に購入した設備は、この周回の間 生産x1.25" }
+];
+
+// 作成(永続装備。Lv制・上限10、コストは基本x2.2^Lv、転生持ち越し)
+const EQUIPMENT_DEFS = [
+  { id: "goldenWhisk", name: "黄金の泡立て器", baseCost: { butter: 10, flour: 8 }, desc: lv => `タップの毎秒生産連動係数 x${(1 + 0.15 * lv).toFixed(2)}` },
+  { id: "ovenMitt", name: "断熱オーブン手袋", baseCost: { cacao: 12, ironShard: 2 }, desc: lv => `焼き加減「こんがり」のダメージ倍率 +${(0.05 * lv).toFixed(2)}` },
+  { id: "pressExtractor", name: "香料圧搾機", baseCost: { spice: 14, goldDust: 2 }, desc: lv => `金ブースト倍率 x${(1 + 0.04 * lv).toFixed(2)}` },
+  { id: "monsterAlmanac", name: "モンスター図鑑", baseCost: { ironShard: 4, silentCore: 2 }, desc: lv => `素材ドロップ数 +${Math.floor(lv / 2)}、モンスターダメージ x${(1 + 0.06 * lv).toFixed(2)}` },
+  { id: "stillFlask", name: "蒸留フラスコ", baseCost: { mint: 10, lavaSugar: 6 }, desc: lv => `料理の効果時間 x${(1 + 0.10 * lv).toFixed(2)}` },
+  { id: "dimensionCompass", name: "次元コンパス", baseCost: { bossCoreAny: 1, stardust: 12 }, desc: lv => `ステージ切替クールダウン -${60 * lv}秒、ボス出現に必要な討伐数 -${lv}` }
+];
+
+// モンスターの種類(HP・滞在・出現重み。表示は既存画像+CSSフィルタ+名前ラベル)
+const MONSTER_TYPES = {
+  normal: { name: "クッキーモンスター", hpMult: 1, stayMult: 1, weight: 50, count: 1, rewardLevelBonus: 0 },
+  swarm: { name: "こつぶ群れ", hpMult: 0.22, stayMult: 1, weight: 22, count: 3, rewardLevelBonus: 0 },
+  tank: { name: "鉄焼きガード", hpMult: 6, stayMult: 1.5, weight: 14, count: 1, rewardLevelBonus: 18 },
+  speedy: { name: "はやての運び屋", hpMult: 0.45, stayMult: 0.55, weight: 14, count: 1, rewardLevelBonus: 0 },
+  goldenBeast: { name: "黄金獣", hpMult: 2.5, stayMult: 1, weight: 0, count: 1, rewardLevelBonus: 0 },
+  boss: { name: "ステージボス", hpMult: 12, stayMult: 1, weight: 0, count: 1, rewardLevelBonus: 0 }
+};
+
+// ステージ(現在地は転生でS1に戻る。解放・討伐数は転生持ち越し)
+// 補正はモンスター/金クッキー系のみ。設備生産・研究・転生式には触れない。
+const STAGES = [
+  { no: 1, name: "バター草原", roster: ["normal", "swarm"], hpMult: 1, dropAdd: 0, dropMult: 1, stayMult: 1, goldenGainMult: 1, goldenSpawnMult: 1, rewardLevelBonus: 0, goldenBeastBonus: 0, bossPeriodAdd: 0 },
+  { no: 2, name: "チョコレート火山", roster: ["normal", "swarm", "tank", "speedy"], hpMult: 3, dropAdd: 1, dropMult: 1, stayMult: 1, goldenGainMult: 1.10, goldenSpawnMult: 1, rewardLevelBonus: 0, goldenBeastBonus: 0, bossPeriodAdd: 0 },
+  { no: 3, name: "ミントの氷河", roster: ["normal", "swarm", "tank", "speedy"], hpMult: 8, dropAdd: 0, dropMult: 2, stayMult: 0.85, goldenGainMult: 1, goldenSpawnMult: 1, rewardLevelBonus: 0, goldenBeastBonus: 0, bossPeriodAdd: 0 },
+  { no: 4, name: "香料の砂丘", roster: ["normal", "swarm", "tank", "speedy"], hpMult: 20, dropAdd: 0, dropMult: 1, stayMult: 1, goldenGainMult: 1, goldenSpawnMult: 0.9, rewardLevelBonus: 8, goldenBeastBonus: 0.15, bossPeriodAdd: 0 },
+  { no: 5, name: "星屑の銀河", roster: ["normal", "swarm", "tank", "speedy"], hpMult: 60, dropAdd: 0, dropMult: 3, stayMult: 1, goldenGainMult: 1, goldenSpawnMult: 1, rewardLevelBonus: 0, goldenBeastBonus: 0, bossPeriodAdd: -10 }
+];
+
+// ステージxモンスター種類 → 落とす素材(ボス核は撃破処理側で付与)
+const STAGE_DROPS = {
+  1: { normal: "butter", swarm: "butter", speedy: "flour", tank: "ironShard", goldenBeast: "flour", normalAlt: { id: "flour", chance: 0.30 } },
+  2: { normal: "cacao", swarm: "cacao", speedy: "lavaSugar", tank: "ironShard", goldenBeast: "ironShard" },
+  3: { normal: "mint", swarm: "mint", speedy: "frostSugar", tank: "silentCore", goldenBeast: "silentCore" },
+  4: { normal: "spice", swarm: "spice", speedy: "spice", tank: "goldDust", goldenBeast: "goldDust" },
+  5: { normal: "stardust", swarm: "stardust", speedy: "stardust", tank: "cometShard", goldenBeast: "cometShard" }
+};
 
 const SKILL_GROUPS = {
   core: "中核",
@@ -4270,6 +4597,20 @@ function freshState() {
     orderTempSpiceMultiplier: 1,
     nextBakeGoodBias: 0,
 
+    // 素材・工房・ステージ(materials等は転生持ち越し、dishBuffs等は周回限定)
+    materials: {},
+    materialsEver: {},
+    equipment: {},
+    dishBuffs: {},
+    parfaitBoosted: {},
+    workshopUnlocked: false,
+    stage: 1,
+    stageUnlocked: 1,
+    stageKills: {},
+    stageBossKills: {},
+    stageSwitchedAt: 0,
+    runMaxQuotaStage: 0,
+
     lastSave: Date.now()
   };
 }
@@ -4336,6 +4677,41 @@ function ensureState() {
   state.orderTempSpiceUntil = Math.max(0, Number(state.orderTempSpiceUntil) || 0);
   state.orderTempSpiceMultiplier = Math.max(1, Number(state.orderTempSpiceMultiplier) || 1);
   state.nextBakeGoodBias = Math.max(0, Number(state.nextBakeGoodBias) || 0);
+
+  // 素材・工房・ステージ(旧セーブには存在しないためデフォルト補完する)
+  state.materials = state.materials && typeof state.materials === "object" ? state.materials : {};
+  MATERIALS.forEach(m => {
+    state.materials[m.id] = Math.min(9999, Math.max(0, Math.floor(Number(state.materials[m.id]) || 0)));
+  });
+  state.materialsEver = state.materialsEver && typeof state.materialsEver === "object" ? state.materialsEver : {};
+  state.equipment = state.equipment && typeof state.equipment === "object" ? state.equipment : {};
+  EQUIPMENT_DEFS.forEach(eq => {
+    state.equipment[eq.id] = Math.min(10, Math.max(0, Math.floor(Number(state.equipment[eq.id]) || 0)));
+  });
+  state.dishBuffs = state.dishBuffs && typeof state.dishBuffs === "object" ? state.dishBuffs : {};
+  DISHES.forEach(d => {
+    const until = Math.max(0, Number(state.dishBuffs[d.id]) || 0);
+    if (until > 0) state.dishBuffs[d.id] = until;
+    else delete state.dishBuffs[d.id];
+  });
+  state.parfaitBoosted = state.parfaitBoosted && typeof state.parfaitBoosted === "object" ? state.parfaitBoosted : {};
+  UPGRADES.forEach(u => {
+    const n = Math.max(0, Math.floor(Number(state.parfaitBoosted[u.id]) || 0));
+    if (n > 0) state.parfaitBoosted[u.id] = n;
+    else delete state.parfaitBoosted[u.id];
+  });
+  state.workshopUnlocked = Boolean(state.workshopUnlocked);
+  state.stageUnlocked = Math.min(STAGES.length, Math.max(1, Math.floor(Number(state.stageUnlocked) || 1)));
+  state.stage = Math.min(state.stageUnlocked, Math.max(1, Math.floor(Number(state.stage) || 1)));
+  state.stageKills = state.stageKills && typeof state.stageKills === "object" ? state.stageKills : {};
+  state.stageBossKills = state.stageBossKills && typeof state.stageBossKills === "object" ? state.stageBossKills : {};
+  STAGES.forEach(st => {
+    state.stageKills[st.no] = Math.max(0, Math.floor(Number(state.stageKills[st.no]) || 0));
+    state.stageBossKills[st.no] = Math.max(0, Math.floor(Number(state.stageBossKills[st.no]) || 0));
+  });
+  state.stageSwitchedAt = Math.max(0, Number(state.stageSwitchedAt) || 0);
+  state.runMaxQuotaStage = Math.max(0, Math.floor(Number(state.runMaxQuotaStage) || 0));
+
   state.lastSave = Number(state.lastSave) || Date.now();
 
   if (state.cookieRemainder < 0 || state.cookieRemainder >= 1) {
@@ -4872,7 +5248,8 @@ function bakeMonsterDamageMultiplier() {
   if (!bakeTemperatureUnlocked()) return 1;
   ensureBakeState();
   if (state.bakeStateId !== "crispy") return 1;
-  return 1.08 * bakePowerMultiplier();
+  // 断熱オーブン手袋：「こんがり」倍率 +0.05xLv
+  return (1.08 + 0.05 * equipmentLv("ovenMitt")) * bakePowerMultiplier();
 }
 
 function bakeMonsterStayMultiplier() {
@@ -5320,6 +5697,12 @@ function resetRunLimitedEffects() {
   state.orderTempSpiceUntil = 0;
   state.orderTempSpiceMultiplier = 1;
   state.nextBakeGoodBias = 0;
+  // 料理バフ・パフェ強化・現在ステージは周回限定(転生でリセット)
+  state.dishBuffs = {};
+  state.parfaitBoosted = {};
+  state.stage = 1;
+  state.stageSwitchedAt = 0;
+  state.runMaxQuotaStage = 0;
   lastSeenQuotaStage = null;
 }
 
@@ -5358,7 +5741,8 @@ function goldenMultiplier() {
   const category = rewardCategoryBonus("golden");
   const policy = runPolicyIs("golden") ? 0.18 : 0;
   const gpLv = Math.max(0, state.perks.goldenPower) / (1 + Math.max(0, state.perks.goldenPower) / 60);
-  return 2.6 + gpLv * 0.25 + skillEffect("goldenPower") + category + policy;
+  // 香料圧搾機：金ブースト倍率 x(1+0.04xLv)
+  return (2.6 + gpLv * 0.25 + skillEffect("goldenPower") + category + policy) * (1 + 0.04 * equipmentLv("pressExtractor"));
 }
 
 function runTempoRamp() {
@@ -5667,7 +6051,8 @@ function rawUpgradeContribution(u) {
     * u.value
     * upgradePersonalMultiplier(u)
     * researchUpgradeMultiplier(u)
-    * supportUpgradeMultiplier(u);
+    * supportUpgradeMultiplier(u)
+    * parfaitUpgradeMultiplier(u);
 }
 
 function rawUpgradeCps(u) {
@@ -5752,13 +6137,14 @@ function monsterDamageMultiplier(mon) {
     + brandHuntBonus
     + categoryBonus
     + policyBonus
-  ) * bakeMonsterDamageMultiplier();
+  ) * bakeMonsterDamageMultiplier() * dishAndEquipmentMonsterDamageMultiplier();
 }
 
 
 function goldenAmountMultiplier() {
   const gaLv = Math.max(0, state.perks.goldenAmount) / (1 + Math.max(0, state.perks.goldenAmount) / 45);
-  return 1 + gaLv * 0.45 + skillEffect("goldenAmount") + rewardCategoryBonus("golden") + (runPolicyIs("golden") ? 0.10 : 0);
+  // ステージ補正(S2：金クッキー獲得x1.10)は獲得量にのみ掛ける
+  return (1 + gaLv * 0.45 + skillEffect("goldenAmount") + rewardCategoryBonus("golden") + (runPolicyIs("golden") ? 0.10 : 0)) * stageGoldenGainMultiplier();
 }
 
 function goldenSpawnFactor() {
@@ -5767,7 +6153,7 @@ function goldenSpawnFactor() {
     -Math.max(0, skillEffect("goldenRate")) * 1.8
     -rewardCategoryBonus("golden") * 1.2
     -(runPolicyIs("golden") ? 0.12 : 0)
-  ) * runTempoRamp() * bakeGoldenSpawnMultiplier();
+  ) * runTempoRamp() * bakeGoldenSpawnMultiplier() * dishGoldenSpawnMultiplier() * stageGoldenSpawnMultiplier();
 }
 
 
@@ -5777,7 +6163,7 @@ function monsterSpawnFactor() {
     -Math.max(0, skillEffect("monsterRate")) * 1.8
     -rewardCategoryBonus("hunt") * 1.0
     -(runPolicyIs("hunt") ? 0.10 : 0)
-  ) * deepPursuitSpawnMultiplier() * portalHuntSpawnMultiplier() * runTempoRamp();
+  ) * deepPursuitSpawnMultiplier() * portalHuntSpawnMultiplier() * runTempoRamp() * dishMonsterSpawnMultiplier();
 }
 
 
@@ -5846,6 +6232,318 @@ function researchCost(r) {
   return Math.floor(r.cost * researchDiscount());
 }
 
+// ===== 実装追加：素材・工房(料理/作成)・ステージのヘルパー =====
+
+function materialDef(id) {
+  return MATERIALS.find(m => m.id === id);
+}
+
+function materialName(id) {
+  const m = materialDef(id);
+  return m ? m.name : id;
+}
+
+function materialCount(id) {
+  return Math.max(0, Math.floor(Number((state.materials || {})[id]) || 0));
+}
+
+function materialEverObtained(id) {
+  return Boolean((state.materialsEver || {})[id]);
+}
+
+function bossCoreTotal() {
+  return STAGES.reduce((sum, st) => sum + materialCount("bossCore" + st.no), 0);
+}
+
+function anyBossCoreEverObtained() {
+  return STAGES.some(st => materialEverObtained("bossCore" + st.no));
+}
+
+// 素材を付与する。初入手で工房タブを演出付きで解放する
+function addMaterials(id, n) {
+  const count = Math.max(0, Math.floor(Number(n) || 0));
+  if (!id || count <= 0) return 0;
+
+  state.materials = state.materials && typeof state.materials === "object" ? state.materials : {};
+  state.materialsEver = state.materialsEver && typeof state.materialsEver === "object" ? state.materialsEver : {};
+  state.materials[id] = Math.min(9999, materialCount(id) + count);
+  state.materialsEver[id] = true;
+
+  if (!state.workshopUnlocked) {
+    state.workshopUnlocked = true;
+    markFeatureUnlocked("system", "workshop");
+    syncWorkshopTabVisibility();
+    playScreenTransition();
+    playSound("golden");
+    showMessage("素材を入手！新タブ「工房」が解放された");
+  }
+
+  return count;
+}
+
+function equipmentDef(id) {
+  return EQUIPMENT_DEFS.find(eq => eq.id === id);
+}
+
+function equipmentLv(id) {
+  return Math.min(10, Math.max(0, Math.floor(Number((state.equipment || {})[id]) || 0)));
+}
+
+// 装備コスト：基本コスト x 2.2^Lv(切り上げ)
+function equipmentCost(eq, lv) {
+  const cost = {};
+  Object.entries(eq.baseCost).forEach(([matId, n]) => {
+    cost[matId] = Math.ceil(n * Math.pow(2.2, Math.max(0, lv)));
+  });
+  return cost;
+}
+
+// bossCoreAny はいずれかのボス核で支払える
+function canPayMaterials(cost) {
+  return Object.entries(cost).every(([matId, n]) => {
+    if (matId === "bossCoreAny") return bossCoreTotal() >= n;
+    return materialCount(matId) >= n;
+  });
+}
+
+function payMaterials(cost) {
+  if (!canPayMaterials(cost)) return false;
+
+  Object.entries(cost).forEach(([matId, n]) => {
+    if (matId === "bossCoreAny") {
+      let need = n;
+      STAGES.forEach(st => {
+        if (need <= 0) return;
+        const coreId = "bossCore" + st.no;
+        const take = Math.min(need, materialCount(coreId));
+        state.materials[coreId] = materialCount(coreId) - take;
+        need -= take;
+      });
+      return;
+    }
+    state.materials[matId] = materialCount(matId) - n;
+  });
+
+  return true;
+}
+
+function dishDef(id) {
+  return DISHES.find(d => d.id === id);
+}
+
+// レシピは対応素材を1回でも入手すると開示(bossCoreAnyはいずれかのボス核)
+function recipeKnown(cost) {
+  return Object.keys(cost).every(matId => {
+    if (matId === "bossCoreAny") return anyBossCoreEverObtained();
+    return materialEverObtained(matId);
+  });
+}
+
+function purgeDishBuffs() {
+  const now = Date.now();
+  const buffs = state.dishBuffs && typeof state.dishBuffs === "object" ? state.dishBuffs : {};
+
+  Object.keys(buffs).forEach(id => {
+    if (!(Number(buffs[id]) > now)) delete buffs[id];
+  });
+
+  state.dishBuffs = buffs;
+}
+
+function dishActive(id) {
+  purgeDishBuffs();
+  return Number((state.dishBuffs || {})[id] || 0) > Date.now();
+}
+
+function activeDishCount() {
+  purgeDishBuffs();
+  return Object.keys(state.dishBuffs || {}).length;
+}
+
+// 料理の効果時間(蒸留フラスコで延長)
+function dishDurationMs() {
+  return 600000 * (1 + 0.10 * equipmentLv("stillFlask"));
+}
+
+// バタークッキー生地：全生産 x(1+0.02x今周回の最高ノルマ層(上限200))
+function dishAllProductionMultiplier() {
+  if (!dishActive("butterCookie")) return 1;
+  return 1 + 0.02 * Math.min(200, Math.max(0, state.runMaxQuotaStage || 0));
+}
+
+// ミントアイスサンド：金クッキー出現間隔 x0.75
+function dishGoldenSpawnMultiplier() {
+  return dishActive("mintIce") ? 0.75 : 1;
+}
+
+// 狩人のシチュー：モンスター出現間隔 x0.75
+function dishMonsterSpawnMultiplier() {
+  return dishActive("hunterStew") ? 0.75 : 1;
+}
+
+// 狩人のシチュー(x1.5)とモンスター図鑑(x(1+0.06xLv))のダメージ補正
+function dishAndEquipmentMonsterDamageMultiplier() {
+  return (dishActive("hunterStew") ? 1.5 : 1) * (1 + 0.06 * equipmentLv("monsterAlmanac"));
+}
+
+// 霜降りケーキ：ノルマ要求量の増加 x0.85
+function dishQuotaMultiplier() {
+  return dishActive("frostCake") ? 0.85 : 1;
+}
+
+// 星屑パフェ：効果中に購入した設備はこの周回の間、生産x1.25
+function parfaitUpgradeMultiplier(u) {
+  const boosted = Math.max(0, Math.floor(Number((state.parfaitBoosted || {})[u.id]) || 0));
+  if (boosted <= 0) return 1;
+
+  const owned = Math.max(0, state.upgrades[u.id] || 0);
+  if (owned <= 0) return 1;
+
+  return 1 + 0.25 * Math.min(owned, boosted) / owned;
+}
+
+// 案A：タップの毎秒生産連動係数(基本0.004。黄金の泡立て器と濃厚ショコラが掛かる)
+function clickCpsLinkCoefficient() {
+  let c = 0.004;
+  c *= 1 + 0.15 * equipmentLv("goldenWhisk");
+  if (dishActive("chocoFondant")) c *= 2;
+  return c;
+}
+
+// 案A：毎秒生産に連動するタップ項。クリック系の倍率(会心を除く)も掛かる
+function cpsLinkedClickPower() {
+  const finger = Math.max(0, state.upgrades.finger || 0);
+
+  return baseCps()
+    * clickCpsLinkCoefficient()
+    * (1 + 0.02 * Math.sqrt(finger))
+    * clickSkillMultiplier()
+    * bankClickMultiplier();
+}
+
+// 案C：神の指1個ごとにタップ力全体 x1.02
+function godFingerClickMultiplier() {
+  return Math.pow(1.02, Math.max(0, state.upgrades.godFinger || 0));
+}
+
+// ===== ステージ =====
+
+function stageDef(no) {
+  return STAGES[Math.min(STAGES.length, Math.max(1, Math.floor(Number(no) || 1))) - 1] || STAGES[0];
+}
+
+function stageUnlockedMax() {
+  return Math.min(STAGES.length, Math.max(1, Math.floor(Number(state.stageUnlocked) || 1)));
+}
+
+function currentStageNo() {
+  return Math.min(stageUnlockedMax(), Math.max(1, Math.floor(Number(state.stage) || 1)));
+}
+
+function stageKillCount(no) {
+  return Math.max(0, Math.floor(Number((state.stageKills || {})[no]) || 0));
+}
+
+function stageBossKillCount(no) {
+  return Math.max(0, Math.floor(Number((state.stageBossKills || {})[no]) || 0));
+}
+
+// ステージ切替クールダウン(次元コンパスで-60秒/Lv)
+function stageSwitchCooldownMs() {
+  return Math.max(0, 180 - 60 * equipmentLv("dimensionCompass")) * 1000;
+}
+
+function stageSwitchRemainMs() {
+  return Math.max(0, (state.stageSwitchedAt || 0) + stageSwitchCooldownMs() - Date.now());
+}
+
+// ボス出現に必要な討伐数(周期)。コンパスとステージ補正で減る
+function bossKillPeriod(no) {
+  const st = stageDef(no);
+  return Math.max(5, 25 + 10 * (st.no - 1) + (st.bossPeriodAdd || 0) - equipmentLv("dimensionCompass"));
+}
+
+function bossDue(no) {
+  return stageKillCount(no) >= bossKillPeriod(no) * (stageBossKillCount(no) + 1);
+}
+
+function killsUntilNextBoss(no) {
+  return Math.max(0, bossKillPeriod(no) * (stageBossKillCount(no) + 1) - stageKillCount(no));
+}
+
+// 金クッキー系のステージ補正
+function stageGoldenSpawnMultiplier() {
+  return stageDef(currentStageNo()).goldenSpawnMult || 1;
+}
+
+function stageGoldenGainMultiplier() {
+  return stageDef(currentStageNo()).goldenGainMult || 1;
+}
+
+function applyStageTheme() {
+  const no = currentStageNo();
+  STAGES.forEach(st => {
+    document.body.classList.toggle("stageTheme-" + st.no, st.no === no);
+  });
+}
+
+function syncWorkshopTabVisibility() {
+  document.body.classList.toggle("workshopUnlocked", Boolean(state.workshopUnlocked));
+}
+
+function switchStage(dir) {
+  if (pausedForSkillChoice()) return;
+
+  const cur = currentStageNo();
+  const next = cur + dir;
+  if (next < 1 || next > stageUnlockedMax()) return;
+
+  const remain = stageSwitchRemainMs();
+  if (remain > 0) {
+    showMessage(`ステージ切替まで あと${fmtTime(Math.ceil(remain / 1000))}`);
+    return;
+  }
+
+  state.stage = next;
+  state.stageSwitchedAt = Date.now();
+  applyStageTheme();
+  playSound("tab");
+  showMessage(`ステージ移動：${stageDef(next).name}`);
+  saveGame();
+  updateTopOnly();
+}
+
+function renderStageBar() {
+  const label = $("stageNameLabel");
+  if (!label) return;
+
+  const no = currentStageNo();
+  const remain = Math.ceil(stageSwitchRemainMs() / 1000);
+  const suffix = remain > 0 && stageUnlockedMax() > 1 ? `(切替 ${fmtTime(remain)})` : "";
+
+  label.textContent = `S${no} ${stageDef(no).name}${suffix}`;
+
+  const prev = $("stagePrevBtn");
+  const next = $("stageNextBtn");
+  if (prev) prev.classList.toggle("locked", no <= 1);
+  if (next) next.classList.toggle("locked", no >= stageUnlockedMax());
+}
+
+function renderDishBuffBar() {
+  const bar = $("dishBuffBar");
+  if (!bar) return;
+
+  purgeDishBuffs();
+  const now = Date.now();
+
+  const chips = DISHES
+    .filter(d => Number((state.dishBuffs || {})[d.id] || 0) > now)
+    .map(d => `<span class="dishBuffChip">♨ ${d.name} ${fmtTime(Math.ceil((state.dishBuffs[d.id] - now) / 1000))}</span>`);
+
+  bar.classList.toggle("active", chips.length > 0);
+  bar.innerHTML = chips.join("");
+}
+
 function baseClickPower() {
   let v = 1;
 
@@ -5860,6 +6558,13 @@ function baseClickPower() {
   v *= prestigeMultiplier();
   v *= globalResearchMultiplier();
   v *= runRewardAllMultiplier();
+  v *= dishAllProductionMultiplier();
+
+  // 案A：毎秒生産連動タップ項を加算(クリック系倍率は関数内で乗算済み)
+  v += cpsLinkedClickPower();
+
+  // 案C：神の指1個ごとにタップ力全体x1.02
+  v *= godFingerClickMultiplier();
 
   return v;
 }
@@ -5882,6 +6587,7 @@ function baseCps() {
   v *= runRewardCpsMultiplier();
   v *= bakeCpsMultiplier();
   v *= orderTempCpsMultiplier();
+  v *= dishAllProductionMultiplier();
 
   return v;
 }
@@ -5950,7 +6656,8 @@ function monsterQuotaRequiredAtElapsed(seconds) {
     + 2.20 * Math.pow(Math.max(0, (s - 600) / 240), 2.25)
     + 9.00 * Math.pow(Math.max(0, (s - 840) / 300), 2.65);
 
-  return Math.max(1, Math.floor((base * wall) / quotaControlMultiplier()));
+  // 霜降りケーキ効果中はノルマ要求量の増加をx0.85に抑える
+  return Math.max(1, Math.floor((base * wall) * dishQuotaMultiplier() / quotaControlMultiplier()));
 }
 
 function monsterQuotaRequired() {
@@ -6535,6 +7242,9 @@ let lastSeenQuotaStage = null;
 function checkQuotaStageTransition() {
   const stage = currentQuotaStageNumber();
 
+  // バタークッキー生地の基準になる「今周回の最高ノルマ層」を記録する
+  state.runMaxQuotaStage = Math.max(state.runMaxQuotaStage || 0, stage);
+
   if (lastSeenQuotaStage == null) {
     lastSeenQuotaStage = stage;
     return;
@@ -6565,6 +7275,8 @@ function updateTopOnly() {
   renderQuota();
   checkQuotaStageTransition();
   renderBakeBox();
+  renderStageBar();
+  renderDishBuffBar();
 
   if (monsterVisible) renderMonsterHp();
 }
@@ -6622,6 +7334,12 @@ function buyUpgrade(id) {
   }
 
   if (bought > 0) {
+    // 星屑パフェ効果中に購入した設備は、この周回の間 生産x1.25
+    if (dishActive("stardustParfait")) {
+      state.parfaitBoosted = state.parfaitBoosted && typeof state.parfaitBoosted === "object" ? state.parfaitBoosted : {};
+      state.parfaitBoosted[id] = Math.max(0, Math.floor(Number(state.parfaitBoosted[id]) || 0)) + bought;
+    }
+
     trackOrderProgress("buyUpgrade", id, bought);
     playSound("upgrade");
     showMessage(`${u.name} ×${bought}`);
@@ -7650,6 +8368,22 @@ function renderInfo() {
     </div>
 
     <div class="infoBox">
+      <h3>ステージ・工房</h3>
+      <div class="infoRow">現在ステージ：S${currentStageNo()} ${stageDef(currentStageNo()).name}(解放済み：S${stageUnlockedMax()}まで)</div>
+      <div class="infoRow">このステージの討伐数：${fmt(stageKillCount(currentStageNo()))} / 次のボスまで あと${fmt(killsUntilNextBoss(currentStageNo()))}体</div>
+      <div class="infoRow">画面上部の「◀ ▶」でステージを移動できる(切替クールダウン ${fmtTime(Math.round(stageSwitchCooldownMs() / 1000))})。ステージが進むほどモンスターは強くなり、落とす素材が変わる。</div>
+      <div class="infoRow">モンスターには種類がある：こつぶ群れ(3体同時)・鉄焼きガード(高HP/高報酬)・はやての運び屋(短滞在/素材2倍)・黄金獣(金ブースト中のみ)・ステージボス(討伐数で出現)。</div>
+      <div class="infoRow">タップ力には毎秒生産の一部が上乗せされる(強い指で強化、神の指は1個ごとにタップ全体x1.02)。</div>
+      ${state.workshopUnlocked ? `
+        <div class="infoRow">工房タブ：素材で「料理」(時限バフ・同時3品・転生でリセット)と「作成」(永続装備・転生持ち越し)ができる。</div>
+        <div class="infoRow">料理バフ発動中：${fmt(activeDishCount())} / 3品</div>
+        <div class="infoRow">装備：${EQUIPMENT_DEFS.filter(eq => equipmentLv(eq.id) > 0).map(eq => `${eq.name} Lv.${equipmentLv(eq.id)}`).join(" / ") || "まだなし"}</div>
+      ` : `
+        <div class="infoRow">モンスターが素材を落とすと、新タブ「工房」が解放される。</div>
+      `}
+    </div>
+
+    <div class="infoBox">
       <h3>解放済みスキル</h3>
       ${skillRows || `<div class="desc">まだスキルなし</div>`}
     </div>
@@ -7670,11 +8404,182 @@ function renderInfo() {
   installOrderBoardButtons();
 }
 
+// ===== 実装追加：工房タブ(料理/作成/素材庫) =====
+
+function cookDish(id) {
+  if (pausedForSkillChoice()) {
+    openSkillChoiceScreen();
+    return;
+  }
+
+  const dish = dishDef(id);
+  if (!dish) return;
+  if (!recipeKnown(dish.cost)) return;
+
+  if (dishActive(id)) {
+    showMessage("この料理はすでに効果中");
+    return;
+  }
+
+  if (activeDishCount() >= 3) {
+    showMessage("料理の同時効果は3品まで");
+    return;
+  }
+
+  if (!payMaterials(dish.cost)) {
+    showMessage("素材が足りない");
+    return;
+  }
+
+  state.dishBuffs[id] = Date.now() + dishDurationMs();
+
+  playSound("upgrade");
+  showMessage(`${dish.name}を調理：${fmtTime(Math.round(dishDurationMs() / 1000))}の間 効果発動`);
+  saveGame();
+  updateTopOnly();
+  renderActiveTab();
+}
+
+function craftEquipment(id) {
+  if (pausedForSkillChoice()) {
+    openSkillChoiceScreen();
+    return;
+  }
+
+  const eq = equipmentDef(id);
+  if (!eq) return;
+  if (!recipeKnown(eq.baseCost)) return;
+
+  const lv = equipmentLv(id);
+
+  if (lv >= 10) {
+    showMessage("これ以上強化できない(Lv上限)");
+    return;
+  }
+
+  if (!payMaterials(equipmentCost(eq, lv))) {
+    showMessage("素材が足りない");
+    return;
+  }
+
+  state.equipment[id] = lv + 1;
+
+  playSound("upgrade");
+  showMessage(`${eq.name} Lv.${lv + 1} 完成`);
+  saveGame();
+  updateTopOnly();
+  renderActiveTab();
+}
+
+function workshopCostText(cost) {
+  return Object.entries(cost).map(([matId, n]) => {
+    if (matId === "bossCoreAny") return `ボス核(任意)×${fmt(n)}(所持${fmt(bossCoreTotal())})`;
+    return `${materialName(matId)}×${fmt(n)}(所持${fmt(materialCount(matId))})`;
+  }).join(" / ");
+}
+
+function renderWorkshop() {
+  const box = $("workshopPanel");
+  if (!box) return;
+
+  if (!state.workshopUnlocked) {
+    box.innerHTML = `<div class="desc">モンスターが素材を落とすと解放される</div>`;
+    return;
+  }
+
+  purgeDishBuffs();
+  const now = Date.now();
+
+  const dishRows = DISHES.map(d => {
+    if (!recipeKnown(d.cost)) {
+      return `
+        <div class="item wsCard locked">
+          <b>???</b>
+          <div class="desc">未知のレシピ(対応する素材を入手すると開示される)</div>
+        </div>
+      `;
+    }
+
+    const active = Number((state.dishBuffs || {})[d.id] || 0) > now;
+    const can = !active && activeDishCount() < 3 && canPayMaterials(d.cost) && !pausedForSkillChoice();
+
+    return `
+      <button class="item wsCard ${can ? "canBuy" : ""} ${active ? "done" : ""}" data-ws="dish" data-id="${d.id}">
+        <b>${d.name}</b>
+        <div class="price">${active ? `効果中 残り${fmtTime(Math.ceil((state.dishBuffs[d.id] - now) / 1000))}` : workshopCostText(d.cost)}</div>
+        <div class="desc">${d.desc}</div>
+      </button>
+    `;
+  }).join("");
+
+  const eqRows = EQUIPMENT_DEFS.map(eq => {
+    if (!recipeKnown(eq.baseCost)) {
+      return `
+        <div class="item wsCard locked">
+          <b>???</b>
+          <div class="desc">未知の設計図(対応する素材を入手すると開示される)</div>
+        </div>
+      `;
+    }
+
+    const lv = equipmentLv(eq.id);
+    const maxed = lv >= 10;
+    const cost = equipmentCost(eq, lv);
+    const can = !maxed && canPayMaterials(cost) && !pausedForSkillChoice();
+
+    return `
+      <button class="item wsCard ${can ? "canBuy" : ""} ${maxed ? "done" : ""}" data-ws="equipment" data-id="${eq.id}">
+        <b>${eq.name} Lv.${lv}${maxed ? "(MAX)" : ""}</b>
+        <div class="price">${maxed ? "強化完了" : `次Lvコスト：${workshopCostText(cost)}`}</div>
+        <div class="desc">現在：${eq.desc(lv)}</div>
+        ${maxed ? "" : `<div class="desc">次Lv：${eq.desc(lv + 1)}</div>`}
+      </button>
+    `;
+  }).join("");
+
+  const matRows = MATERIALS
+    .filter(m => materialEverObtained(m.id))
+    .map(m => `
+      <div class="wsMatRow">
+        <span>${m.name}${m.tier === "r" ? "(レア)" : m.tier === "b" ? "(ボス核)" : ""}</span>
+        <b>${fmt(materialCount(m.id))}</b>
+      </div>
+    `)
+    .join("");
+
+  box.innerHTML = `
+    <div class="infoBox">
+      <h3>料理(時限バフ・同時3品まで)</h3>
+      <div class="desc">素材を消費して${fmtTime(Math.round(dishDurationMs() / 1000))}の間バフを得る。効果は転生で消えるが、レシピは残る。</div>
+      ${dishRows}
+    </div>
+
+    <div class="infoBox">
+      <h3>作成(永続装備・転生持ち越し)</h3>
+      <div class="desc">Lvは最大10。コストはLvごとにx2.2で増える。</div>
+      ${eqRows}
+    </div>
+
+    <div class="infoBox">
+      <h3>素材庫(転生持ち越し・各9999まで)</h3>
+      ${matRows || `<div class="desc">まだ素材なし。モンスターを倒すとステージと種類に応じた素材を落とす。</div>`}
+    </div>
+  `;
+
+  box.querySelectorAll("[data-ws]").forEach(btn => {
+    const kind = btn.dataset.ws;
+    const id = btn.dataset.id;
+    if (!id) return;
+    addTap(btn, () => kind === "dish" ? cookDish(id) : craftEquipment(id));
+  });
+}
+
 function renderActiveTab() {
   if (activeTab === "shopTab") renderShop();
   if (activeTab === "researchTab") renderResearch();
   if (activeTab === "prestigeTab") renderPrestige();
   if (activeTab === "infoTab") renderInfo();
+  if (activeTab === "workshopTab") renderWorkshop();
 }
 
 function renderAllTabs() {
@@ -7682,6 +8587,7 @@ function renderAllTabs() {
   renderResearch();
   renderPrestige();
   renderInfo();
+  renderWorkshop();
 }
 
 function switchTab(tabId) {
@@ -7957,6 +8863,16 @@ function prestigeReset() {
   const keepPrestigeRuns = state.prestigeRuns + 1;
   const keepSkills = state.skills;
 
+  // 素材・装備・ステージ解放・討伐数は転生持ち越し。
+  // 料理バフ・現在ステージ・パフェ強化はfreshStateで周回リセットされる。
+  const keepMaterials = { ...(state.materials || {}) };
+  const keepMaterialsEver = { ...(state.materialsEver || {}) };
+  const keepEquipment = { ...(state.equipment || {}) };
+  const keepWorkshopUnlocked = Boolean(state.workshopUnlocked);
+  const keepStageUnlocked = state.stageUnlocked;
+  const keepStageKills = { ...(state.stageKills || {}) };
+  const keepStageBossKills = { ...(state.stageBossKills || {}) };
+
   state = freshState();
 
   state.totalCookies = keepTotal;
@@ -7976,6 +8892,16 @@ function prestigeReset() {
   state.monstersDefeated = keepMonsterKills;
   state.everFeatures = keepEverFeatures;
   state.skills = keepSkills;
+  state.materials = keepMaterials;
+  state.materialsEver = keepMaterialsEver;
+  state.equipment = keepEquipment;
+  state.workshopUnlocked = keepWorkshopUnlocked;
+  state.stageUnlocked = keepStageUnlocked;
+  state.stageKills = keepStageKills;
+  state.stageBossKills = keepStageBossKills;
+  ensureState();
+  applyStageTheme();
+  syncWorkshopTabVisibility();
   state.runStart = Date.now();
   resetRunLimitedEffects();
   state.awaitingSkillChoice = true;
@@ -8018,6 +8944,8 @@ function completeReset() {
   oldSaveKeys.forEach(key => localStorage.removeItem(key));
 
   state = freshState();
+  applyStageTheme();
+  syncWorkshopTabVisibility();
   clearGoldenBoosts();
   selectedSkillId = null;
 
@@ -8485,11 +9413,13 @@ function syncMonsterVisible() {
 }
 
 function createMonsterElement(mon) {
+  const typeDef = MONSTER_TYPES[mon.type] || MONSTER_TYPES.normal;
   const wrap = document.createElement("div");
-  wrap.className = "monsterInstance";
+  wrap.className = "monsterInstance monType-" + (mon.type || "normal");
   wrap.dataset.monsterId = String(mon.id);
   wrap.innerHTML = `
-    <button class="cookieMonsterButton" aria-label="クッキーモンスター"></button>
+    <div class="monsterTypeName">${typeDef.name}</div>
+    <button class="cookieMonsterButton" aria-label="${typeDef.name}"></button>
     <div class="monsterHp">
       <div class="monsterHpFill"></div>
     </div>
@@ -8508,6 +9438,36 @@ function findMonster(id) {
   return monsters.find(m => m.id === id);
 }
 
+// 種類ごとの表示サイズ(配置計算用。CSS側の幅と揃える)
+function monsterFootprint(typeId) {
+  if (typeId === "swarm") return { w: 104, h: 122 };
+  if (typeId === "speedy") return { w: 118, h: 136 };
+  if (typeId === "boss") return { w: 170, h: 200 };
+  return { w: 142, h: 172 };
+}
+
+// 出現する種類を決める。ボス周期到達→ボス、金ブースト中は確率で黄金獣、他はロスター抽選
+function pickMonsterTypeId(stageNo) {
+  const st = stageDef(stageNo);
+
+  if (bossDue(stageNo)) return "boss";
+
+  if (goldenBoostActive() && Math.random() < 0.35 + (st.goldenBeastBonus || 0)) {
+    return "goldenBeast";
+  }
+
+  const roster = (st.roster || ["normal"]).filter(t => MONSTER_TYPES[t]);
+  const total = roster.reduce((sum, t) => sum + (MONSTER_TYPES[t].weight || 0), 0);
+  let r = Math.random() * Math.max(1, total);
+
+  for (const t of roster) {
+    r -= MONSTER_TYPES[t].weight || 0;
+    if (r <= 0) return t;
+  }
+
+  return "normal";
+}
+
 function showMonster() {
   if (pausedForSkillChoice()) return;
   if (!normalPlayScreenActive()) return;
@@ -8519,38 +9479,57 @@ function showMonster() {
   clearMonsterSpawnTimer();
 
   const level = monsterLevel();
-  const id = monsterIdSeq++;
+  const stageNo = currentStageNo();
+  const st = stageDef(stageNo);
+  const typeId = pickMonsterTypeId(stageNo);
+  const typeDef = MONSTER_TYPES[typeId] || MONSTER_TYPES.normal;
+  const count = Math.max(1, typeDef.count || 1);
+  const groupId = monsterIdSeq;
 
-  const mon = {
-    id,
-    level,
-    goldenChainMultiplier: state.goldenChainReady
-      ? 1 + (state.perks.goldenChain || 0) * 2.0
-      : 1,
-    goldenFirstHitReady: state.goldenFirstHitReady,
-    firstHitUsed: false,
-    maxHp: Math.max(40, Math.floor(monsterHpValue(level) * (state.nextMonsterHpMultiplier || 1))),
-    hp: 1,
-    el: null,
-    hideTimer: null
-  };
+  const baseHp = Math.max(40, Math.floor(monsterHpValue(level) * (state.nextMonsterHpMultiplier || 1)));
+  const stayMs = typeId === "boss"
+    ? 60000
+    : monsterStayDurationMs() * (typeDef.stayMult || 1) * (st.stayMult || 1);
 
-  mon.hp = mon.maxHp;
-  mon.el = createMonsterElement(mon);
+  for (let i = 0; i < count; i++) {
+    const id = monsterIdSeq++;
 
-  monsters.push(mon);
+    const mon = {
+      id,
+      level,
+      type: typeId,
+      stageNo,
+      swarmGroup: typeId === "swarm" ? groupId : null,
+      goldenChainMultiplier: (i === 0 && state.goldenChainReady)
+        ? 1 + (state.perks.goldenChain || 0) * 2.0
+        : 1,
+      goldenFirstHitReady: i === 0 && state.goldenFirstHitReady,
+      firstHitUsed: false,
+      maxHp: Math.max(9, Math.floor(baseHp * (typeDef.hpMult || 1) * (st.hpMult || 1))),
+      hp: 1,
+      el: null,
+      hideTimer: null
+    };
+
+    mon.hp = mon.maxHp;
+    mon.el = createMonsterElement(mon);
+
+    monsters.push(mon);
+
+    const fp = monsterFootprint(typeId);
+    placeFixedElement(mon.el, fp.w, fp.h, 90);
+    renderMonsterHp(mon.id);
+
+    mon.hideTimer = setTimeout(() => {
+      hideMonster(mon.id, true);
+    }, stayMs);
+  }
+
   syncMonsterVisible();
 
   state.goldenChainReady = false;
   state.goldenFirstHitReady = false;
   state.nextMonsterHpMultiplier = 1;
-
-  placeFixedElement(mon.el, 142, 158, 90);
-  renderMonsterHp(mon.id);
-
-  mon.hideTimer = setTimeout(() => {
-    hideMonster(mon.id, true);
-  }, monsterStayDurationMs());
 }
 
 function forceMonster() {
@@ -8681,11 +9660,80 @@ function hitMonster(id) {
   if (mon.hp <= 0) defeatMonster(mon.id);
 }
 
+// ドロップ数：1+floor(√Lv/6)(上限4)x種類補正、ステージ補正、図鑑ボーナス
+function monsterDropCount(mon) {
+  const st = stageDef(mon.stageNo || 1);
+  let n = mon.type === "swarm"
+    ? 1
+    : Math.min(4, 1 + Math.floor(Math.sqrt(Math.max(1, mon.level)) / 6));
+
+  if (mon.type === "speedy") n *= 2;
+
+  n += st.dropAdd || 0;
+  n *= st.dropMult || 1;
+  n += Math.floor(equipmentLv("monsterAlmanac") / 2);
+
+  return Math.max(1, Math.floor(n));
+}
+
+// 撃破時の素材ドロップ(ボス核はhandleBossDefeatで付与)。表示用テキストを返す
+function dropMonsterMaterials(mon) {
+  const typeId = mon.type || "normal";
+  if (typeId === "boss") return "";
+
+  const table = STAGE_DROPS[mon.stageNo || 1] || STAGE_DROPS[1];
+  let matId = table[typeId] || table.normal;
+
+  // S1はspeedy不在のため、normalが低確率で小麦粉を代替ドロップする
+  if (typeId === "normal" && table.normalAlt && Math.random() < table.normalAlt.chance) {
+    matId = table.normalAlt.id;
+  }
+
+  if (!matId) return "";
+
+  const count = monsterDropCount(mon);
+  addMaterials(matId, count);
+
+  const text = `+${fmt(count)} ${materialName(matId)}`;
+  showFloat(text);
+  return text;
+}
+
+// ボス撃破：ボス核付与、初回なら次ステージ解放
+function handleBossDefeat(stageNo) {
+  state.stageBossKills = state.stageBossKills && typeof state.stageBossKills === "object" ? state.stageBossKills : {};
+  state.stageBossKills[stageNo] = stageBossKillCount(stageNo) + 1;
+
+  const first = state.stageBossKills[stageNo] === 1;
+  const coreId = "bossCore" + stageNo;
+  const coreCount = first ? 3 : 1;
+
+  addMaterials(coreId, coreCount);
+
+  let text = `+${fmt(coreCount)} ${materialName(coreId)}`;
+  showFloat(text);
+
+  if (first && stageNo < STAGES.length && stageUnlockedMax() < stageNo + 1) {
+    state.stageUnlocked = stageNo + 1;
+    text += ` / 新ステージ「${stageDef(stageNo + 1).name}」解放！`;
+    playScreenTransition();
+  }
+
+  return text;
+}
+
 function defeatMonster(id) {
   const mon = findMonster(id);
   if (!mon) return;
 
   const defeatedLevel = mon.level;
+  const typeId = mon.type || "normal";
+  const stageNo = mon.stageNo || currentStageNo();
+  const stageInfo = stageDef(stageNo);
+  const typeDef = MONSTER_TYPES[typeId] || MONSTER_TYPES.normal;
+
+  // 報酬Lv判定：鉄焼きガード+18層ぶん、香料の砂丘+8層ぶん扱い
+  const rewardLevel = defeatedLevel + (typeDef.rewardLevelBonus || 0) + (stageInfo.rewardLevelBonus || 0);
 
   hideMonster(mon.id, false);
   playSound("defeat");
@@ -8693,6 +9741,36 @@ function defeatMonster(id) {
   state.monstersDefeated += 1;
   if (!state.quotaFailed) state.quotaMonsterKills = Math.floor(Number(state.quotaMonsterKills) || 0) + 1;
   trackOrderProgress("monster", null, 1);
+
+  // ステージ討伐カウント(転生持ち越し。ボス周期の判定に使う)
+  state.stageKills = state.stageKills && typeof state.stageKills === "object" ? state.stageKills : {};
+  state.stageKills[stageNo] = stageKillCount(stageNo) + 1;
+
+  const dropText = dropMonsterMaterials(mon);
+
+  // はやての運び屋：撃破すると次の金クッキー出現間隔x0.5
+  if (typeId === "speedy") {
+    state.nextGoldenSpawnMultiplier = (state.nextGoldenSpawnMultiplier || 1) * 0.5;
+
+    if (!goldenVisible) {
+      clearGoldenSpawnTimer();
+      scheduleGoldenCookie();
+    }
+  }
+
+  const bossText = typeId === "boss" ? handleBossDefeat(stageNo) : "";
+
+  // こつぶ群れ：残りの個体がいる間は報酬選択を出さない(最後の1体で通常フロー)
+  const partnersLeft = typeId === "swarm" && mon.swarmGroup != null
+    && monsters.some(m => m.swarmGroup === mon.swarmGroup);
+
+  if (partnersLeft) {
+    showMessage(`撃破${dropText ? ` ${dropText}` : ""}`);
+    saveGame();
+    updateTopOnly();
+    renderActiveTab();
+    return;
+  }
 
   const chainPrepLv = state.perks.chainPrep || 0;
 
@@ -8732,17 +9810,20 @@ function defeatMonster(id) {
     }
   }
 
+  if (dropText) message += ` ${dropText}`;
+  if (bossText) message += ` ${bossText}`;
+
   playSound("golden");
   showMessage(message);
 
-  pendingRewardChoices = buildMonsterRewardChoices(defeatedLevel);
+  pendingRewardChoices = buildMonsterRewardChoices(rewardLevel);
   state.nextRewardCountBonus = 0;
   preloadRewardChoiceImages(pendingRewardChoices);
 
   clearTimeout(rewardOpenTimer);
   rewardOpenTimer = setTimeout(() => {
     rewardOpenTimer = null;
-    showRewardChoices(defeatedLevel);
+    showRewardChoices(rewardLevel);
   }, 700);
 
   saveGame();
@@ -9041,7 +10122,10 @@ function chooseReward(choice) {
 window.addEventListener("resize", () => {
   if (goldenVisible) placeFixedElement($("goldenCookie"), 90, 90, 90);
   monsters.forEach(m => {
-    if (m.el) placeFixedElement(m.el, 142, 158, 90);
+    if (m.el) {
+      const fp = monsterFootprint(m.type);
+      placeFixedElement(m.el, fp.w, fp.h, 90);
+    }
   });
 });
 
@@ -9053,6 +10137,11 @@ applySettings();
 installBrowserZoomBlockers();
 installSkillTreePinchZoom();
 liftFloatingActors();
+applyStageTheme();
+syncWorkshopTabVisibility();
+
+addTap($("stagePrevBtn"), () => switchStage(-1));
+addTap($("stageNextBtn"), () => switchStage(1));
 
 updateTopOnly();
 renderAllTabs();
