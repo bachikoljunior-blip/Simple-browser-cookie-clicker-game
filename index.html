@@ -3500,6 +3500,65 @@
       font-weight: 800;
     }
 
+    /* ===== 転生直後の周回方針の強制選択 ===== */
+    .skillPolicyBox {
+      margin: 8px 0 2px;
+      padding: 8px;
+      border-radius: 12px;
+      background: rgba(3, 12, 24, 0.72);
+      border: 1px solid rgba(91, 200, 255, 0.28);
+    }
+
+    .skillPolicyTitle {
+      font-size: 11px;
+      font-weight: 800;
+      color: #9fd8ff;
+      margin-bottom: 6px;
+      text-align: left;
+    }
+
+    .skillPolicyRow {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .skillPolicyBtn {
+      flex: 1 1 30%;
+      min-width: 96px;
+      padding: 7px 6px;
+      border-radius: 10px;
+      border: 1px solid rgba(120, 185, 255, 0.30);
+      background: linear-gradient(160deg, rgba(10, 24, 44, 0.95), rgba(3, 9, 18, 0.97));
+      color: #cfe8ff;
+      text-align: left;
+      touch-action: manipulation;
+    }
+
+    .skillPolicyBtn b {
+      display: block;
+      font-size: 12px;
+    }
+
+    .skillPolicyBtn span {
+      display: block;
+      font-size: 10px;
+      color: rgba(207, 232, 255, 0.62);
+      line-height: 1.35;
+      margin-top: 2px;
+    }
+
+    .skillPolicyBtn.chosen {
+      border-color: rgba(255, 226, 154, 0.85);
+      background: linear-gradient(160deg, rgba(64, 44, 14, 0.96), rgba(30, 19, 6, 0.98));
+      color: #ffe9b8;
+      box-shadow: 0 0 12px rgba(255, 190, 80, 0.35), inset 0 0 10px rgba(255, 210, 120, 0.12);
+    }
+
+    .skillPolicyBtn.chosen span {
+      color: rgba(255, 233, 184, 0.72);
+    }
+
     /* ===== 設定による省略・軽量化 ===== */
     body.artOff .artCard::before {
       opacity: 0 !important;
@@ -3732,6 +3791,11 @@
       </div>
 
       <div id="selectedSkillPanel" class="selectedSkillPanel"></div>
+
+      <div id="skillPolicyBox" class="skillPolicyBox">
+        <div class="skillPolicyTitle">周回方針を選択(この周回の間は変更できません)</div>
+        <div id="skillPolicyRow" class="skillPolicyRow"></div>
+      </div>
 
       <div class="skillActionRow">
         <button id="takeSelectedSkillBtn" class="takeSkillBtn">この効果を取る</button>
@@ -4185,6 +4249,7 @@ function freshState() {
     huntFocusRewardPenalty: 0,
     nextMonsterStayMultiplier: 1,
     runPolicy: "balanced",
+    runPolicyChosen: false,
     rewardCategoryCounts: {},
     spiceBoostUntil: 0,
     portalHuntUntil: 0,
@@ -4250,6 +4315,7 @@ function ensureState() {
   state.huntFocusRewardPenalty = Math.max(0, Math.floor(Number(state.huntFocusRewardPenalty) || 0));
   state.nextMonsterStayMultiplier = Number(state.nextMonsterStayMultiplier) || 1;
   state.runPolicy = ["balanced", "click", "bake", "hunt", "golden"].includes(state.runPolicy) ? state.runPolicy : "balanced";
+  state.runPolicyChosen = state.runPolicyChosen === true;
   state.rewardCategoryCounts = state.rewardCategoryCounts && typeof state.rewardCategoryCounts === "object" ? state.rewardCategoryCounts : {};
   ["golden", "hunt", "equipment", "risk"].forEach(k => state.rewardCategoryCounts[k] = Math.max(0, Math.floor(Number(state.rewardCategoryCounts[k]) || 0)));
   state.spiceBoostUntil = Number(state.spiceBoostUntil) || 0;
@@ -6791,11 +6857,38 @@ function skillLinePath(from, to) {
   return `M ${p.x1.toFixed(1)} ${p.y1.toFixed(1)} Q ${mx.toFixed(1)} ${my.toFixed(1)} ${p.x2.toFixed(1)} ${p.y2.toFixed(1)}`;
 }
 
+// 転生直後の方針選択列。周回中(選択済み)のときは表示しない
+function renderSkillPolicyRow() {
+  const box = $("skillPolicyBox");
+  if (!box) return;
+
+  const show = runPolicyUnlocked() && pausedForSkillChoice();
+  box.style.display = show ? "" : "none";
+  if (!show) return;
+
+  $("skillPolicyRow").innerHTML = RUN_POLICIES.map(p => `
+    <button type="button" class="skillPolicyBtn ${state.runPolicyChosen && state.runPolicy === p.id ? "chosen" : ""}" data-runpolicy="${p.id}">
+      <b>${p.name}</b><span>${p.desc}</span>
+    </button>
+  `).join("");
+
+  document.querySelectorAll("[data-runpolicy]").forEach(btn => {
+    addTap(btn, () => {
+      state.runPolicy = btn.dataset.runpolicy;
+      state.runPolicyChosen = true;
+      playSound("tab");
+      saveGame();
+      renderSkillChoiceScreen();
+    });
+  });
+}
+
 function renderSkillChoiceScreen() {
   $("skillScreenPoints").textContent = fmt(state.prestige);
 
   const visibleSkills = SKILLS.filter(skillVisible);
-  const canStart = pausedForSkillChoice();
+  const policyPending = pausedForSkillChoice() && runPolicyUnlocked() && !state.runPolicyChosen;
+  const canStart = pausedForSkillChoice() && !policyPending;
 
   if (!selectedSkillId || !visibleSkills.some(s => s.id === selectedSkillId)) {
     const firstCanBuy = visibleSkills.find(skillCanBuy);
@@ -6834,7 +6927,9 @@ function renderSkillChoiceScreen() {
   const startBtn = $("skillStartBtn");
   startBtn.classList.toggle("locked", !canStart);
   startBtn.disabled = !canStart;
-  startBtn.textContent = "この構成でスタート";
+  startBtn.textContent = policyPending ? "周回方針を選んでください" : "この構成でスタート";
+
+  renderSkillPolicyRow();
 
   const lines = visibleSkills.flatMap(skill => {
     return skill.prereqs.map(reqId => {
@@ -6969,6 +7064,7 @@ addTap($("takeSelectedSkillBtn"), takeSelectedSkill);
 
 addTap($("skillStartBtn"), () => {
   if (!pausedForSkillChoice()) return;
+  if (runPolicyUnlocked() && !state.runPolicyChosen) return;
 
   state.awaitingSkillChoice = false;
   state.skillChoiceStartCount = boughtSkillCount();
@@ -7390,10 +7486,8 @@ function renderPrestige() {
   const policyBox = runPolicyUnlocked() ? `
     <div class="infoBox">
       <h3>周回方針</h3>
-      <div class="desc">転生後の立ち上がりと報酬方針を変える。現在：${runPolicyName()}</div>
-      <div class="policyGrid">
-        ${RUN_POLICIES.map(p => `<button class="item policyBtn ${state.runPolicy === p.id ? "done" : ""}" data-policy="${p.id}"><b>${p.name}</b><div class="desc">${p.desc}</div></button>`).join("")}
-      </div>
+      <div class="desc">この周回の方針：<b>${runPolicyName()}</b></div>
+      <div class="desc">方針は転生直後にのみ選択でき、周回の途中では変更できません。</div>
     </div>
   ` : "";
 
@@ -7418,16 +7512,6 @@ function renderPrestige() {
       <button id="resetBtn" class="item danger">完全リセット</button>
     </div>
   `;
-
-  document.querySelectorAll(".policyBtn").forEach(btn => {
-    addTap(btn, () => {
-      state.runPolicy = btn.dataset.policy || "balanced";
-      showMessage(`周回方針：${runPolicyName()}`);
-      saveGame();
-      renderPrestige();
-      updateTopOnly();
-    });
-  });
 
   const prestigeBtn = $("prestigeBtn");
   if (prestigeBtn) addTap(prestigeBtn, prestigeReset);
@@ -7863,7 +7947,6 @@ function prestigeReset() {
 
   const keepTotal = state.totalCookies;
   const keepClicks = state.totalClicks;
-  const keepRunPolicy = state.runPolicy || "balanced";
   const baseGain = prestigeBaseGain();
   const keepPrestige = state.prestige + gain;
   const keepPrestigeTotal = state.prestigeTotal + gain;
@@ -7878,7 +7961,9 @@ function prestigeReset() {
 
   state.totalCookies = keepTotal;
   state.totalClicks = keepClicks;
-  state.runPolicy = keepRunPolicy;
+  // 周回方針は引き継がない。転生直後のスキル画面で必ず選び直す(周回中は変更不可)
+  state.runPolicy = "balanced";
+  state.runPolicyChosen = false;
   state.prestige = keepPrestige;
   state.prestigeTotal = keepPrestigeTotal;
   state.prestigeBaseTotal = keepPrestigeBaseTotal;
