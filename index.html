@@ -2619,10 +2619,11 @@
     }
 
     .tabPages {
-      /* .gameの縦横比固定に合わせ、ビューポートではなくゲーム画面の高さ基準にする */
-      flex: 0 1 41% !important;
-      max-height: 41% !important;
-      min-height: 90px !important;
+      /* タブ内の操作がしやすいよう、ゲーム画面の半分をタブに割り当てる。
+         (ゲーム画面基準の%なので、縦横比固定によりどの端末でも同じ配分になる) */
+      flex: 0 1 50% !important;
+      max-height: 50% !important;
+      min-height: 150px !important;
     }
 
     body.sectionFullscreen .tabPages {
@@ -3498,6 +3499,34 @@
       text-align: right;
       color: var(--accent);
       font-weight: 800;
+    }
+
+    /* ===== タブ操作域の拡大: 上部エリアをひとまわりコンパクトに ===== */
+    #cookie {
+      width: 116px !important;
+      height: 116px !important;
+    }
+
+    .cookieWrap {
+      min-height: 122px !important;
+      margin-top: 0 !important;
+    }
+
+    .cookieCount {
+      font-size: clamp(21px, 6.2vw, 27px) !important;
+      margin: 1px 0 !important;
+    }
+
+    .quotaBox {
+      padding: 6px 8px !important;
+    }
+
+    .stats {
+      margin-top: 4px !important;
+    }
+
+    .stats div {
+      padding: 5px 4px !important;
     }
 
     /* ===== 転生直後の周回方針の強制選択 ===== */
@@ -6179,7 +6208,7 @@ function applySettings() {
   document.body.classList.toggle("artOff", !settings.cardArt);
   document.body.classList.toggle("compactCards", settings.compactCards);
   if (seMasterGain) seMasterGain.gain.value = Math.max(0, Math.min(1, settings.seVolume / 100));
-  if (bgmGainNode) bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.16;
+  if (bgmGainNode) bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.10;
 }
 
 loadSettings();
@@ -6212,32 +6241,39 @@ function startBgm() {
     if (audioCtx.state === "suspended") audioCtx.resume();
 
     bgmGainNode = audioCtx.createGain();
-    bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.16;
+    bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.10;
     bgmFilter = audioCtx.createBiquadFilter();
     bgmFilter.type = "lowpass";
-    bgmFilter.frequency.value = 900;
+    bgmFilter.frequency.value = 680;
     bgmFilter.connect(bgmGainNode);
     bgmGainNode.connect(audioCtx.destination);
     bgmStarted = true;
 
-    // Fメジャー・ペンタトニック系のゆったりした音を約2.4秒ごとに1音ずつ鳴らす
+    // Fメジャー・ペンタトニックを約4.6秒に1音、隣の音へゆっくり歩くように鳴らす。
+    // 跳躍をなくし、立ち上がりも余韻も長くして、意識に上らない環境音に寄せる
     const scale = [174.61, 196.00, 220.00, 261.63, 293.66, 349.23];
+    let noteIndex = 2;
 
     bgmTimer = setInterval(() => {
       if ((settings.bgmVolume || 0) <= 0 || document.hidden) return;
 
       try {
         const now = audioCtx.currentTime;
-        const freq = scale[Math.floor(Math.random() * scale.length)];
-        const len = 2.6;
 
-        [[freq, 1], [freq * 2, 0.28]].forEach(([f, amp]) => {
+        // -1/0/+1 の範囲でしか動かない(音程の跳躍を排除)
+        const roll = Math.random();
+        const stepDir = roll < 0.38 ? -1 : roll < 0.62 ? 0 : 1;
+        noteIndex = Math.max(0, Math.min(scale.length - 1, noteIndex + stepDir));
+        const freq = scale[noteIndex];
+        const len = 6.5;
+
+        [[freq, 1], [freq * 2, 0.14]].forEach(([f, amp]) => {
           const osc = audioCtx.createOscillator();
           const g = audioCtx.createGain();
           osc.type = "sine";
           osc.frequency.value = f;
           g.gain.setValueAtTime(0.0001, now);
-          g.gain.linearRampToValueAtTime(amp, now + 0.9);
+          g.gain.linearRampToValueAtTime(amp, now + 2.2);
           g.gain.exponentialRampToValueAtTime(0.0001, now + len);
           osc.connect(g);
           g.connect(bgmFilter);
@@ -6247,22 +6283,22 @@ function startBgm() {
 
         bgmStep += 1;
 
-        // 4音ごとに5度上の音を静かに重ねて厚みを出す
-        if (bgmStep % 4 === 0) {
+        // 6音ごとに5度上をさらに静かに重ねる
+        if (bgmStep % 6 === 0) {
           const osc = audioCtx.createOscillator();
           const g = audioCtx.createGain();
-          osc.type = "triangle";
+          osc.type = "sine";
           osc.frequency.value = freq * 1.5;
-          g.gain.setValueAtTime(0.0001, now + 0.4);
-          g.gain.linearRampToValueAtTime(0.18, now + 1.3);
-          g.gain.exponentialRampToValueAtTime(0.0001, now + len + 0.4);
+          g.gain.setValueAtTime(0.0001, now + 1.0);
+          g.gain.linearRampToValueAtTime(0.10, now + 3.0);
+          g.gain.exponentialRampToValueAtTime(0.0001, now + len + 1.0);
           osc.connect(g);
           g.connect(bgmFilter);
-          osc.start(now + 0.4);
-          osc.stop(now + len + 0.4);
+          osc.start(now + 1.0);
+          osc.stop(now + len + 1.0);
         }
       } catch (e) {}
-    }, 2400);
+    }, 4600);
   } catch (e) {}
 }
 
