@@ -4445,7 +4445,7 @@ const UPGRADES = [
   { id: "galaxyFactory", name: "銀河工場", type: "cps", value: 450000, base: 2800000000, growth: 1.47, desc: "毎秒 +45万" },
   { id: "blackHoleMixer", name: "ブラックホールミキサー", type: "cps", value: 3300000, base: 46000000000, growth: 1.49, desc: "毎秒 +330万" },
   { id: "universeOven", name: "宇宙焼成炉", type: "cps", value: 26000000, base: 820000000000, growth: 1.51, desc: "毎秒 +2600万" },
-  { id: "godFinger", name: "神の指", type: "click", value: 2600000, base: 1500000000000, growth: 1.51, desc: "1タップ +260万。さらに1個ごとにタップ力全体 x1.02" },
+  { id: "godFinger", name: "神の指", type: "click", value: 2600000, base: 1500000000000, growth: 1.51, desc: "1タップ +260万。さらに1個ごとにタップ力全体 x1.012" },
   { id: "cookieSingularity", name: "クッキー特異点", type: "cps", value: 230000000, base: 16000000000000, growth: 1.53, desc: "毎秒 +2.3億" },
   { id: "quantumBakery", name: "量子ベーカリー", type: "cps", value: 2100000000, base: 320000000000000, growth: 1.55, desc: "毎秒 +21億" },
   { id: "antimatterOven", name: "反物質オーブン", type: "cps", value: 22000000000, base: 7000000000000000, growth: 1.57, desc: "毎秒 +220億" }
@@ -6730,9 +6730,9 @@ function cpsLinkedClickPower() {
     * bankClickMultiplier();
 }
 
-// 案C：神の指1個ごとにタップ力全体 x1.02
+// 案C：神の指1個ごとにタップ力全体 x1.012
 function godFingerClickMultiplier() {
-  return Math.pow(1.02, Math.max(0, state.upgrades.godFinger || 0));
+  return Math.pow(1.012, Math.max(0, state.upgrades.godFinger || 0));
 }
 
 // ===== ステージ =====
@@ -6895,7 +6895,7 @@ function baseClickPower() {
   // 案A：毎秒生産連動タップ項を加算(クリック系倍率は関数内で乗算済み)
   v += cpsLinkedClickPower();
 
-  // 案C：神の指1個ごとにタップ力全体x1.02
+  // 案C：神の指1個ごとにタップ力全体x1.012
   v *= godFingerClickMultiplier();
 
   return v;
@@ -8934,7 +8934,7 @@ function renderInfo() {
       <div class="infoRow">ステージは転生時(スキル選択→方針選択の後)に1つ選び、その周回中は固定。ステージが進むほどモンスターは強くなり、落とす素材が変わる。S6深層領域はボス撃破ごとに層が進む(現在 第${fmt(deepLayerNow())}層)。</div>
       <div class="infoRow">周回方針は素材ドロップにもバイアスを掛ける：${RUN_POLICIES.find(p => p.id === state.runPolicy)?.desc || ""}</div>
       <div class="infoRow">モンスターには種類がある：こつぶ群れ(3体同時)・鉄焼きガード(高HP/高報酬)・はやての運び屋(短滞在/素材2倍)・黄金獣(金ブースト中のみ)・ステージボス(討伐数で出現)。</div>
-      <div class="infoRow">タップ力には毎秒生産の一部が上乗せされる(強い指で強化、神の指は1個ごとにタップ全体x1.02)。</div>
+      <div class="infoRow">タップ力には毎秒生産の一部が上乗せされる(強い指で強化、神の指は1個ごとにタップ全体x1.012)。</div>
       ${workshopUnlockedNow() ? `
         <div class="infoRow">工房タブ：素材で「料理」(時限バフ・同時3品・転生でリセット)${workshopCraftUnlocked() ? "と「作成」(永続装備・転生持ち越し)" : ""}ができる。${workshopCraftUnlocked() ? "" : "スキル「工房の拡張」で「作成」も解放される。"}</div>
         <div class="infoRow">料理バフ発動中：${fmt(activeDishCount())} / 3品</div>
