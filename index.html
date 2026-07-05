@@ -604,21 +604,6 @@
       border-top: none;
     }
 
-    .siteInfo {
-      text-align: left;
-    }
-
-    .siteInfo p {
-      margin: 6px 0;
-      font-size: 12px;
-      line-height: 1.65;
-      color: var(--sub);
-    }
-
-    .siteInfo a {
-      color: var(--accent);
-    }
-
     .skillSummary {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -2213,6 +2198,20 @@
       flex: 0 0 auto;
     }
 
+    .backToTitleBtn {
+      flex: 0 0 auto;
+      width: 100%;
+      margin-bottom: 8px;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 213, 132, 0.34);
+      background: rgba(255, 255, 255, 0.05);
+      color: #f3dcb4;
+      font-size: 12px;
+      font-weight: 800;
+      touch-action: manipulation;
+    }
+
     .pageScroll,
     #shop,
     #research,
@@ -3118,40 +3117,8 @@
       <div class="tabPageHead" data-full-target="infoTab">
         <h2>一覧</h2>
       </div>
-      <div id="infoPanel" class="pageScroll">
-        <div id="infoPanelBody"></div>
-
-        <div class="siteInfo">
-          <div class="infoBox">
-            <h3>このゲームについて</h3>
-            <p>「クッキーストラテジャー」は、インストール不要・完全無料でブラウザからそのまま遊べるクッキークリッカー系の放置ゲームです。クッキーをタップして焼き上げ、稼いだクッキーで強化や研究を購入し、毎秒の自動生産をどんどん伸ばしていきます。プレイデータはお使いのブラウザ内（ローカルストレージ）にのみ保存されるため、会員登録や個人情報の入力は一切不要です。</p>
-          </div>
-
-          <div class="infoBox">
-            <h3>遊び方</h3>
-            <p>1. 画面中央の大きなクッキーをタップすると、クッキーが手に入ります。</p>
-            <p>2. 「強化」タブで、おばあちゃんやオーブンなどの設備を購入すると、タップの威力や毎秒の自動生産量が増えます。</p>
-            <p>3. 「研究」タブでは、特定の設備をさらに強くする研究を解放できます。</p>
-            <p>4. ときどき現れる金のクッキーをタップすると、一定時間すべての生産がブーストされます。</p>
-            <p>5. クッキーモンスターが現れたら、連打して撃退しましょう。撃破すると好きな報酬を1つ選べます。</p>
-            <p>6. 生産ノルマを維持しながら周回を進め、「転生」でスキルポイントを獲得すると、スキルツリーで恒久的な強化を取得して次の周回をさらに有利に進められます。</p>
-          </div>
-
-          <div class="infoBox">
-            <h3>よくある質問</h3>
-            <p><b>Q. 料金はかかりますか？</b><br>A. 完全無料です。アプリのインストールや会員登録も不要で、ブラウザだけで遊べます。</p>
-            <p><b>Q. セーブデータはどこに保存されますか？</b><br>A. お使いのブラウザのローカルストレージに自動保存されます。同じ端末・同じブラウザで開けば続きから遊べます。ブラウザのデータを削除するとセーブデータも消えるのでご注意ください。</p>
-            <p><b>Q. 放置していても進みますか？</b><br>A. はい。ゲームを閉じている間も一定時間分のクッキーが自動で生産され、次に開いたときにまとめて受け取れます。</p>
-            <p><b>Q. スマートフォンでも遊べますか？</b><br>A. はい。スマートフォン・タブレット・パソコンのブラウザに対応しています。</p>
-          </div>
-
-          <div class="infoBox">
-            <h3>サイト情報</h3>
-            <p>本サイトのご利用にあたっては、<a href="privacy.html">プライバシーポリシー</a>をご確認ください。</p>
-            <p>ゲームへのご意見・ご感想・不具合のご報告は、メール（<a href="mailto:bachikoljunior@gmail.com">bachikoljunior@gmail.com</a>）までお気軽にお寄せください。</p>
-          </div>
-        </div>
-      </div>
+      <button id="backToTitleBtn" type="button" class="backToTitleBtn">タイトル画面に戻る</button>
+      <div id="infoPanel" class="pageScroll"></div>
     </section>
   </div>
 </main>
@@ -6449,7 +6416,7 @@ function upgradeEffectiveContribution(u) {
 }
 
 function renderInfo() {
-  const box = $("infoPanelBody");
+  const box = $("infoPanel");
 
   const visible = visibleUpgrades();
 
@@ -7965,7 +7932,19 @@ function startGameFromTitle() {
   renderAllTabs();
 }
 
+function returnToTitleScreen() {
+  if (titleScreenActive() || pausedForSkillChoice()) return;
+
+  document.body.classList.add("titleScreenMode");
+  clearGoldenSpawnTimer();
+  clearMonsterSpawnTimer();
+  if (goldenVisible) hideGoldenCookie(false);
+  hideMonster(false);
+  saveGame();
+}
+
 addTap($("titleStartBtn"), startGameFromTitle);
+addTap($("backToTitleBtn"), returnToTitleScreen);
 
 addTap($("titleAboutBtn"), () => {
   $("titleAboutOverlay").classList.add("active");
