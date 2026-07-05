@@ -96,6 +96,10 @@
          幅・高さの両方を明示計算し、中身のmin-widthに比率を崩されないようにする */
       height: min(calc(100dvh - 16px), calc((100vw - 16px) * 844 / 390));
       width: min(calc(100vw - 16px), calc((100dvh - 16px) * 390 / 844));
+      /* svh対応ブラウザでは、URLバーの開閉で変わらない安定した高さを使う
+         (プレイ中にゲーム全体が伸縮しないようにする) */
+      height: min(calc(100svh - 16px), calc((100vw - 16px) * 844 / 390));
+      width: min(calc(100vw - 16px), calc((100svh - 16px) * 390 / 844));
       max-width: none;
       margin: auto;
       display: flex;
@@ -2619,10 +2623,11 @@
     }
 
     .tabPages {
-      /* .gameの縦横比固定に合わせ、ビューポートではなくゲーム画面の高さ基準にする */
-      flex: 0 1 41% !important;
-      max-height: 41% !important;
-      min-height: 90px !important;
+      /* タブ内の操作がしやすいよう、ゲーム画面の半分をタブに割り当てる。
+         flex-basis固定(0 0)にして、上部の情報量が変わっても境界が動かないようにする */
+      flex: 0 0 50% !important;
+      max-height: 50% !important;
+      min-height: 150px !important;
     }
 
     body.sectionFullscreen .tabPages {
@@ -2842,6 +2847,13 @@
         var(--screen-play);
       background-size: cover;
       background-position: center 30%;
+      /* 背景の工房絵をゆっくり上下にドリフトさせる */
+      animation: titleBgDrift 22s ease-in-out infinite alternate;
+    }
+
+    @keyframes titleBgDrift {
+      from { background-position: 50% 0%, 50% 100%, center, center 26%; }
+      to { background-position: 50% 0%, 50% 100%, center, center 38%; }
     }
 
     .titleScreenFrame {
@@ -2861,7 +2873,48 @@
     }
 
     .titleLogo {
-      animation: titleLogoFloat 5.2s ease-in-out infinite alternate;
+      animation:
+        logoEnter 0.85s 0.15s cubic-bezier(0.2, 1.4, 0.35, 1) both,
+        titleLogoFloat 5.2s 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes logoEnter {
+      from { opacity: 0; transform: translateY(14px) scale(0.82); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* 額縁→ロゴ→説明→ボタンの順で舞台に上がる入場演出 */
+    .titleScreenFrame {
+      animation: frameEnter 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes frameEnter {
+      from { opacity: 0; transform: translateY(26px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .titleTagline {
+      animation:
+        fadeRise 0.5s 0.45s ease-out both,
+        taglineGlow 3.4s 1.2s ease-in-out infinite alternate;
+    }
+
+    @keyframes fadeRise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes taglineGlow {
+      from { text-shadow: 0 0 0 rgba(255, 210, 130, 0); }
+      to { text-shadow: 0 0 12px rgba(255, 210, 130, 0.55); }
+    }
+
+    .titleButtons {
+      animation: fadeRise 0.55s 0.6s ease-out both;
+    }
+
+    .titleFooter {
+      animation: fadeRise 0.5s 0.75s ease-out both;
     }
 
     @keyframes titleLogoFloat {
@@ -3500,6 +3553,55 @@
       font-weight: 800;
     }
 
+    /* ===== タブ操作域の拡大: 上部エリアをひとまわりコンパクトに ===== */
+    /* 上部エリアは縦flexにし、情報欄(ノルマ・焼き加減)の増減はクッキー欄の
+       伸縮だけで吸収する。タブとの境界やゲーム全体の比率は変わらない */
+    .top {
+      display: flex !important;
+      flex-direction: column !important;
+    }
+
+    #cookie {
+      height: 116px !important;
+      max-height: 100% !important;
+      aspect-ratio: 1 / 1 !important;
+      width: auto !important;
+    }
+
+    .cookieWrap {
+      flex: 1 1 auto !important;
+      min-height: 84px !important;
+      margin-top: 0 !important;
+    }
+
+    /* メッセージはフロー外のトースト表示にして、出ても配分に影響させない */
+    #message {
+      position: absolute !important;
+      left: 10px;
+      right: 10px;
+      bottom: 4px;
+      margin-top: 0 !important;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .cookieCount {
+      font-size: clamp(21px, 6.2vw, 27px) !important;
+      margin: 1px 0 !important;
+    }
+
+    .quotaBox {
+      padding: 6px 8px !important;
+    }
+
+    .stats {
+      margin-top: 4px !important;
+    }
+
+    .stats div {
+      padding: 5px 4px !important;
+    }
+
     /* ===== 転生直後の周回方針の強制選択 ===== */
     .skillPolicyBox {
       margin: 8px 0 2px;
@@ -3577,6 +3679,11 @@
       display: none !important;
     }
 
+    body.fxOff .titleScreen,
+    body.fxOff .titleScreenFrame,
+    body.fxOff .titleTagline,
+    body.fxOff .titleButtons,
+    body.fxOff .titleFooter,
     body.fxOff .titleLogo,
     body.fxOff .titleLogoMain,
     body.fxOff .titleLogoSub,
@@ -7058,7 +7165,7 @@ function applySettings() {
   document.body.classList.toggle("artOff", !settings.cardArt);
   document.body.classList.toggle("compactCards", settings.compactCards);
   if (seMasterGain) seMasterGain.gain.value = Math.max(0, Math.min(1, settings.seVolume / 100));
-  if (bgmGainNode) bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.16;
+  if (bgmGainNode) bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.10;
 }
 
 loadSettings();
@@ -7091,57 +7198,76 @@ function startBgm() {
     if (audioCtx.state === "suspended") audioCtx.resume();
 
     bgmGainNode = audioCtx.createGain();
-    bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.16;
+    bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.10;
     bgmFilter = audioCtx.createBiquadFilter();
     bgmFilter.type = "lowpass";
-    bgmFilter.frequency.value = 900;
+    bgmFilter.frequency.value = 680;
     bgmFilter.connect(bgmGainNode);
     bgmGainNode.connect(audioCtx.destination);
     bgmStarted = true;
 
-    // Fメジャー・ペンタトニック系のゆったりした音を約2.4秒ごとに1音ずつ鳴らす
-    const scale = [174.61, 196.00, 220.00, 261.63, 293.66, 349.23];
+    // BGMは2トラック構成。タイトル画面ではコード進行のゆったりした
+    // アルペジオ、ゲーム中は隣の音へ歩くだけの環境音を流し分ける
+    const gameScale = [174.61, 196.00, 220.00, 261.63, 293.66, 349.23];
+    let noteIndex = 2;
+
+    // タイトル用: F → Am → Dm → B♭ の循環をアルペジオで奏でる
+    const titleChords = [
+      [174.61, 220.00, 261.63, 349.23],
+      [164.81, 220.00, 261.63, 329.63],
+      [146.83, 174.61, 220.00, 293.66],
+      [116.54, 174.61, 233.08, 293.66]
+    ];
+
+    function playBgmNote(freq, len, attack, peak, type) {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = type || "sine";
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+      g.gain.linearRampToValueAtTime(peak, audioCtx.currentTime + attack);
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + len);
+      osc.connect(g);
+      g.connect(bgmFilter);
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + len);
+    }
 
     bgmTimer = setInterval(() => {
       if ((settings.bgmVolume || 0) <= 0 || document.hidden) return;
 
       try {
-        const now = audioCtx.currentTime;
-        const freq = scale[Math.floor(Math.random() * scale.length)];
-        const len = 2.6;
-
-        [[freq, 1], [freq * 2, 0.28]].forEach(([f, amp]) => {
-          const osc = audioCtx.createOscillator();
-          const g = audioCtx.createGain();
-          osc.type = "sine";
-          osc.frequency.value = f;
-          g.gain.setValueAtTime(0.0001, now);
-          g.gain.linearRampToValueAtTime(amp, now + 0.9);
-          g.gain.exponentialRampToValueAtTime(0.0001, now + len);
-          osc.connect(g);
-          g.connect(bgmFilter);
-          osc.start(now);
-          osc.stop(now + len);
-        });
-
         bgmStep += 1;
 
-        // 4音ごとに5度上の音を静かに重ねて厚みを出す
-        if (bgmStep % 4 === 0) {
-          const osc = audioCtx.createOscillator();
-          const g = audioCtx.createGain();
-          osc.type = "triangle";
-          osc.frequency.value = freq * 1.5;
-          g.gain.setValueAtTime(0.0001, now + 0.4);
-          g.gain.linearRampToValueAtTime(0.18, now + 1.3);
-          g.gain.exponentialRampToValueAtTime(0.0001, now + len + 0.4);
-          osc.connect(g);
-          g.connect(bgmFilter);
-          osc.start(now + 0.4);
-          osc.stop(now + len + 0.4);
+        if (titleScreenActive()) {
+          // タイトルBGM: 1.15秒ごとにコードの構成音を1音ずつ順番に鳴らす
+          bgmFilter.frequency.value = 860;
+          const chord = titleChords[Math.floor(bgmStep / 8) % titleChords.length];
+          const pos = bgmStep % 4;
+          const freq = chord[pos];
+          playBgmNote(freq, 3.4, 0.55, pos === 0 ? 0.9 : 0.55, "triangle");
+          playBgmNote(freq * 2, 3.4, 0.55, 0.10, "sine");
+          return;
+        }
+
+        // ゲームBGM: 4.6秒に1音、隣の音にしか動かない歩行型の環境音
+        bgmFilter.frequency.value = 680;
+        if (bgmStep % 4 !== 0) return;
+
+        const roll = Math.random();
+        const stepDir = roll < 0.38 ? -1 : roll < 0.62 ? 0 : 1;
+        noteIndex = Math.max(0, Math.min(gameScale.length - 1, noteIndex + stepDir));
+        const freq = gameScale[noteIndex];
+
+        playBgmNote(freq, 6.5, 2.2, 1, "sine");
+        playBgmNote(freq * 2, 6.5, 2.2, 0.14, "sine");
+
+        // 24ステップ(6音)ごとに5度上を静かに重ねる
+        if (bgmStep % 24 === 0) {
+          playBgmNote(freq * 1.5, 6.5, 3.0, 0.10, "sine");
         }
       } catch (e) {}
-    }, 2400);
+    }, 1150);
   } catch (e) {}
 }
 
@@ -7328,6 +7454,36 @@ function playSound(kind) {
       return;
     }
 
+    if (kind === "start") {
+      // ゲーム開始: 明るく駆け上がる3音+高いきらめき
+      const now = audioCtx.currentTime;
+      [349, 440, 523].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = "triangle";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.06, now + i * 0.07);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.24);
+        osc.connect(gain);
+        gain.connect(seBus());
+        osc.start(now + i * 0.07);
+        osc.stop(now + i * 0.07 + 0.24);
+      });
+
+      const ping = audioCtx.createOscillator();
+      const pingGain = audioCtx.createGain();
+      ping.type = "sine";
+      ping.frequency.value = 1568;
+      pingGain.gain.setValueAtTime(0.045, now + 0.24);
+      pingGain.gain.exponentialRampToValueAtTime(0.001, now + 0.24 + 0.4);
+      ping.connect(pingGain);
+      pingGain.connect(seBus());
+      ping.start(now + 0.24);
+      ping.stop(now + 0.24 + 0.4);
+      return;
+    }
+
     if (kind === "skill") {
       // スキル取得：神秘的なチャイム
       const now = audioCtx.currentTime;
@@ -7425,6 +7581,10 @@ function checkQuotaStageTransition() {
 
   const up = stage > lastSeenQuotaStage;
   lastSeenQuotaStage = stage;
+
+  // 全画面・タイトル表示中はゲージが非表示。クラスを付けると復帰した瞬間に
+  // アニメーションが再生されて誤作動に見えるため、演出自体を行わない
+  if (document.body.classList.contains("sectionFullscreen") || titleScreenActive()) return;
 
   const box = $("quotaBox");
   if (!box) return;
@@ -7725,6 +7885,12 @@ function closeSkillChoiceScreen() {
 
   if (document.fullscreenElement && document.exitFullscreen) {
     document.exitFullscreen().catch(() => {});
+  }
+
+  // 通常画面に戻ったら出現タイマーを再開する(閲覧だけして戻った場合の停止防止)
+  if (normalPlayScreenActive()) {
+    scheduleGoldenCookie();
+    scheduleMonster();
   }
 }
 
@@ -9074,6 +9240,12 @@ function closeTabPageFullscreen() {
   pageFullscreenId = null;
   syncTabPageFullscreen();
   renderActiveTab();
+
+  // 全画面に入るときに出現タイマーを止めているため、通常画面に戻ったら再開する
+  if (normalPlayScreenActive()) {
+    scheduleGoldenCookie();
+    scheduleMonster();
+  }
 }
 
 function toggleTabPageFullscreen(targetId) {
@@ -10435,6 +10607,14 @@ loadGame();
 ensureState();
 applyVisualAssets();
 applySettings();
+
+// 層演出のクラスは再生し終わったら外す。付けたままだと全画面から戻って
+// ゲージが再表示された瞬間にアニメーションが再生されてしまう
+$("quotaBox").addEventListener("animationend", e => {
+  if (e.animationName === "layerUp" || e.animationName === "layerDown") {
+    $("quotaBox").classList.remove("layerUp", "layerDown");
+  }
+});
 installBrowserZoomBlockers();
 installSkillTreePinchZoom();
 liftFloatingActors();
@@ -10477,14 +10657,19 @@ function returnToTitleScreen() {
   saveGame();
 }
 
-addTap($("titleStartBtn"), startGameFromTitle);
+addTap($("titleStartBtn"), () => {
+  playSound("start");
+  startGameFromTitle();
+});
 addTap($("backToTitleBtn"), returnToTitleScreen);
 
 addTap($("titleAboutBtn"), () => {
+  playSound("tab");
   $("titleAboutOverlay").classList.add("active");
 });
 
 addTap($("titleAboutCloseBtn"), () => {
+  playSound("tab");
   $("titleAboutOverlay").classList.remove("active");
 });
 
