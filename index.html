@@ -1785,8 +1785,8 @@
     .stats div,
     .infoBox,
     .skillSummary div {
-      background: rgba(24, 13, 7, 0.66) !important;
-      border-color: rgba(255,205,122,0.24) !important;
+      background: rgba(24, 13, 7, 0.90) !important;
+      border-color: rgba(255,205,122,0.28) !important;
       backdrop-filter: blur(2px);
     }
 
@@ -1797,15 +1797,15 @@
     .startBtn,
     .takeSkillBtn {
       background:
-        linear-gradient(180deg, rgba(100,58,25,0.82), rgba(37,20,10,0.86)) !important;
-      border-color: rgba(255,198,101,0.30) !important;
+        linear-gradient(180deg, #5a3a1e, #2c180c) !important;
+      border-color: rgba(255,198,101,0.34) !important;
     }
 
     .tab.active,
     .mode.active {
       background:
-        linear-gradient(180deg, rgba(205,128,45,0.94), rgba(95,47,13,0.94)) !important;
-      border-color: rgba(255,222,143,0.54) !important;
+        linear-gradient(180deg, #c97e2b, #5e2f0d) !important;
+      border-color: rgba(255,222,143,0.62) !important;
     }
 
     .artCard {
@@ -2051,21 +2051,23 @@
     .artCard {
       min-height: 108px !important;
       padding: 12px 158px 12px 12px !important;
+      /* 背景が透けないよう全面を濃い焦げ茶の不透明に。右端だけわずかに明るくして
+         奥のイラストが沈まないようにする */
       background:
-        linear-gradient(90deg, rgba(15, 7, 3, 0.62) 0%, rgba(15, 7, 3, 0.46) 48%, rgba(15, 7, 3, 0.00) 100%) !important;
-      border-color: rgba(255, 213, 132, 0.36) !important;
+        linear-gradient(90deg, #3a2010 0%, #2c1809 62%, #3a2211 100%) !important;
+      border-color: rgba(255, 213, 132, 0.40) !important;
     }
 
     .artCard.canBuy {
       background:
-        linear-gradient(90deg, rgba(74, 37, 10, 0.66) 0%, rgba(74, 37, 10, 0.42) 48%, rgba(74, 37, 10, 0.00) 100%) !important;
-      border-color: rgba(255, 228, 151, 0.62) !important;
+        linear-gradient(90deg, #5a3312 0%, #3d220c 62%, #52300f 100%) !important;
+      border-color: rgba(255, 228, 151, 0.68) !important;
     }
 
     .artCard.done {
       background:
-        linear-gradient(90deg, rgba(20, 48, 17, 0.62) 0%, rgba(20, 48, 17, 0.42) 48%, rgba(20, 48, 17, 0.00) 100%) !important;
-      border-color: rgba(156,255,178,0.42) !important;
+        linear-gradient(90deg, #234a1a 0%, #172f12 62%, #21451a 100%) !important;
+      border-color: rgba(156,255,178,0.46) !important;
     }
 
     .artCard::before {
