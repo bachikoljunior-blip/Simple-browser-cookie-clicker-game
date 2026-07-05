@@ -2577,12 +2577,15 @@
     /* 追加調整：タブ表示を画面の半分弱に固定し、上部エリアが残りを埋める */
     .top {
       flex: 1 1 auto !important;
+      /* 基底ルールのmin-height:0を打ち消し、クッキー本体などの中身より
+         小さく潰れてタブ側にはみ出すことがないようにする */
+      min-height: auto !important;
     }
 
     .tabPages {
-      flex: 0 0 auto !important;
-      height: 44dvh !important;
-      max-height: 44dvh !important;
+      flex: 0 1 40dvh !important;
+      max-height: 40dvh !important;
+      min-height: 90px !important;
     }
 
     body.sectionFullscreen .tabPages {
