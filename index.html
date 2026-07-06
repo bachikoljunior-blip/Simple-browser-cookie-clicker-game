@@ -4253,6 +4253,139 @@
 
 <script>
 /*
+  ===== 多倍長数値 Decimal(仮数部+指数部)=====
+  クッキー等の「上限」は、実は JavaScript の Number(double)が扱える最大値
+  (約 1.8×10^308)で頭打ちになるために生じる。BigInt で無限化すると桁数に比例して
+  演算が重くなり処理落ちするため、ここでは「仮数(m)×10^指数(e)」で値を保持する。
+  ・m の絶対値は [1,10) または 0(このとき e=0)。e は整数。
+  ・double 範囲内では通常の数値と同じ有効桁(約15〜16桁)で一致するので、
+    既存のバランス(到達可能な範囲)は一切変わらない。
+  ・値がどれだけ大きくても加減乗除のコストは一定なので処理落ちしない。
+*/
+function _pow10(e) { return Math.pow(10, e); }
+
+class Decimal {
+  constructor(m, e) { this.m = m; this.e = e; }
+
+  static fromNumber(n) {
+    n = Number(n);
+    if (!Number.isFinite(n) || n === 0) return new Decimal(0, 0);
+    const e = Math.floor(Math.log10(Math.abs(n)));
+    const m = n / _pow10(e);
+    return Decimal._norm(m, e);
+  }
+
+  static fromString(s) {
+    s = String(s).trim();
+    if (!s || s === "0") return new Decimal(0, 0);
+    let i = s.indexOf("e");
+    if (i < 0) i = s.indexOf("E");
+    if (i < 0) return Decimal.fromNumber(Number(s));
+    const mant = Number(s.slice(0, i));
+    const exp = Number(s.slice(i + 1));
+    if (!Number.isFinite(mant) || !Number.isFinite(exp)) return new Decimal(0, 0);
+    return Decimal._norm(mant, Math.round(exp));
+  }
+
+  static _norm(m, e) {
+    if (!Number.isFinite(m) || m === 0) return new Decimal(0, 0);
+    e = Math.round(e);
+    let am = Math.abs(m);
+    if (am < 1 || am >= 10) {
+      const adj = Math.floor(Math.log10(am));
+      m = m / _pow10(adj);
+      e += adj;
+      am = Math.abs(m);
+      if (am >= 10) { m /= 10; e += 1; }
+      else if (am > 0 && am < 1) { m *= 10; e -= 1; }
+    }
+    if (!Number.isFinite(m) || m === 0) return new Decimal(0, 0);
+    return new Decimal(m, e);
+  }
+
+  get sign() { return this.m > 0 ? 1 : this.m < 0 ? -1 : 0; }
+  isZero() { return this.m === 0; }
+  isFinite() { return Number.isFinite(this.m) && Number.isFinite(this.e); }
+  neg() { return new Decimal(-this.m, this.e); }
+  abs() { return new Decimal(Math.abs(this.m), this.e); }
+
+  add(o) {
+    o = D(o);
+    if (this.m === 0) return o;
+    if (o.m === 0) return this;
+    let big = this, small = o;
+    if (big.e < small.e) { big = o; small = this; }
+    const diff = big.e - small.e;
+    if (diff > 17) return big;
+    return Decimal._norm(big.m + small.m * _pow10(-diff), big.e);
+  }
+  sub(o) { return this.add(D(o).neg()); }
+  mul(o) { o = D(o); if (this.m === 0 || o.m === 0) return new Decimal(0, 0); return Decimal._norm(this.m * o.m, this.e + o.e); }
+  div(o) { o = D(o); if (o.m === 0 || this.m === 0) return new Decimal(0, 0); return Decimal._norm(this.m / o.m, this.e - o.e); }
+
+  pow(n) {
+    n = Number(n);
+    if (n === 0) return new Decimal(1, 0);
+    if (this.m === 0) return new Decimal(0, 0);
+    const log = this.log10() * n;
+    const e = Math.floor(log);
+    const m = _pow10(log - e);
+    return Decimal._norm(m, e);
+  }
+
+  log10() { return this.e + Math.log10(Math.abs(this.m)); }
+
+  floor() {
+    if (this.m === 0) return this;
+    if (this.e < 0) return this.m > 0 ? new Decimal(0, 0) : new Decimal(-1, 0);
+    if (this.e >= 15) return this;
+    return Decimal.fromNumber(Math.floor(this.toNumber()));
+  }
+
+  cmp(o) {
+    o = D(o);
+    const s1 = this.sign, s2 = o.sign;
+    if (s1 !== s2) return s1 < s2 ? -1 : 1;
+    if (s1 === 0) return 0;
+    if (this.e !== o.e) return (this.e < o.e ? -1 : 1) * s1;
+    if (this.m !== o.m) return this.m < o.m ? -1 : 1;
+    return 0;
+  }
+  gt(o) { return this.cmp(o) > 0; }
+  gte(o) { return this.cmp(o) >= 0; }
+  lt(o) { return this.cmp(o) < 0; }
+  lte(o) { return this.cmp(o) <= 0; }
+  eq(o) { return this.cmp(o) === 0; }
+
+  toNumber() {
+    if (this.m === 0) return 0;
+    if (this.e > 308) return this.m > 0 ? Infinity : -Infinity;
+    if (this.e < -308) return 0;
+    return this.m * _pow10(this.e);
+  }
+  // 表示・ノルマゲージ用: double 範囲を超える場合は上限値でクランプ(NaN 波及防止)
+  toNumberClamped(cap) {
+    const v = this.toNumber();
+    return Number.isFinite(v) ? v : (this.sign < 0 ? -cap : cap);
+  }
+  toString() { return this.m === 0 ? "0" : (this.m + "e" + this.e); }
+  toJSON() { return this.toString(); }
+
+  static max(a, b) { a = D(a); b = D(b); return a.cmp(b) >= 0 ? a : b; }
+  static min(a, b) { a = D(a); b = D(b); return a.cmp(b) <= 0 ? a : b; }
+}
+Decimal.ZERO = new Decimal(0, 0);
+
+// 数値・文字列・Decimal・保存形({m,e})のいずれからでも Decimal を得る
+function D(x) {
+  if (x instanceof Decimal) return x;
+  if (typeof x === "number") return Decimal.fromNumber(x);
+  if (typeof x === "string") return Decimal.fromString(x);
+  if (x && typeof x === "object" && "m" in x && "e" in x) return Decimal._norm(Number(x.m) || 0, Number(x.e) || 0);
+  return new Decimal(0, 0);
+}
+
+/*
   ===== クラウド保存(Firebase)の設定 =====
   Googleログインでセーブデータを自動的にクラウド保存する機能を使うには、
   ご自身の無料Firebaseプロジェクトを作成し、発行された設定値を下に入力してください。
@@ -4661,10 +4794,10 @@ function freshState() {
   SKILLS.forEach(s => skills[s.id] = false);
 
   return {
-    cookies: 0,
+    cookies: D(0),
     cookieRemainder: 0,
-    totalCookies: 0,
-    runCookies: 0,
+    totalCookies: D(0),
+    runCookies: D(0),
     totalClicks: 0,
 
     prestige: 0,
@@ -4734,10 +4867,11 @@ function ensureState() {
   state.upgradePerks = { ...base.upgradePerks, ...(state.upgradePerks || {}) };
   state.skills = { ...base.skills, ...(state.skills || {}) };
 
-  state.cookies = Math.floor(Number(state.cookies) || 0);
+  // クッキー系は Decimal 化(上限撤廃)。旧セーブの数値・新セーブの文字列いずれも D() で復元
+  state.cookies = D(state.cookies);
   state.cookieRemainder = Number(state.cookieRemainder) || 0;
-  state.totalCookies = Math.floor(Number(state.totalCookies) || 0);
-  state.runCookies = Math.floor(Number(state.runCookies) || 0);
+  state.totalCookies = D(state.totalCookies);
+  state.runCookies = D(state.runCookies);
   state.totalClicks = Math.floor(Number(state.totalClicks) || 0);
 
   state.prestige = Math.floor(Number(state.prestige) || 0);
@@ -4791,7 +4925,7 @@ function ensureState() {
 
   if (state.cookieRemainder < 0 || state.cookieRemainder >= 1) {
     const fixed = Math.floor(state.cookieRemainder);
-    state.cookies += fixed;
+    state.cookies = state.cookies.add(fixed);
     state.cookieRemainder -= fixed;
   }
 }
@@ -5065,6 +5199,18 @@ function fmtShortJapaneseUnitNumber(n) {
 }
 
 function fmt(n) {
+  // Decimal: double 範囲内は従来の数値経路に委譲して表示を完全一致させ、
+  // それを超える場合だけ指数部から直接単位を算出(旧 level 上限77は撤廃)
+  if (n instanceof Decimal) {
+    if (!n.isFinite()) return "∞";
+    if (n.e <= 300) return fmt(n.toNumber());
+    const sign = n.sign < 0 ? "-" : "";
+    const log = n.log10();
+    const level = Math.max(0, Math.floor(log / 4 + 1e-12));
+    const scaled = Math.pow(10, log - 4 * level);
+    return sign + fmtShortJapaneseUnitNumber(scaled) + generateHugeUnit(level);
+  }
+
   n = Number(n) || 0;
   if (!Number.isFinite(n)) return "∞";
 
@@ -6042,7 +6188,7 @@ function currentQuotaProgressRatio() {
   const quota = monsterQuotaRequired();
   if (!quota || quota <= 0) return 0;
 
-  return quotaGaugeProgressRatio(state.runCookies, quota);
+  return quotaGaugeProgressRatio(state.runCookies.toNumberClamped(1e300), quota);
 }
 
 function quotaStageDisplay(progressRatio) {
@@ -6224,7 +6370,7 @@ function bankClickMultiplier() {
   if (!state.research.bankClickDividend) return 1;
 
   const bank = state.upgrades.bank || 0;
-  const saved = Math.log10(state.cookies + 10);
+  const saved = state.cookies.add(10).log10();
 
   const bankM = levelGrowth(bank, 0.028);
   const savedM = 1 + Math.log1p(saved) * 8.0;
@@ -6370,7 +6516,7 @@ function multiBuyPlan(u) {
 
     while (n < 1000) {
       const c = costOf(u, owned + n);
-      if (total + c > state.cookies) break;
+      if (state.cookies.lt(total + c)) break;
       total += c;
       n += 1;
     }
@@ -6384,7 +6530,7 @@ function multiBuyPlan(u) {
 
   for (let i = 0; i < want; i++) total += costOf(u, owned + i);
 
-  return { count: want, totalCost: total, affordable: state.cookies >= total, isMax: false };
+  return { count: want, totalCost: total, affordable: state.cookies.gte(total), isMax: false };
 }
 
 function researchCost(r) {
@@ -6436,28 +6582,29 @@ function currentCps() {
 }
 
 function earn(amount) {
-  if (pausedForSkillChoice()) return 0;
+  if (pausedForSkillChoice()) return Decimal.ZERO;
 
-  amount = Number(amount);
-  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  amount = D(amount);
+  if (!amount.isFinite() || amount.lte(0)) return Decimal.ZERO;
 
-  const total = state.cookieRemainder + amount;
-  const whole = Math.floor(total);
-  state.cookieRemainder = total - whole;
+  // 端数(1未満)の繰り越しは小さな double のまま扱う(巨大値では端数は自然に消える)
+  const total = amount.add(state.cookieRemainder);
+  const whole = total.floor();
+  state.cookieRemainder = total.sub(whole).toNumberClamped(1);
 
-  if (whole <= 0) return 0;
+  if (whole.lte(0)) return Decimal.ZERO;
 
-  state.cookies += whole;
-  state.totalCookies += whole;
-  state.runCookies += whole;
+  state.cookies = state.cookies.add(whole);
+  state.totalCookies = state.totalCookies.add(whole);
+  state.runCookies = state.runCookies.add(whole);
 
   return whole;
 }
 
 function spend(amount) {
-  amount = Math.floor(Number(amount) || 0);
-  if (state.cookies < amount) return false;
-  state.cookies -= amount;
+  amount = D(amount).floor();
+  if (state.cookies.lt(amount)) return false;
+  state.cookies = state.cookies.sub(amount);
   return true;
 }
 
@@ -6506,7 +6653,7 @@ function monsterQuotaRequired() {
 
   if (!state.blackHoleCompressionUsed && state.research.blackHoleCompression) {
     const compression = blackHoleQuotaCompressionMultiplier();
-    const ratio = state.runCookies / baseQuota;
+    const ratio = state.runCookies.div(baseQuota).toNumberClamped(1e300);
 
     if (compression < 1 && ratio < 1.03 && ratio >= compression) {
       state.blackHoleCompressionUsed = true;
@@ -6520,7 +6667,7 @@ function monsterQuotaRequired() {
 
 function monsterQuotaMet() {
   const quota = monsterQuotaRequired();
-  return quota !== null && state.runCookies >= quota;
+  return quota !== null && state.runCookies.gte(quota);
 }
 
 function checkQuotaState() {
@@ -6529,7 +6676,7 @@ function checkQuotaState() {
   const quota = monsterQuotaRequired();
   const elapsed = quotaElapsedSeconds();
 
-  if (quota !== null && quota > 0 && state.runCookies < quota) {
+  if (quota !== null && quota > 0 && state.runCookies.lt(quota)) {
     state.quotaFailed = true;
     state.quotaActive = false;
     clearMonsterSpawnTimer();
@@ -6648,13 +6795,14 @@ function renderQuota() {
   const elapsed = quotaElapsedSeconds();
   const rawQuota = monsterQuotaRequired();
   const quota = Math.max(0, rawQuota === null ? 0 : rawQuota);
-  const run = Math.max(0, Math.floor(state.runCookies));
-  const ok = run >= quota;
-  const diff = run - quota;
+  const run = state.runCookies;                        // Decimal
+  const runNum = run.toNumberClamped(1e300);           // ゲージ計算用の安全な数値
+  const ok = run.gte(quota);
+  const diff = run.sub(quota);                          // Decimal
   const gaugeQuota = Math.max(1, quota);
-  const progressRatio = quota <= 0 ? 1 : quotaGaugeProgressRatio(run, gaugeQuota);
+  const progressRatio = quota <= 0 ? 1 : quotaGaugeProgressRatio(runNum, gaugeQuota);
   const stageDisplay = quotaStageDisplay(progressRatio);
-  const underTarget = run < quota;
+  const underTarget = run.lt(quota);
 
   const layerHtml = quotaLayerHtml(progressRatio);
 
@@ -8014,7 +8162,7 @@ function researchFormulaText(r) {
 
   if (r.id === "bankClickDividend") {
     const bank = state.upgrades.bank || 0;
-    const saved = Math.log10(state.cookies + 10);
+    const saved = state.cookies.add(10).log10();
     return `式：クリック倍率 = 1.028^銀行数 × (1 + log(log10(所持クッキー + 10) + 1) × 8.0) × 方針補正 / 現在：銀行 ${fmt(bank)}個、所持指数 ${saved.toFixed(2)}、倍率 x${bankClickMultiplier().toFixed(3)}`;
   }
 
@@ -8156,7 +8304,7 @@ function renderResearch() {
     if (!r) return;
     const cost = researchCost(r);
 
-    btn.classList.toggle("canBuy", state.cookies >= cost && !pausedForSkillChoice());
+    btn.classList.toggle("canBuy", state.cookies.gte(cost) && !pausedForSkillChoice());
     btn.innerHTML = `
       <b>${r.name}</b>
       <div class="price">${fmtCost(cost) + " クッキー"}</div>
@@ -8168,12 +8316,15 @@ function renderResearch() {
 }
 
 function totalPrestigeFromCookies(totalCookies) {
-  const total = Math.max(0, Math.floor(Number(totalCookies) || 0));
-  if (total < 10000) return 0;
+  const total = D(totalCookies);
+  if (total.lt(10000)) return 0;
 
-  return Math.max(1, Math.floor(
-    0.4 * Math.pow(total / 10000, 0.60)
-  ));
+  // double 範囲内(〜1e301)は従来式そのまま=到達可能域のPTを完全一致させる。
+  // それを超える場合のみ、指数部から対数形で算出
+  if (total.e <= 300) {
+    return Math.max(1, Math.floor(0.4 * Math.pow(total.toNumber() / 10000, 0.60)));
+  }
+  return Math.max(1, Math.floor(0.4 * Math.pow(10, 0.60 * (total.log10() - 4))));
 }
 
 function quotaPrestigeBonusFactor() {
@@ -8193,7 +8344,7 @@ function prestigeGain() {
 }
 
 function prestigeUnlocked() {
-  return state.totalCookies >= 1000000 || state.prestigeTotal > 0 || state.prestigeRuns > 0;
+  return state.totalCookies.gte(1000000) || state.prestigeTotal > 0 || state.prestigeRuns > 0;
 }
 
 function updatePrestigeTabLabel() {
@@ -8206,7 +8357,7 @@ function updatePrestigeTabLabel() {
 }
 
 function checkPrestigeUnlockNotice() {
-  if (!state.seenPrestigeUnlockNotice && state.totalCookies >= 1000000) {
+  if (!state.seenPrestigeUnlockNotice && state.totalCookies.gte(1000000)) {
     state.seenPrestigeUnlockNotice = true;
     showMessage("新たな機能が解放されます");
     saveGame();
@@ -8231,7 +8382,7 @@ function renderPrestige() {
   }
 
   const gain = prestigeGain();
-  const canPrestige = gain > 0 && !pausedForSkillChoice() && state.cookies >= 1000000;
+  const canPrestige = gain > 0 && !pausedForSkillChoice() && state.cookies.gte(1000000);
   const policyBox = runPolicyUnlocked() ? `
     <div class="infoBox">
       <h3>周回方針</h3>
@@ -8475,13 +8626,13 @@ function switchTab(tabId) {
 function rankName() {
   const t = state.totalCookies;
 
-  if (t >= 1000000000000) return "宇宙";
-  if (t >= 1000000000) return "神";
-  if (t >= 10000000) return "王";
-  if (t >= 1000000) return "大企業";
-  if (t >= 100000) return "経営者";
-  if (t >= 10000) return "職人";
-  if (t >= 1000) return "見習い";
+  if (t.gte(1000000000000)) return "宇宙";
+  if (t.gte(1000000000)) return "神";
+  if (t.gte(10000000)) return "王";
+  if (t.gte(1000000)) return "大企業";
+  if (t.gte(100000)) return "経営者";
+  if (t.gte(10000)) return "職人";
+  if (t.gte(1000)) return "見習い";
 
   return "初心者";
 }
@@ -8709,8 +8860,8 @@ document.querySelectorAll(".tab").forEach(btn => {
 function prestigeReset() {
   const gain = prestigeGain();
   if (gain <= 0 || pausedForSkillChoice()) return;
-  if (state.cookies < 1000000) return;
-  state.cookies -= 1000000;
+  if (state.cookies.lt(1000000)) return;
+  state.cookies = state.cookies.sub(1000000);
 
   const keepTotal = state.totalCookies;
   const keepClicks = state.totalClicks;
@@ -9151,9 +9302,10 @@ function loadGame() {
       const baseLimit = OFFLINE_LIMIT_SECONDS;
       const extraLimit = skillEffect("offlineHours") * 60 * 60;
       const seconds = Math.min(offlineMs / 1000, baseLimit + extraLimit);
-      const gained = earn(baseCps() * seconds);
+      // 放置生産は Decimal で計算(seconds が巨大でも double の Infinity 化で取り逃さない)
+      const gained = earn(D(baseCps()).mul(seconds));
 
-      if (gained > 0) showMessage(`放置 +${fmt(gained)}`);
+      if (gained.gt(0)) showMessage(`放置 +${fmt(gained)}`);
     }
 
     saveGame();
@@ -9615,8 +9767,9 @@ function forceMonster() {
   state.quotaFailed = false;
   state.quotaActive = true;
 
-  if (state.runCookies < Math.max(1, monsterQuotaRequiredAtElapsed(quotaElapsedSeconds()))) {
-    earn(Math.max(1, monsterQuotaRequiredAtElapsed(quotaElapsedSeconds())) - state.runCookies + 1);
+  const needQuota = Math.max(1, monsterQuotaRequiredAtElapsed(quotaElapsedSeconds()));
+  if (state.runCookies.lt(needQuota)) {
+    earn(D(needQuota).sub(state.runCookies).add(1));
   }
 
   showMonster();
