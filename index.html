@@ -4002,6 +4002,16 @@
       display: none !important;
     }
 
+    /* その回でまだ取得していない設備・研究は、絵をシルエット(黒い影)で伏せる。
+       取得(購入)すると本来の絵が現れる。 */
+    .artCard.artSilhouette::before {
+      filter: brightness(0) !important;
+      opacity: 0.42 !important;
+      mix-blend-mode: normal !important;
+      color: rgba(0, 0, 0, 0.45) !important;
+      text-shadow: none !important;
+    }
+
   </style>
 </head>
 
@@ -8130,6 +8140,8 @@ function renderShop() {
     const eff = upgradeShopEffectRows(u);
 
     btn.classList.toggle("canBuy", plan.affordable && !pausedForSkillChoice());
+    // その回でまだ購入していない設備は絵をシルエットで伏せる
+    btn.classList.toggle("artSilhouette", (state.upgrades[u.id] || 0) === 0);
     btn.innerHTML = `
       <b>${u.name}</b>
       <div class="price">${priceText}</div>
@@ -8336,13 +8348,15 @@ function renderResearch() {
     entries.forEach(e => {
       const btn = document.createElement("button");
 
+      // その回でまだ取得していない研究(未購入=locked/buy)は絵をシルエットで伏せる
+      const notObtained = e.mode === "locked" || e.mode === "buy";
       btn.className = "item artCard"
         + (e.mode === "owned" ? " researchOwned" : "")
-        + (e.mode === "locked" ? " researchLocked" : "");
+        + (e.mode === "locked" ? " researchLocked" : "")
+        + (notObtained ? " artSilhouette" : "");
       btn.dataset.id = e.id;
-      // 伏せ表示のときは絵(アイコン・画像)を隠す
-      btn.dataset.art = e.mode === "locked" ? "🔒" : researchArt(e.r);
-      if (e.mode !== "locked") setArtImage(btn, ASSETS.research[e.r.id]);
+      btn.dataset.art = researchArt(e.r);
+      if (e.mode !== "owned") setArtImage(btn, ASSETS.research[e.r.id]);
 
       if (e.mode === "buy") addTap(btn, () => buyResearch(e.r.id));
       else btn.disabled = true;
