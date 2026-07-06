@@ -4005,7 +4005,6 @@
     </div>
 
     <div id="quotaBox" class="quotaBox"></div>
-    <div id="bakeBox" class="bakeBox"></div>
 
     <div class="cookieWrap">
       <button id="cookie" aria-label="クッキー">
@@ -4022,12 +4021,6 @@
         <div id="monsterHpFill"></div>
       </div>
       <div id="monsterHpText">HP</div>
-    </div>
-
-    <div class="stats">
-      <div>タップ <b id="power">1</b></div>
-      <div>毎秒 <b id="cps">0</b></div>
-      <div>ランク <b id="rank">初心者</b></div>
     </div>
 
     <div id="message"></div>
@@ -4373,7 +4366,6 @@ const SKILL_NODES = [
   { id: "auto_2", name: "炉の列", branchId: "auto", cost: 1139062500000, x: 1380, y: 860, icon: "◇", prereqs: ["auto_1"], desc: "毎秒生産 x183。", effects: [{ type: "cps", value: 182 }] },
   { id: "auto_3", name: "同期炉", branchId: "auto", cost: 3.84434e18, x: 1560, y: 740, icon: "◇", prereqs: ["auto_2", "monster_2"], desc: "毎秒生産 x2549、モンスターダメージ +60%。", effects: [{ type: "cps", value: 2548 }, { type: "monsterDamageSkill", value: 0.6 }] },
   { id: "auto_4", name: "無人ライン", branchId: "auto", cost: 1.9462e27, x: 1740, y: 620, icon: "◇", prereqs: ["monster_3", "research_factory"], desc: "毎秒生産 +24%、全生産 x35676.1。工場理論の増幅先。", effects: [{ type: "cps", value: 0.24 }, { type: "all", value: 35675.12 }] },
-  { id: "bake_temperature", name: "焼き加減管理", branchId: "auto", cost: 1.1533e20, x: 1740, y: 500, icon: "♨", prereqs: ["auto_3", "research_remodel"], desc: "通常画面に焼き加減を追加する。焼き加減によって、金クッキー・毎秒生産・狩猟の有利時間が切り替わる。", effects: [{ type: "unlockSystem", target: "bakeTemperature" }] },
 
   // 右下：怪物狩り型
   { id: "monster_1", name: "狩りの合図", branchId: "monster", cost: 50625000, x: 1200, y: 1260, icon: "◉", prereqs: ["core"], desc: "モンスター出現間隔を短縮。", effects: [{ type: "monsterRate", value: 0.24 }] },
@@ -6994,9 +6986,6 @@ function checkQuotaStageTransition() {
 
 function updateTopOnly() {
   $("cookies").textContent = fmt(state.cookies);
-  $("power").textContent = fmt(currentClickPower());
-  $("cps").textContent = pausedForSkillChoice() ? "準備中" : fmt(currentCps());
-  $("rank").textContent = rankName();
 
   $("cookie").classList.toggle("boost-all", goldenBoostActive());
 
@@ -7004,7 +6993,6 @@ function updateTopOnly() {
   checkPrestigeUnlockNotice();
   renderQuota();
   checkQuotaStageTransition();
-  renderBakeBox();
 
   if (monsterVisible) renderMonsterHp();
 }
@@ -8136,6 +8124,12 @@ function renderInfo() {
 
 
   box.innerHTML = `
+    <div class="infoBox">
+      <h3>生産の実数値</h3>
+      <div class="infoRow">クリック（タップ1回の生産）：${fmt(currentClickPower())}</div>
+      <div class="infoRow">毎秒（CPS・自動生産）：${pausedForSkillChoice() ? "準備中" : fmt(currentCps())}</div>
+    </div>
+
     <div class="infoBox">
       <h3>現在の倍率・状態</h3>
       <div class="infoRow">周回方針：${runPolicyName()}</div>
