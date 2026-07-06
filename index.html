@@ -4625,16 +4625,16 @@ const RESEARCH = [
   { id: "galaxyAssembly", name: "銀河分業", cost: 120000000000, upgrade: "galaxyFactory", detail: "所持している設備種類数と銀河工場数に応じて銀河工場倍率が伸びる。", desc: "所持設備の種類数が多いほど銀河工場が強くなる" },
   { id: "blackHoleCompression", name: "重力圧縮", cost: 3200000000000, upgrade: "blackHoleMixer", detail: "ノルマ未達寸前で、周回中1回だけブラックホール数に応じて必要ノルマを圧縮する。全体生産も上げる。", desc: "ノルマ未達寸前で一度だけ必要ノルマを圧縮し、全体生産も強化する" },
   { id: "quantumProofing", name: "量子発酵", cost: 64000000000000, upgrade: "quantumBakery", detail: "取得済み研究数と量子ベーカリー数に応じて量子ベーカリーが伸びる。", desc: "研究数が多いほど量子ベーカリーの生産が伸びる" },
-  { id: "antimatterRecipe", name: "反物質配合", cost: 1280000000000000, upgrade: "antimatterOven", detail: "反物質オーブン数と取得スキル数に応じて全体生産が伸びる。", desc: "反物質オーブンと取得スキル数が多いほど全体生産が伸びる" },
+  { id: "antimatterRecipe", name: "反物質配合", cost: 1250000000000000, upgrade: "antimatterOven", detail: "反物質オーブン数と取得スキル数に応じて全体生産が伸びる。", desc: "反物質オーブンと取得スキル数が多いほど全体生産が伸びる" },
 
   // 設備増幅研究の全設備化：増幅研究を持たないcps設備に、生産x9x複利型(1+レート)^所持数の増幅を追加
   { id: "bankVault", name: "複利金庫", cost: 160000000, upgrade: "bank", detail: "銀行の生産に固定x9と、銀行数に応じた複利(1.006^銀行数)が掛かる。", desc: "銀行の生産x9。銀行が多いほど複利でさらに伸びる" },
   { id: "moonBake", name: "月光焼成", cost: 1600000000, upgrade: "moonBakery", detail: "月面ベーカリーの生産に固定x9と、月面ベーカリー数に応じた複利(1.005^月面数)が掛かる。", desc: "月面ベーカリーの生産x9。数が多いほど複利でさらに伸びる" },
   { id: "timeLayer", name: "時間差焼成", cost: 16000000000, upgrade: "timeOven", detail: "時空オーブンの生産に固定x9と、時空オーブン数に応じた複利(1.005^時空数)が掛かる。", desc: "時空オーブンの生産x9。数が多いほど複利でさらに伸びる" },
   { id: "eventHorizon", name: "事象縁焼成", cost: 6400000000000, upgrade: "blackHoleMixer", detail: "ブラックホールミキサーの生産に固定x9と、ミキサー数に応じた複利(1.004^BH数)が掛かる。", desc: "ブラックホールミキサーの生産x9。数が多いほど複利でさらに伸びる" },
-  { id: "cosmicConvection", name: "宇宙対流", cost: 128000000000000, upgrade: "universeOven", detail: "宇宙焼成炉の生産に固定x9と、宇宙焼成炉数に応じた複利(1.004^宇宙炉数)が掛かる。", desc: "宇宙焼成炉の生産x9。数が多いほど複利でさらに伸びる" },
-  { id: "singularityFlow", name: "特異点整流", cost: 2560000000000000, upgrade: "cookieSingularity", detail: "クッキー特異点の生産に固定x9と、特異点数に応じた複利(1.004^特異点数)が掛かる。", desc: "クッキー特異点の生産x9。数が多いほど複利でさらに伸びる" },
-  { id: "annihilationCore", name: "対消滅炉心", cost: 25600000000000000, upgrade: "antimatterOven", detail: "反物質オーブンの生産に固定x9と、反物質オーブン数に応じた複利(1.004^反物質数)が掛かる。", desc: "反物質オーブンの生産x9。数が多いほど複利でさらに伸びる" }
+  { id: "cosmicConvection", name: "宇宙対流", cost: 125000000000000, upgrade: "universeOven", detail: "宇宙焼成炉の生産に固定x9と、宇宙焼成炉数に応じた複利(1.004^宇宙炉数)が掛かる。", desc: "宇宙焼成炉の生産x9。数が多いほど複利でさらに伸びる" },
+  { id: "singularityFlow", name: "特異点整流", cost: 2550000000000000, upgrade: "cookieSingularity", detail: "クッキー特異点の生産に固定x9と、特異点数に応じた複利(1.004^特異点数)が掛かる。", desc: "クッキー特異点の生産x9。数が多いほど複利でさらに伸びる" },
+  { id: "annihilationCore", name: "対消滅炉心", cost: 25500000000000000, upgrade: "antimatterOven", detail: "反物質オーブンの生産に固定x9と、反物質オーブン数に応じた複利(1.004^反物質数)が掛かる。", desc: "反物質オーブンの生産x9。数が多いほど複利でさらに伸びる" }
 ].sort((a, b) => a.cost - b.cost);
 
 const REWARD_POOL = [
@@ -4780,7 +4780,7 @@ const SKILL_NODES = [
   { id: "core", name: "分岐炉心", branchId: "core", cost: 15, x: 1000, y: 1120, icon: "◎", prereqs: [], desc: "転生後に周回方針を選べるようにする。", effects: [{ type: "unlockSystem", target: "runPolicy" }] },
 
   // 左上：タップ型
-  { id: "click_1", name: "会心の指", branchId: "click", cost: 337500, x: 800, y: 980, icon: "◆", prereqs: ["core"], desc: "タップ生産 +800%。会心タップ型への入口。", effects: [{ type: "click", value: 8 }] },
+  { id: "click_1", name: "会心の指", branchId: "click", cost: 335000, x: 800, y: 980, icon: "◆", prereqs: ["core"], desc: "タップ生産 +800%。会心タップ型への入口。", effects: [{ type: "click", value: 8 }] },
   { id: "click_2", name: "連打の呼吸", branchId: "click", cost: 2.04073e53, x: 620, y: 860, icon: "◆", prereqs: ["click_1"], desc: "タップ生産 x285474。", effects: [{ type: "click", value: 285472.96 }] },
   { id: "click_3", name: "焼き印タップ", branchId: "click", cost: 8.16293e55, x: 440, y: 740, icon: "◆", prereqs: ["click_2", "golden_2"], desc: "タップ生産 x2569257.6、金獲得量 +30%。", effects: [{ type: "click", value: 2569256.64 }, { type: "goldenAmount", value: 0.3 }] },
   { id: "click_4", name: "神経直結", branchId: "click", cost: 4.70716e77, x: 260, y: 620, icon: "◆", prereqs: ["golden_3", "research_remodel"], desc: "タップ生産 +24%、全生産 x499452.7。銀行配当の増幅先。", effects: [{ type: "click", value: 0.24 }, { type: "all", value: 499451.68 }] },
@@ -4794,21 +4794,21 @@ const SKILL_NODES = [
 
   // 右上：自動焼成型
   { id: "auto_1", name: "火種", branchId: "auto", cost: 2250, x: 1200, y: 980, icon: "◇", prereqs: ["core"], desc: "毎秒生産 +1300%。自動焼成型への入口。", effects: [{ type: "cps", value: 13 }] },
-  { id: "auto_2", name: "炉の列", branchId: "auto", cost: 1139062500000, x: 1380, y: 860, icon: "◇", prereqs: ["auto_1"], desc: "毎秒生産 x183。", effects: [{ type: "cps", value: 182 }] },
+  { id: "auto_2", name: "炉の列", branchId: "auto", cost: 1100000000000, x: 1380, y: 860, icon: "◇", prereqs: ["auto_1"], desc: "毎秒生産 x183。", effects: [{ type: "cps", value: 182 }] },
   { id: "auto_3", name: "同期炉", branchId: "auto", cost: 3.84434e18, x: 1560, y: 740, icon: "◇", prereqs: ["auto_2", "monster_2"], desc: "毎秒生産 x2549、モンスターダメージ +60%。", effects: [{ type: "cps", value: 2548 }, { type: "monsterDamageSkill", value: 0.6 }] },
   { id: "auto_4", name: "無人ライン", branchId: "auto", cost: 1.9462e27, x: 1740, y: 620, icon: "◇", prereqs: ["monster_3", "research_remodel"], desc: "毎秒生産 +24%、全生産 x35676.1。工場理論の増幅先。", effects: [{ type: "cps", value: 0.24 }, { type: "all", value: 35675.12 }] },
 
   // 右下：怪物狩り型
-  { id: "monster_1", name: "狩りの合図", branchId: "monster", cost: 50625000, x: 1200, y: 1260, icon: "◉", prereqs: ["core"], desc: "モンスター出現間隔を短縮。", effects: [{ type: "monsterRate", value: 0.24 }] },
-  { id: "monster_2", name: "急所割り", branchId: "monster", cost: 170859375000000, x: 1380, y: 1380, icon: "◉", prereqs: ["monster_1"], desc: "モンスター最終ダメージ +160%。", effects: [{ type: "monsterDamageSkill", value: 1.6 }] },
+  { id: "monster_1", name: "狩りの合図", branchId: "monster", cost: 50500000, x: 1200, y: 1260, icon: "◉", prereqs: ["core"], desc: "モンスター出現間隔を短縮。", effects: [{ type: "monsterRate", value: 0.24 }] },
+  { id: "monster_2", name: "急所割り", branchId: "monster", cost: 170000000000000, x: 1380, y: 1380, icon: "◉", prereqs: ["monster_1"], desc: "モンスター最終ダメージ +160%。", effects: [{ type: "monsterDamageSkill", value: 1.6 }] },
   { id: "monster_3", name: "砕ける皮", branchId: "monster", cost: 1.29746e25, x: 1560, y: 1500, icon: "◉", prereqs: ["monster_2", "auto_3"], desc: "モンスターHP -50%。狩猟分析の前提。", effects: [{ type: "monsterHpDown", value: 0.7 }] },
   { id: "hunt_analysis", name: "狩猟分析", branchId: "monster", cost: 2.59493e24, x: 1740, y: 1620, icon: "◉", prereqs: ["monster_3"], desc: "モンスターHP表示に、現在火力での必要攻撃数を追加する。", effects: [{ type: "unlockSystem", target: "huntAnalysis" }] },
   { id: "monster_4", name: "群れ読み", branchId: "monster", cost: 6.19873e66, x: 1920, y: 1740, icon: "◉", prereqs: ["hunt_analysis"], desc: "モンスター滞在時間を伸ばし、報酬解放の前提になる。", effects: [{ type: "monsterStay", value: 0.5 }] },
-  { id: "workshop_1", name: "素材の嗅覚", branchId: "monster", cost: 7593750000, x: 1200, y: 1500, icon: "⚒", prereqs: ["monster_1"], desc: "モンスターが素材を落とすようになり、新タブ「工房」(料理・素材庫)が解放される。", effects: [{ type: "unlockSystem", target: "workshop" }] },
-  { id: "workshop_2", name: "工房の拡張", branchId: "monster", cost: 1139062500000, x: 1200, y: 1640, icon: "⚒", prereqs: ["workshop_1"], desc: "工房に「作成」(永続装備)セクションが解放される。", effects: [{ type: "unlockSystem", target: "workshopCraft" }] },
+  { id: "workshop_1", name: "素材の嗅覚", branchId: "monster", cost: 7550000000, x: 1200, y: 1500, icon: "⚒", prereqs: ["monster_1"], desc: "モンスターが素材を落とすようになり、新タブ「工房」(料理・素材庫)が解放される。", effects: [{ type: "unlockSystem", target: "workshop" }] },
+  { id: "workshop_2", name: "工房の拡張", branchId: "monster", cost: 1100000000000, x: 1200, y: 1640, icon: "⚒", prereqs: ["workshop_1"], desc: "工房に「作成」(永続装備)セクションが解放される。", effects: [{ type: "unlockSystem", target: "workshopCraft" }] },
 
   // 上：研究と設備解放。研究解放は1つずつ。
-  { id: "economy_1", name: "仕入れ", branchId: "economy", cost: 7593750000, x: 1000, y: 900, icon: "⬡", prereqs: ["core"], desc: "アップグレード費用 -21%、研究費用 -21%。経済型への入口。", effects: [{ type: "upgradeDiscount", value: 0.24 }, { type: "researchDiscount", value: 0.24 }] },
+  { id: "economy_1", name: "仕入れ", branchId: "economy", cost: 7550000000, x: 1000, y: 900, icon: "⬡", prereqs: ["core"], desc: "アップグレード費用 -21%、研究費用 -21%。経済型への入口。", effects: [{ type: "upgradeDiscount", value: 0.24 }, { type: "researchDiscount", value: 0.24 }] },
   { id: "research_1", name: "研究机", branchId: "research", cost: 2.56289e16, x: 1000, y: 740, icon: "⌬", prereqs: ["economy_1"], desc: "研究費用 -38%。研究系の入口。", effects: [{ type: "researchDiscount", value: 0.48 }] },
   { id: "research_remodel", name: "研究改造室", branchId: "research", cost: 5.7665e20, x: 1000, y: 580, icon: "⌬", prereqs: ["research_1"], desc: "研究費用 -30%。研究系スキルの中継点。", effects: [{ type: "researchDiscount", value: 0.36 }] },
   { id: "economy_2", name: "まとめ買い", branchId: "economy", cost: 1.24556e35, x: 800, y: 580, icon: "⬡", prereqs: ["economy_1"], desc: "アップグレード費用 -45%。", effects: [{ type: "upgradeDiscount", value: 0.6 }] },
@@ -6799,15 +6799,30 @@ function markFeatureUnlocked(kind, id) {
   state.everFeatures[featureKey(kind, id)] = true;
 }
 
+
+// 丸め規則(2026-07-06 確定): 有効数字3桁が5の倍数になるよう切り捨て+小数切り捨て
+// (例: 123,456→120,000 / 94→90 / 768.72→765)。コスト(設備・研究・スキル)の表示と内部値に適用。
+function q5round(v) {
+  if (!(v > 0) || !Number.isFinite(v)) return v;
+  const e = Math.floor(Math.log10(v));
+  if (v >= 10) {
+    const step = 5 * Math.pow(10, Math.max(0, e - 2));
+    return Math.floor(v / step + 1e-9) * step;
+  }
+  const step = 5 * Math.pow(10, e - 2);
+  return Math.floor(v / step + 1e-9) * step;
+}
+function q5cost(v) { return Math.max(1, Math.floor(q5round(v))); }
+
 function costOf(u, ownedOverride) {
   const owned = ownedOverride == null ? state.upgrades[u.id] : ownedOverride;
 
-  return Math.max(1, Math.floor(
+  return q5cost(
     600
     * Math.pow(u.base, 0.60)
     * Math.pow(u.growth, owned <= 5500 ? owned * 0.25 : 5500 * 0.25 + (owned - 5500) * 0.60)
     * upgradeDiscount()
-  ));
+  );
 }
 
 // 選択中の購入数モード(×1/×10/×100/MAX)での購入プラン(個数と合計コスト)
@@ -6838,7 +6853,7 @@ function multiBuyPlan(u) {
 }
 
 function researchCost(r) {
-  return Math.floor(r.cost * researchDiscount());
+  return q5cost(r.cost * researchDiscount());
 }
 
 // ===== 実装追加：素材・工房(料理/作成)・ステージのヘルパー =====
