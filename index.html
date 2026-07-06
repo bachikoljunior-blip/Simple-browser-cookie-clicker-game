@@ -536,6 +536,15 @@
       display: none !important;
     }
 
+    /* 未解放(対応設備が未所持)の研究: 効果と絵を伏せた控えめな表示 */
+    .item.researchLocked {
+      opacity: 0.5;
+      filter: grayscale(0.5);
+    }
+    .item.researchLocked::before {
+      color: rgba(255, 230, 180, 0.10) !important;
+    }
+
     .artCard {
       position: relative;
       overflow: hidden;
@@ -2355,7 +2364,9 @@
     /* 追加修正：ノルマ階層ゲージ / ブラウザ拡大抑制 */
 
     .quotaBox {
-      padding-top: 8px !important;
+      padding-top: 5px !important;
+      padding-bottom: 5px !important;
+      margin: 3px 0 !important;
     }
 
     .quotaFutureLine {
@@ -2363,7 +2374,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      margin-bottom: 3px;
+      margin-bottom: 2px;
       font-size: 11px;
       font-weight: 900;
       color: #ffe6ad;
@@ -2382,7 +2393,7 @@
     }
 
     .quotaGauge {
-      height: 14px !important;
+      height: 12px !important;
       background: rgba(0,0,0,0.48) !important;
     }
 
@@ -4050,7 +4061,7 @@
         <div class="infoBox">
           <h3>よくある質問</h3>
           <p><b>Q. 料金はかかりますか？</b><br>A. 完全無料です。アプリのインストールや会員登録も不要で、ブラウザだけで遊べます。</p>
-          <p><b>Q. セーブデータはどこに保存されますか？</b><br>A. お使いのブラウザのローカルストレージに自動保存されます。同じ端末・同じブラウザで開けば続きから遊べます。ブラウザのデータを削除するとセーブデータも消えるのでご注意ください。設定画面の「セーブコードをコピー」でコードをコピーし、メモ帳やLINEキープなどに保存しておけば、機種変更や別のブラウザでも「貼り付けて復元する」から続きから遊べます。ファイルとして保存したい場合は、設定画面の「ファイルとして保存したい場合はこちら」からファイルへの書き出し・読み込みも利用できます。</p>
+          <p><b>Q. セーブデータはどこに保存されますか？</b><br>A. お使いのブラウザのローカルストレージに自動保存されます。同じ端末・同じブラウザで開けば続きから遊べます。ブラウザのデータを削除するとセーブデータも消えるのでご注意ください。機種変更や別のブラウザに移したいときは、設定画面の「ファイルに書き出す」でセーブデータをファイルとして保存し、移行先で「ファイルから読み込む」から復元できます。Googleでログインすれば、クラウドに自動保存することもできます。</p>
           <p><b>Q. 放置していても進みますか？</b><br>A. はい。ゲームを閉じている間も一定時間分のクッキーが自動で生産され、次に開いたときにまとめて受け取れます。</p>
           <p><b>Q. スマートフォンでも遊べますか？</b><br>A. はい。スマートフォン・タブレット・パソコンのブラウザに対応しています。</p>
         </div>
@@ -4090,25 +4101,15 @@
     <div class="settingRow">画面の装飾アニメーション<input type="checkbox" id="setFancyFx"></div>
     <div class="settingRow">カードの画像表示<input type="checkbox" id="setCardArt"></div>
     <div class="settingRow">カードの説明を省略表示<input type="checkbox" id="setCompact"></div>
+    <div class="settingRow">購入数の変更バーを表示<input type="checkbox" id="setShowBuyMode"></div>
     <div class="settingRow settingRowStack">
       <span>セーブデータの管理(ブラウザ外への保存)</span>
-      <div class="saveCodeHint">ボタンで「セーブコード」をコピーし、メモ帳やLINEキープなどに保存しておくと、機種変更や別のブラウザでも下の欄に貼り付けて続きから遊べます。</div>
+      <div class="saveCodeHint">セーブデータはファイルとして書き出して保存できます。機種変更や別のブラウザに移すときは、書き出したファイルを読み込んでください。</div>
       <div class="settingBtnRow">
-        <button id="copySaveCodeBtn" type="button" class="settingsWideBtn">セーブコードをコピー</button>
+        <button id="exportSaveBtn" type="button" class="settingsWideBtn">ファイルに書き出す</button>
+        <button id="importSaveBtn" type="button" class="settingsWideBtn">ファイルから読み込む</button>
       </div>
-      <textarea id="saveCodeOutput" class="saveCodeArea" readonly rows="3" placeholder="コピーがうまくいかない場合は、この欄を長押しして手動でコピーしてください"></textarea>
-      <textarea id="saveCodeInput" class="saveCodeArea" rows="3" placeholder="復元する場合は、保存しておいたセーブコードをここに貼り付けてください"></textarea>
-      <div class="settingBtnRow">
-        <button id="restoreSaveCodeBtn" type="button" class="settingsWideBtn">貼り付けて復元する</button>
-      </div>
-      <details class="saveFileDetails">
-        <summary>ファイルとして保存したい場合はこちら</summary>
-        <div class="settingBtnRow">
-          <button id="exportSaveBtn" type="button" class="settingsWideBtn">ファイルに書き出す</button>
-          <button id="importSaveBtn" type="button" class="settingsWideBtn">ファイルから読み込む</button>
-        </div>
-        <input type="file" id="importSaveInput" accept="application/json,.json" style="display:none">
-      </details>
+      <input type="file" id="importSaveInput" accept="application/json,.json" style="display:none">
     </div>
     <div class="settingRow settingRowStack">
       <span>クラウド保存(自動・任意)</span>
@@ -4131,7 +4132,7 @@
 
     <div class="cookieCount">
       <span id="cookies">0</span>
-      <span id="cookieCps" class="cookieCps">毎秒 0</span>
+      <span id="cookieCps" class="cookieCps">合計毎秒 0</span>
     </div>
 
     <div id="quotaBox" class="quotaBox"></div>
@@ -4580,6 +4581,37 @@ const RESEARCH = [
   { id: "quantumProofing", name: "量子発酵", cost: 64000000000000, advanced: true, skill: "research_quantum", detail: "取得済み研究数と量子ベーカリー数に応じて量子ベーカリーが伸びる。", desc: "研究数が多いほど量子ベーカリーの生産が伸びる" },
   { id: "antimatterRecipe", name: "反物質配合", cost: 1280000000000000, advanced: true, skill: "research_antimatter", detail: "反物質オーブン数と取得スキル数に応じて全体生産が伸びる。", desc: "反物質オーブンと取得スキル数が多いほど全体生産が伸びる" }
 ].sort((a, b) => a.cost - b.cost);
+
+// 各研究が対応する設備。対応設備を購入するまで研究は購入できず、効果と絵を伏せる。
+const RESEARCH_EQUIPMENT = {
+  fingerTechnique: "finger",
+  grandmaCrowd: "grandma",
+  ovenBatch: "oven",
+  factoryNetwork: "factory",
+  spiceBlend: "spiceRack",
+  portalNetwork: "portal",
+  bankClickDividend: "bank",
+  moonGlobalYeast: "moonBakery",
+  portalGlobalFold: "portal",
+  galaxyAssembly: "galaxyFactory",
+  blackHoleCompression: "blackHoleMixer",
+  quantumProofing: "quantumBakery",
+  antimatterRecipe: "antimatterOven"
+};
+
+// 研究に対応する設備を所持しているか(未所持なら伏せた状態で表示する)
+function researchEquipmentOwned(r) {
+  const equip = RESEARCH_EQUIPMENT[r.id];
+  return !equip || (state.upgrades[equip] || 0) > 0;
+}
+
+// 研究に対応する設備が強化タブに表示されているか(=「次の設備が表示された」状態)
+function researchEquipmentVisible(r) {
+  const equip = RESEARCH_EQUIPMENT[r.id];
+  if (!equip) return true;
+  if ((state.upgrades[equip] || 0) > 0) return true;
+  return visibleUpgrades().some(u => u.id === equip);
+}
 
 const REWARD_POOL = [
   { id: "goldenRate", name: "金クッキー出現率アップ", category: "golden", desc: n => `金クッキーの出現間隔を短縮。取るたびにさらに短くなる Lv.${n}` },
@@ -5604,7 +5636,9 @@ function rewardModalOpen() {
 }
 
 function quotaClockPaused() {
-  return pausedForSkillChoice() || rewardModalOpen() || titleScreenActive();
+  // タブが非表示(バックグラウンド/別アプリ)の間もノルマ時計を止める。
+  // これを止めないと、復帰時に経過秒だけが一気に進んでノルマが即終了してしまう。
+  return pausedForSkillChoice() || rewardModalOpen() || titleScreenActive() || document.hidden;
 }
 
 function startQuotaPause() {
@@ -6821,11 +6855,12 @@ function renderQuota() {
     return;
   }
 
-  // 表記は最小限に。1行の要約＋ゲージのみ(クッキー画像を大きく見せるため)
+  // 表記は最小限に。1行の要約＋ゲージのみ(クッキー画像を大きく見せるため)。
+  // 層はゲージ上のバッジで示すので、要約行は数値と達成状況だけにする。
   box.innerHTML = `
     <div class="quotaFutureLine">
       <span>ノルマ ${fmt(run)} / ${fmt(quota)}</span>
-      <span class="quotaProgressPct">第${stageDisplay.stage}層 ${ok ? "達成" : "未達"}</span>
+      <span class="quotaProgressPct">${ok ? "達成" : "未達"}</span>
     </div>
     <div class="quotaGauge ${underTarget ? "quotaUnderTarget" : "quotaOverTarget"}" aria-label="現在ノルマ ${fmt(run)} / ${fmt(gaugeQuota)}">
       ${layerHtml}
@@ -6842,7 +6877,8 @@ const settings = {
   tapFx: true,
   fancyFx: true,
   cardArt: true,
-  compactCards: false
+  compactCards: false,
+  showBuyMode: true
 };
 
 function loadSettings() {
@@ -6860,6 +6896,13 @@ function applySettings() {
   document.body.classList.toggle("fxOff", !settings.fancyFx);
   document.body.classList.toggle("artOff", !settings.cardArt);
   document.body.classList.toggle("compactCards", settings.compactCards);
+  // 購入数変更バーの表示/非表示。非表示のときは購入数を必ず×1に戻す。
+  const buyModeBar = document.getElementById("buyModeBar");
+  if (buyModeBar) buyModeBar.style.display = settings.showBuyMode ? "" : "none";
+  if (!settings.showBuyMode && buyMode !== "1") {
+    buyMode = "1";
+    document.querySelectorAll(".buyModeBtn").forEach(b => b.classList.toggle("active", b.dataset.buymode === "1"));
+  }
   if (seMasterGain) seMasterGain.gain.value = Math.max(0, Math.min(1, settings.seVolume / 100));
   if (bgmGainNode) bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.10;
 }
@@ -6907,6 +6950,7 @@ function startBgm() {
     const gameScale = [174.61, 196.00, 220.00, 261.63, 293.66, 349.23, 392.00];
     let noteIndex = 2;
     let lastGameIndex = -1;
+    let lastGameDir = 0;
 
     // タイトル用: 明るめのメジャー進行(F → C → G → B♭)を上行アルペジオで奏でる
     const titleChords = [
@@ -6937,15 +6981,17 @@ function startBgm() {
         bgmStep += 1;
 
         if (titleScreenActive()) {
-          // タイトルBGM: コードを4音ぶんで切り替え、上行→下行で往復するアルペジオ。
-          // 同じ音を連続させず、単調な繰り返しを避ける
+          // タイトルBGM: コード1つを8音のメロディでめぐる。以前の上行→下行(往復)は
+          // 端の音が2回連続して"同じ音階の繰り返し"になり不穏だったため、
+          // 隣り合う音が重複しない非対称パターンに変更した。
+          // attack も短くして、鳴り始めをはっきり早く感じられるようにする。
           bgmFilter.frequency.value = 860;
-          const chord = titleChords[Math.floor(bgmStep / 4) % titleChords.length];
-          const cyc = bgmStep % 8;          // 0..3 上行, 4..7 下行
-          const pos = cyc < 4 ? cyc : 7 - cyc;
+          const chord = titleChords[Math.floor(bgmStep / 8) % titleChords.length];
+          const titlePattern = [0, 1, 2, 3, 2, 3, 1, 2];
+          const pos = titlePattern[bgmStep % 8];
           const freq = chord[pos];
-          playBgmNote(freq, 3.0, 0.5, pos === 0 ? 0.9 : 0.55, "triangle");
-          playBgmNote(freq * 2, 3.0, 0.5, 0.10, "sine");
+          playBgmNote(freq, 3.0, 0.08, pos === 0 ? 0.85 : 0.5, "triangle");
+          playBgmNote(freq * 2, 3.0, 0.08, 0.09, "sine");
           return;
         }
 
@@ -6953,12 +6999,23 @@ function startBgm() {
         bgmFilter.frequency.value = 680;
         if (bgmStep % 4 !== 0) return;
 
-        let stepDir = Math.random() < 0.5 ? -1 : 1;         // 必ず動く(同音の停滞を避ける)
+        // 直前の進行方向をやや引き継ぐ。方向を毎回反転すると2音の往復になり、
+        // タイトルと同じ"同じ音階の繰り返し"の不穏さが出るため、それを避ける。
+        let stepDir = (lastGameDir !== 0 && Math.random() < 0.6)
+          ? lastGameDir
+          : (Math.random() < 0.5 ? -1 : 1);
         if (Math.random() < 0.18) stepDir *= 2;             // たまに跳ねる
-        noteIndex = Math.max(0, Math.min(gameScale.length - 1, noteIndex + stepDir));
-        if (noteIndex === lastGameIndex) {                  // 直前と同じなら1つずらす
-          noteIndex = noteIndex > 0 ? noteIndex - 1 : noteIndex + 1;
+        let next = noteIndex + stepDir;
+        if (next < 0 || next > gameScale.length - 1) {      // 端で折り返す
+          stepDir = -Math.sign(stepDir);
+          next = noteIndex + stepDir;
         }
+        next = Math.max(0, Math.min(gameScale.length - 1, next));
+        if (next === lastGameIndex) {                       // 直前と同じ音は避ける
+          next = next > 0 ? next - 1 : next + 1;
+        }
+        lastGameDir = Math.sign(next - noteIndex) || lastGameDir;
+        noteIndex = next;
         lastGameIndex = noteIndex;
         const freq = gameScale[noteIndex];
 
@@ -6990,7 +7047,16 @@ document.addEventListener("pointerdown", () => { try { startBgm(); } catch (e) {
 // 一度中断した音を以降の操作・再表示で必ず復帰させる
 document.addEventListener("pointerdown", resumeAudioIfNeeded);
 document.addEventListener("touchstart", resumeAudioIfNeeded, { passive: true });
-document.addEventListener("visibilitychange", () => { if (!document.hidden) resumeAudioIfNeeded(); });
+document.addEventListener("visibilitychange", () => {
+  // 非表示→表示、表示→非表示の切り替え時に即座にノルマ時計の一時停止状態を更新する。
+  // (setInterval はバックグラウンドで停止・間引きされるため、イベントで確実に反映させる)
+  try { updateQuotaPauseState(); } catch (e) {}
+  if (document.hidden) {
+    try { saveGame(); } catch (e) {}
+  } else {
+    resumeAudioIfNeeded();
+  }
+});
 window.addEventListener("focus", resumeAudioIfNeeded);
 window.addEventListener("pageshow", resumeAudioIfNeeded);
 
@@ -7316,7 +7382,7 @@ function checkQuotaStageTransition() {
 function updateTopOnly() {
   $("cookies").textContent = fmt(state.cookies);
   const cpsEl = $("cookieCps");
-  if (cpsEl) cpsEl.textContent = pausedForSkillChoice() ? "毎秒 準備中" : "毎秒 " + fmt(currentCps());
+  if (cpsEl) cpsEl.textContent = pausedForSkillChoice() ? "合計毎秒 準備中" : "合計毎秒 " + fmt(currentCps());
 
   $("cookie").classList.toggle("boost-all", goldenBoostActive());
 
@@ -7407,6 +7473,7 @@ function buyResearch(id) {
 
   if (!r) return;
   if (!researchUnlocked(r)) return;
+  if (!researchEquipmentOwned(r)) return; // 対応設備を購入するまでは研究を買えない
   if (state.research[id]) return;
   if (!spend(researchCost(r))) return;
 
@@ -7645,10 +7712,22 @@ function closePolicyChoiceScreen() {
   $("policyChoiceScreen").classList.remove("active");
 }
 
+// 周回方針の説明は、スキル・研究で解放済みの要素だけに触れる。
+// (例: 会心はまだ解放していない間は説明に出さない)
+function policyChoiceDescription(p) {
+  if (p.id === "click") {
+    const critUnlocked = !!(state.research && state.research.fingerTechnique);
+    return critUnlocked
+      ? "タップと会心を伸ばし、手動クリック寄りにする。"
+      : "タップの威力を伸ばし、手動クリック寄りにする。";
+  }
+  return p.desc;
+}
+
 function renderPolicyChoiceScreen() {
   $("policyChoiceRow").innerHTML = RUN_POLICIES.map(p => `
     <button type="button" class="policyChoiceBtn" data-runpolicy="${p.id}">
-      <b>${p.name}</b><span>${p.desc}</span>
+      <b>${p.name}</b><span>${policyChoiceDescription(p)}</span>
     </button>
   `).join("");
 
@@ -7771,6 +7850,7 @@ function syncSettingsUi() {
   $("setFancyFx").checked = settings.fancyFx;
   $("setCardArt").checked = settings.cardArt;
   $("setCompact").checked = settings.compactCards;
+  $("setShowBuyMode").checked = settings.showBuyMode;
 }
 
 addTap($("settingsBtn"), () => {
@@ -7788,23 +7868,6 @@ addTap($("settingsCloseBtn"), () => {
 addTap($("settingsToTitleBtn"), () => {
   $("settingsOverlay").classList.remove("active");
   returnToTitleScreen();
-});
-
-addTap($("copySaveCodeBtn"), () => {
-  playSound("tab");
-  const code = buildSaveCode();
-  const output = $("saveCodeOutput");
-  output.value = code;
-  output.focus();
-  output.select();
-  copyTextToClipboard(code).then(ok => {
-    showMessage(ok ? "セーブコードをコピーしました" : "コードを表示しました。手動でコピーしてください");
-  });
-});
-
-addTap($("restoreSaveCodeBtn"), () => {
-  playSound("tab");
-  applySaveCode($("saveCodeInput").value);
 });
 
 addTap($("exportSaveBtn"), () => {
@@ -7873,7 +7936,7 @@ $("setBgmVol").addEventListener("input", () => {
   applySettings();
 });
 
-[["setTapFx", "tapFx"], ["setFancyFx", "fancyFx"], ["setCardArt", "cardArt"], ["setCompact", "compactCards"]].forEach(([id, key]) => {
+[["setTapFx", "tapFx"], ["setFancyFx", "fancyFx"], ["setCardArt", "cardArt"], ["setCompact", "compactCards"], ["setShowBuyMode", "showBuyMode"]].forEach(([id, key]) => {
   $(id).addEventListener("change", () => {
     settings[key] = $(id).checked;
     saveSettings();
@@ -8244,12 +8307,16 @@ function renderResearch() {
   const box = $("research");
 
   // 表示順はRESEARCH配列順で固定。
-  //  owned : 購入済み → 名前と効果のみ(枠なし・元の位置)
-  //  buy   : 解放済みで購入可能
+  //  owned  : 購入済み → 名前と効果のみ(枠なし・元の位置)
+  //  buy    : 解放済み・対応設備を所持 → 購入可能
+  //  locked : 解放済みだが対応設備が未所持 → 伏せた状態で表示(購入不可・効果と絵を隠す)
   const entries = [];
   for (const r of RESEARCH) {
     if (state.research[r.id]) entries.push({ r, mode: "owned", id: "own:" + r.id });
-    else if (researchUnlocked(r)) entries.push({ r, mode: "buy", id: r.id });
+    else if (researchUnlocked(r)) {
+      if (researchEquipmentOwned(r)) entries.push({ r, mode: "buy", id: r.id });
+      else if (researchEquipmentVisible(r)) entries.push({ r, mode: "locked", id: "lock:" + r.id });
+    }
   }
 
   if (entries.length === 0) {
@@ -8269,10 +8336,13 @@ function renderResearch() {
     entries.forEach(e => {
       const btn = document.createElement("button");
 
-      btn.className = "item artCard" + (e.mode === "owned" ? " researchOwned" : "");
+      btn.className = "item artCard"
+        + (e.mode === "owned" ? " researchOwned" : "")
+        + (e.mode === "locked" ? " researchLocked" : "");
       btn.dataset.id = e.id;
-      btn.dataset.art = researchArt(e.r);
-      setArtImage(btn, ASSETS.research[e.r.id]);
+      // 伏せ表示のときは絵(アイコン・画像)を隠す
+      btn.dataset.art = e.mode === "locked" ? "🔒" : researchArt(e.r);
+      if (e.mode !== "locked") setArtImage(btn, ASSETS.research[e.r.id]);
 
       if (e.mode === "buy") addTap(btn, () => buyResearch(e.r.id));
       else btn.disabled = true;
@@ -8296,6 +8366,20 @@ function renderResearch() {
       btn.innerHTML = `
         <b>${r.name}</b>
         <div class="desc">${r.desc}</div>
+      `;
+      return;
+    }
+
+    if (id.startsWith("lock:")) {
+      const r = RESEARCH.find(x => ("lock:" + x.id) === id);
+      if (!r) return;
+      const equip = getUpgrade(RESEARCH_EQUIPMENT[r.id]);
+      const equipName = equip ? equip.name : "対応設備";
+      btn.classList.remove("canBuy");
+      // 効果・絵・名前を伏せ、どの設備で解放されるかだけ示す
+      btn.innerHTML = `
+        <b>？？？</b>
+        <div class="desc">「${equipName}」を購入すると研究が解放されます</div>
       `;
       return;
     }
@@ -8528,6 +8612,30 @@ function renderInfo() {
     ` : ""}
   `;
 
+  // 「現在の倍率・状態」欄は、スキル・研究などで解放された要素だけを説明する。
+  // まだ解放していない仕組み(周回方針・報酬系統・研究倍率・費用割引など)の行は隠す。
+  const hasAnySkill = boughtSkillCount() > 0;
+  const hasAnyResearch = Object.keys(state.research || {}).some(k => state.research[k]);
+  const stateRows = [
+    runPolicyUnlocked() ? `<div class="infoRow">周回方針：${runPolicyName()}</div>` : "",
+    rewardSynergyUnlocked() ? `<div class="infoRow">報酬系統：金${fmt((state.rewardCategoryCounts||{}).golden||0)} / 狩猟${fmt((state.rewardCategoryCounts||{}).hunt||0)} / 設備${fmt((state.rewardCategoryCounts||{}).equipment||0)} / 危険${fmt((state.rewardCategoryCounts||{}).risk||0)}</div>` : "",
+    hasAnySkill ? `<div class="infoRow">スキル全体倍率：x${prestigeMultiplier().toFixed(3)}</div>` : "",
+    hasAnySkill ? `<div class="infoRow">スキルタップ倍率：x${clickSkillMultiplier().toFixed(3)}</div>` : "",
+    hasAnySkill ? `<div class="infoRow">スキル毎秒倍率：x${cpsSkillMultiplier().toFixed(3)}</div>` : "",
+    `<div class="infoRow">金クッキー倍率：x${goldenMultiplier().toFixed(3)}</div>`,
+    `<div class="infoRow">金ブースト時間：${(goldenBoostDuration() / 1000).toFixed(1)}秒</div>`,
+    `<div class="infoRow">金クッキー獲得量倍率：x${goldenAmountMultiplier().toFixed(3)}</div>`,
+    hasAnyResearch ? `<div class="infoRow">研究による固定全体倍率：x${globalResearchMultiplier().toFixed(3)}</div>` : "",
+    state.research.bankClickDividend ? `<div class="infoRow">銀行クリック固定倍率：x${bankClickMultiplier().toFixed(3)}</div>` : "",
+    upgradeDiscount() < 0.999 ? `<div class="infoRow">アップグレード費用倍率：x${upgradeDiscount().toFixed(3)}</div>` : "",
+    researchDiscount() < 0.999 ? `<div class="infoRow">研究費用倍率：x${researchDiscount().toFixed(3)}</div>` : "",
+    analysisRows,
+    `<div class="infoRow">ノルマ：${state.quotaFailed ? "終了" : fmt(state.runCookies) + " / " + fmt(monsterQuotaRequired())}</div>`,
+    `<div class="infoRow">今回のノルマ維持記録：${fmtTime(state.quotaHoldSeconds || 0)} / ノルマ中討伐 ${fmt(state.quotaMonsterKills || 0)}体</div>`,
+    `<div class="infoRow">モンスター出現：${canMonsterAppear() ? "可能" : "ノルマ未達"}</div>`,
+    `<div class="infoRow">モンスター基本ダメージ：${fmt(monsterBaseDamage())}</div>`,
+    `<div class="infoRow">モンスター最終ダメージ：${fmt(monsterBaseDamage() * monsterDamageMultiplier())}</div>`
+  ].join("");
 
   box.innerHTML = `
     <div class="infoBox">
@@ -8538,24 +8646,7 @@ function renderInfo() {
 
     <div class="infoBox">
       <h3>現在の倍率・状態</h3>
-      <div class="infoRow">周回方針：${runPolicyName()}</div>
-      <div class="infoRow">報酬系統：金${fmt((state.rewardCategoryCounts||{}).golden||0)} / 狩猟${fmt((state.rewardCategoryCounts||{}).hunt||0)} / 設備${fmt((state.rewardCategoryCounts||{}).equipment||0)} / 危険${fmt((state.rewardCategoryCounts||{}).risk||0)}</div>
-      <div class="infoRow">スキル全体倍率：x${prestigeMultiplier().toFixed(3)}</div>
-      <div class="infoRow">スキルタップ倍率：x${clickSkillMultiplier().toFixed(3)}</div>
-      <div class="infoRow">スキル毎秒倍率：x${cpsSkillMultiplier().toFixed(3)}</div>
-      <div class="infoRow">金クッキー倍率：x${goldenMultiplier().toFixed(3)}</div>
-      <div class="infoRow">金ブースト時間：${(goldenBoostDuration() / 1000).toFixed(1)}秒</div>
-      <div class="infoRow">研究による固定全体倍率：x${globalResearchMultiplier().toFixed(3)}</div>
-      <div class="infoRow">銀行クリック固定倍率：x${bankClickMultiplier().toFixed(3)}</div>
-      <div class="infoRow">アップグレード費用倍率：x${upgradeDiscount().toFixed(3)}</div>
-      <div class="infoRow">研究費用倍率：x${researchDiscount().toFixed(3)}</div>
-      ${analysisRows}
-      <div class="infoRow">金クッキー獲得量倍率：x${goldenAmountMultiplier().toFixed(3)}</div>
-      <div class="infoRow">ノルマ：${state.quotaFailed ? "終了" : fmt(state.runCookies) + " / " + fmt(monsterQuotaRequired())}</div>
-      <div class="infoRow">今回のノルマ維持記録：${fmtTime(state.quotaHoldSeconds || 0)} / ノルマ中討伐 ${fmt(state.quotaMonsterKills || 0)}体</div>
-      <div class="infoRow">モンスター出現：${canMonsterAppear() ? "可能" : "ノルマ未達"}</div>
-      <div class="infoRow">モンスター基本ダメージ：${fmt(monsterBaseDamage())}</div>
-      <div class="infoRow">モンスター最終ダメージ：${fmt(monsterBaseDamage() * monsterDamageMultiplier())}</div>
+      ${stateRows}
     </div>
 
     <div class="infoBox">
@@ -9052,47 +9143,6 @@ function importSaveFromFile(file) {
   reader.readAsText(file);
 }
 
-function buildSaveCode() {
-  return btoa(unescape(encodeURIComponent(JSON.stringify(buildSavePayload()))));
-}
-
-function applySaveCode(code) {
-  const trimmed = (code || "").trim();
-  if (!trimmed) {
-    alert("セーブコードを入力してください");
-    return;
-  }
-  try {
-    applyImportedSaveJson(decodeURIComponent(escape(atob(trimmed))));
-  } catch (e) {
-    alert("セーブコードの読み込みに失敗しました。コードが正しいか確認してください。");
-  }
-}
-
-function copyTextToClipboard(text) {
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    return navigator.clipboard.writeText(text).then(() => true).catch(() => fallbackCopyToClipboard(text));
-  }
-  return Promise.resolve(fallbackCopyToClipboard(text));
-}
-
-function fallbackCopyToClipboard(text) {
-  try {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.style.position = "fixed";
-    ta.style.opacity = "0";
-    document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    const ok = document.execCommand("copy");
-    ta.remove();
-    return ok;
-  } catch (e) {
-    return false;
-  }
-}
-
 /* ===== クラウド保存(Firebase) ===== */
 
 const CLOUD_SYNC_INTERVAL_MS = 60000;
@@ -9523,7 +9573,9 @@ function placeFixedElement(el, width, height, minY) {
   const availW = Math.max(1, hostW - pad * 2);
   const availH = Math.max(1, hostH - minYFixed - pad);
   const fitScale = Math.min(1, availW / naturalW, availH / naturalH);
-  const scale = Math.max(0.5, fitScale);
+  // 縮小しすぎるとモンスターが小さくなりタップしづらいので下限を引き上げる。
+  // (狭い端末では多少はみ出しても、タップできる大きさを優先する)
+  const scale = Math.max(0.78, fitScale);
   const best = tryPlace(naturalW * scale, naturalH * scale);
 
   el.style.transform = scale < 0.999 ? `translateZ(0) scale(${scale.toFixed(3)})` : "translateZ(0)";
@@ -9703,7 +9755,9 @@ function createMonsterElement(mon) {
   const top = document.querySelector(".top") || document.body;
   top.appendChild(wrap);
 
-  addTap(wrap.querySelector(".cookieMonsterButton"), () => hitMonster(mon.id));
+  // タップ判定はモンスター本体だけでなくラッパー全体(HPバー含む)に付けて
+  // 当たり判定を広げ、小さめに表示された時でもタップしやすくする。
+  addTap(wrap, () => hitMonster(mon.id));
 
   return wrap;
 }
