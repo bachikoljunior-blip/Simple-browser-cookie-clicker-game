@@ -4110,6 +4110,17 @@
         <input type="file" id="importSaveInput" accept="application/json,.json" style="display:none">
       </details>
     </div>
+    <div class="settingRow settingRowStack">
+      <span>クラウド保存(自動・任意)</span>
+      <div class="saveCodeHint" id="cloudSyncStatus">Googleでログインすると、セーブデータが自動でクラウドに保存されます。</div>
+      <div class="settingBtnRow">
+        <button id="cloudLoginBtn" type="button" class="settingsWideBtn">Googleでログイン</button>
+        <button id="cloudLogoutBtn" type="button" class="settingsWideBtn" style="display:none">ログアウト</button>
+      </div>
+      <div class="settingBtnRow">
+        <button id="cloudSyncNowBtn" type="button" class="settingsWideBtn" style="display:none">今すぐ同期する</button>
+      </div>
+    </div>
     <button id="settingsToTitleBtn" type="button" class="settingsWideBtn">タイトル画面に戻る</button>
   </div>
 </div>
@@ -4241,6 +4252,22 @@
 </section>
 
 <script>
+/*
+  ===== クラウド保存(Firebase)の設定 =====
+  Googleログインでセーブデータを自動的にクラウド保存する機能を使うには、
+  ご自身の無料Firebaseプロジェクトを作成し、発行された設定値を下に入力してください。
+  (Firebaseコンソール > プロジェクトの設定 > 全般 > マイアプリ で確認できます)
+  未設定のままなら、この機能は自動的に無効化され、他のセーブ機能には影響しません。
+*/
+const FIREBASE_CONFIG = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
 const saveKey = "cookie_game_compact_simple";
 
 const oldSaveKeys = [
@@ -7600,6 +7627,7 @@ function syncSettingsUi() {
 
 addTap($("settingsBtn"), () => {
   syncSettingsUi();
+  syncCloudSettingsUi();
   $("settingsOverlay").classList.add("active");
   playSound("tab");
 });
@@ -7645,6 +7673,21 @@ $("importSaveInput").addEventListener("change", e => {
   const file = e.target.files && e.target.files[0];
   e.target.value = "";
   if (file) importSaveFromFile(file);
+});
+
+addTap($("cloudLoginBtn"), () => {
+  playSound("tab");
+  signInToCloud();
+});
+
+addTap($("cloudLogoutBtn"), () => {
+  playSound("tab");
+  signOutFromCloud();
+});
+
+addTap($("cloudSyncNowBtn"), () => {
+  playSound("tab");
+  pushCloudSave();
 });
 
 addTap($("policyChoiceBackBtn"), () => {
@@ -8785,12 +8828,42 @@ function saveGame() {
   localStorage.setItem(saveKey, JSON.stringify(state));
 }
 
-function applyImportedSaveJson(raw) {
-  const imported = JSON.parse(raw);
-  if (!imported || typeof imported !== "object") throw new Error("invalid save data");
-  if (!confirm("現在のセーブデータを上書きして読み込みます。よろしいですか？")) return;
+function computeSaveChecksum(stateJson) {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < stateJson.length; i++) {
+    hash ^= stateJson.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16);
+}
 
-  state = imported;
+function buildSavePayload() {
+  saveGame();
+  const stateJson = JSON.stringify(state);
+  return { state, checksum: computeSaveChecksum(stateJson), savedAt: Date.now() };
+}
+
+function parseSavePayload(raw) {
+  const data = JSON.parse(raw);
+  if (data && typeof data === "object" && data.state && typeof data.checksum === "string") {
+    const verified = computeSaveChecksum(JSON.stringify(data.state)) === data.checksum;
+    return { state: data.state, verified };
+  }
+  // 旧形式(チェックサムなしでstateそのものを書き出していたバージョン)との互換のため
+  return { state: data, verified: null };
+}
+
+function applyImportedSaveJson(raw) {
+  const parsed = parseSavePayload(raw);
+  if (!parsed.state || typeof parsed.state !== "object") throw new Error("invalid save data");
+
+  if (parsed.verified === false) {
+    if (!confirm("セーブデータが破損しているか、改ざんされている可能性があります。正しく復元されない場合があります。それでも読み込みますか？")) return;
+  } else if (!confirm("現在のセーブデータを上書きして読み込みます。よろしいですか？")) {
+    return;
+  }
+
+  state = parsed.state;
   ensureState();
   state.lastSave = Date.now();
   saveGame();
@@ -8802,8 +8875,8 @@ function applyImportedSaveJson(raw) {
 }
 
 function exportSaveToFile() {
-  saveGame();
-  const blob = new Blob([JSON.stringify(state)], { type: "application/json" });
+  const payload = buildSavePayload();
+  const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   const stamp = new Date(Date.now()).toISOString().replace(/[:.]/g, "-");
@@ -8829,8 +8902,7 @@ function importSaveFromFile(file) {
 }
 
 function buildSaveCode() {
-  saveGame();
-  return btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+  return btoa(unescape(encodeURIComponent(JSON.stringify(buildSavePayload()))));
 }
 
 function applySaveCode(code) {
@@ -8867,6 +8939,178 @@ function fallbackCopyToClipboard(text) {
     return ok;
   } catch (e) {
     return false;
+  }
+}
+
+/* ===== クラウド保存(Firebase) ===== */
+
+const CLOUD_SYNC_INTERVAL_MS = 60000;
+
+let firebaseApp = null;
+let firebaseAuth = null;
+let firebaseDb = null;
+let firebaseLoadPromise = null;
+let cloudUser = null;
+let cloudSyncTimer = null;
+let cloudSyncing = false;
+
+function cloudSaveConfigured() {
+  return !!(FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== "YOUR_API_KEY");
+}
+
+function loadExternalScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("failed to load " + src));
+    document.head.appendChild(s);
+  });
+}
+
+function ensureFirebaseReady() {
+  if (!cloudSaveConfigured()) return Promise.reject(new Error("firebase not configured"));
+  if (firebaseLoadPromise) return firebaseLoadPromise;
+
+  firebaseLoadPromise = (async () => {
+    if (typeof firebase === "undefined") {
+      await loadExternalScript("https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js");
+      await loadExternalScript("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js");
+      await loadExternalScript("https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js");
+    }
+    firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+    firebaseAuth = firebase.auth();
+    firebaseDb = firebase.firestore();
+    firebaseAuth.onAuthStateChanged(onCloudAuthStateChanged);
+  })();
+
+  return firebaseLoadPromise;
+}
+
+const CLOUD_SAVE_USED_KEY = "cookie_game_cloud_save_used";
+
+function onCloudAuthStateChanged(user) {
+  cloudUser = user;
+  syncCloudSettingsUi();
+  if (user) {
+    localStorage.setItem(CLOUD_SAVE_USED_KEY, "1");
+    startCloudAutoSync();
+    pullCloudSaveIfNewer();
+  } else {
+    localStorage.removeItem(CLOUD_SAVE_USED_KEY);
+    stopCloudAutoSync();
+  }
+}
+
+function restoreCloudSessionIfNeeded() {
+  if (cloudSaveConfigured() && localStorage.getItem(CLOUD_SAVE_USED_KEY)) {
+    ensureFirebaseReady().catch(e => console.error(e));
+  }
+}
+
+async function signInToCloud() {
+  if (!cloudSaveConfigured()) {
+    alert("クラウド保存は現在設定されていません。");
+    return;
+  }
+  try {
+    await ensureFirebaseReady();
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await firebaseAuth.signInWithPopup(provider);
+  } catch (e) {
+    console.error(e);
+    alert("ログインに失敗しました。時間をおいて再度お試しください。");
+  }
+}
+
+function signOutFromCloud() {
+  if (firebaseAuth) firebaseAuth.signOut();
+}
+
+async function pushCloudSave(silent) {
+  if (!cloudUser || !firebaseDb || cloudSyncing) return;
+  cloudSyncing = true;
+  try {
+    const payload = buildSavePayload();
+    await firebaseDb.collection("saves").doc(cloudUser.uid).set(payload);
+    if (!silent) showMessage("クラウドに保存しました");
+  } catch (e) {
+    console.error(e);
+  } finally {
+    cloudSyncing = false;
+  }
+}
+
+async function pullCloudSaveIfNewer() {
+  if (!cloudUser || !firebaseDb) return;
+  try {
+    const doc = await firebaseDb.collection("saves").doc(cloudUser.uid).get();
+    if (!doc.exists) {
+      pushCloudSave(true);
+      return;
+    }
+
+    const cloudPayload = doc.data();
+    const cloudStateJson = JSON.stringify(cloudPayload.state || {});
+    const verified = cloudPayload.state && computeSaveChecksum(cloudStateJson) === cloudPayload.checksum;
+
+    if (!cloudPayload.state || verified === false) {
+      alert("クラウド上のセーブデータが破損している可能性があるため、読み込みを中止しました。");
+      return;
+    }
+
+    if ((cloudPayload.state.lastSave || 0) > (state.lastSave || 0)) {
+      if (confirm("クラウドの方が新しいセーブデータがあります。読み込みますか？")) {
+        state = cloudPayload.state;
+        ensureState();
+        saveGame();
+        updateTopOnly();
+        renderAllTabs();
+        showMessage("クラウドのセーブデータを読み込みました");
+      }
+    } else {
+      pushCloudSave(true);
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function startCloudAutoSync() {
+  stopCloudAutoSync();
+  cloudSyncTimer = setInterval(() => pushCloudSave(true), CLOUD_SYNC_INTERVAL_MS);
+}
+
+function stopCloudAutoSync() {
+  if (cloudSyncTimer) clearInterval(cloudSyncTimer);
+  cloudSyncTimer = null;
+}
+
+function syncCloudSettingsUi() {
+  const statusEl = $("cloudSyncStatus");
+  const loginBtn = $("cloudLoginBtn");
+  const logoutBtn = $("cloudLogoutBtn");
+  const syncNowBtn = $("cloudSyncNowBtn");
+  if (!statusEl) return;
+
+  if (!cloudSaveConfigured()) {
+    statusEl.textContent = "クラウド保存は現在設定されていません。";
+    loginBtn.style.display = "";
+    logoutBtn.style.display = "none";
+    syncNowBtn.style.display = "none";
+    return;
+  }
+
+  if (cloudUser) {
+    statusEl.textContent = `ログイン中: ${cloudUser.displayName || cloudUser.email || "不明なアカウント"}(自動で同期されます)`;
+    loginBtn.style.display = "none";
+    logoutBtn.style.display = "";
+    syncNowBtn.style.display = "";
+  } else {
+    statusEl.textContent = "Googleでログインすると、セーブデータが自動でクラウドに保存されます。";
+    loginBtn.style.display = "";
+    logoutBtn.style.display = "none";
+    syncNowBtn.style.display = "none";
   }
 }
 
@@ -9856,6 +10100,7 @@ loadGame();
 ensureState();
 applyVisualAssets();
 applySettings();
+restoreCloudSessionIfNeeded();
 
 // 層演出のクラスは再生し終わったら外す。付けたままだと全画面から戻って
 // ゲージが再表示された瞬間にアニメーションが再生されてしまう
