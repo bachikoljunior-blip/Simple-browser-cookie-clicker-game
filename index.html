@@ -4121,9 +4121,10 @@
 </section>
 
 <script>
-const saveKey = "cookie_game_compact";
+const saveKey = "cookie_game_compact_simple";
 
 const oldSaveKeys = [
+  "cookie_game_compact", // 旧: 2ゲーム共通だったキー(同一オリジンで衝突)。初回のみ引き継ぐ
   "cookie_game_compact_v11",
   "cookie_game_compact_v10",
   "cookie_game_compact_v9",
@@ -6527,7 +6528,7 @@ function renderQuota() {
 }
 
 // ===== 設定(音量・演出・画像・省略表示) =====
-const SETTINGS_KEY = "cookie_game_settings_v1";
+const SETTINGS_KEY = "cookie_game_settings_v1_simple";
 const settings = {
   seVolume: 100,
   bgmVolume: 35,
