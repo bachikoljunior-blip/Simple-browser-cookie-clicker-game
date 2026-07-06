@@ -3628,8 +3628,20 @@
 
     .cookieWrap {
       flex: 1 1 auto !important;
-      min-height: 84px !important;
+      min-height: 64px !important;
       margin-top: 0 !important;
+    }
+
+    /* 情報欄(クッキー数・ノルマ・ステータス等)は縮ませない。
+       画面が低いときの不足分はクッキー画像(.cookieWrap)の縮小だけで吸収し、
+       数値表示が縦に潰れて欠けるのを防ぐ */
+    #settingsBtn,
+    .cookieCount,
+    .quotaBox,
+    .bakeBox,
+    .stats,
+    #message {
+      flex-shrink: 0 !important;
     }
 
     /* メッセージはフロー外のトースト表示にして、出ても配分に影響させない */
