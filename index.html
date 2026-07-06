@@ -93,14 +93,11 @@
     }
 
     .game {
-      /* どの端末でも縦横比を390:844に固定し、余った領域はレターボックスにする。
-         幅・高さの両方を明示計算し、中身のmin-widthに比率を崩されないようにする */
-      height: min(calc(100dvh - 16px), calc((100vw - 16px) * 844 / 390));
-      width: min(calc(100vw - 16px), calc((100dvh - 16px) * 390 / 844));
-      /* svh対応ブラウザでは、URLバーの開閉で変わらない安定した高さを使う
-         (プレイ中にゲーム全体が伸縮しないようにする) */
-      height: min(calc(100svh - 16px), calc((100vw - 16px) * 844 / 390));
-      width: min(calc(100vw - 16px), calc((100svh - 16px) * 390 / 844));
+      /* 横幅は画面幅いっぱいに使う(左右の黒帯を出さない)。上限640pxでPCでも自然。
+         高さはURLバー開閉で変わらないsvh基準にして、プレイ中の伸縮を防ぐ */
+      width: min(calc(100vw - 12px), 640px);
+      height: calc(100dvh - 12px);
+      height: calc(100svh - 12px);
       max-width: none;
       margin: auto;
       display: flex;
@@ -2664,6 +2661,26 @@
       display: block;
     }
 
+    /* 報酬獲得→OKで選択へ。ロック中は選択肢を隠し、OKボタンだけ表示 */
+    .rewardConfirmBtn {
+      display: none;
+      width: 100%;
+      margin: 0 0 12px;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,218,137,0.5);
+      background: linear-gradient(180deg, rgba(191,118,43,0.96), rgba(98,52,16,0.98));
+      color: #fff4de;
+      font-weight: 900;
+      font-size: 16px;
+    }
+    #rewardModal.rewardLocked .rewardConfirmBtn {
+      display: block;
+    }
+    #rewardModal.rewardLocked #rewardChoices {
+      display: none;
+    }
+
     /* 追加実装：クッキー本体が見えている通常画面では、下タブが強化以外でも出現物を残す。全画面・スキル中は上の規則で非表示。 */
 
 
@@ -2827,6 +2844,50 @@
       background: rgba(112, 58, 20, 0.70);
       color: #fff4de;
       font-weight: 900;
+    }
+
+    .orderTimeRow {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin: 3px 0 5px;
+    }
+
+    .orderTimeLabel {
+      flex: 0 0 auto;
+      font-size: 11px;
+      color: #dfc6a7;
+    }
+
+    .orderTimeVal {
+      flex: 0 0 auto;
+      font-size: 11px;
+      font-weight: 800;
+      color: #ffe1a8;
+      min-width: 46px;
+      text-align: right;
+    }
+
+    .orderTimeBar {
+      flex: 1 1 auto;
+      position: relative;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.45);
+      border: 1px solid rgba(255,255,255,0.12);
+      overflow: hidden;
+    }
+
+    .orderTimeFill {
+      height: 100%;
+      width: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, rgba(120,200,255,0.9), rgba(180,235,255,0.82));
+      transition: width 0.3s linear;
+    }
+
+    .orderTimeFill--low {
+      background: linear-gradient(90deg, rgba(255,140,96,0.95), rgba(255,196,120,0.9));
     }
 
 
@@ -3587,8 +3648,20 @@
 
     .cookieWrap {
       flex: 1 1 auto !important;
-      min-height: 84px !important;
+      min-height: 64px !important;
       margin-top: 0 !important;
+    }
+
+    /* 情報欄(クッキー数・ノルマ・ステータス等)は縮ませない。
+       画面が低いときの不足分はクッキー画像(.cookieWrap)の縮小だけで吸収し、
+       数値表示が縦に潰れて欠けるのを防ぐ */
+    #settingsBtn,
+    .cookieCount,
+    .quotaBox,
+    .bakeBox,
+    .stats,
+    #message {
+      flex-shrink: 0 !important;
     }
 
     /* メッセージはフロー外のトースト表示にして、出ても配分に影響させない */
@@ -4026,6 +4099,21 @@
       mix-blend-mode: screen;
     }
 
+    /* 注文出現時、別タブを開いていると注文タブが点滅する(開くと止まる) */
+    .tab.orderAlert {
+      animation: orderTabBlink 1.1s ease-in-out infinite;
+    }
+
+    @keyframes orderTabBlink {
+      0%, 100% { box-shadow: inset 0 0 0 rgba(255, 205, 110, 0); filter: brightness(1); }
+      50% { box-shadow: inset 0 0 14px rgba(255, 205, 110, 0.85); filter: brightness(1.35); }
+    }
+
+    body.fxOff .tab.orderAlert {
+      animation: none !important;
+      filter: brightness(1.2);
+    }
+
     /* 方針/ステージ選択画面：内容が縦に長いときも上端が切れずスクロールできるようにする
        (align-items:center+overflowの組合せは先頭が届かなくなるため、子のmargin:autoで中央寄せ) */
     .policyChoiceScreen.active {
@@ -4036,6 +4124,75 @@
     .policyChoiceInner {
       margin: auto 0;
       padding-bottom: 12px;
+    }
+
+    /* ===== 直近要望: 表示崩れ対策 ===== */
+    html, body {
+      touch-action: manipulation;
+    }
+
+    .tabs {
+      display: flex !important;
+      flex-wrap: nowrap !important;
+      grid-template-columns: none !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab {
+      flex: 1 0 auto !important;
+      min-width: 72px !important;
+      white-space: nowrap;
+      touch-action: manipulation !important;
+    }
+
+    #rewardModal {
+      padding: 12px !important;
+    }
+    .rewardPanel {
+      max-height: calc(100dvh - 24px);
+      max-height: calc(100svh - 24px) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
+    }
+    #rewardChoices {
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ===== クッキー画面(上部)の各表示が潰れない調整 ===== */
+    .top {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      scrollbar-width: none;
+    }
+    .top::-webkit-scrollbar { display: none; }
+    .tabPages {
+      flex: 0 0 46% !important;
+      max-height: 46% !important;
+    }
+    .cookieWrap {
+      min-height: 116px !important;
+    }
+
+    /* ===== スキルツリーのスワイプ中はアニメ/重フィルタを止めてガクつきを防ぐ ===== */
+    .skillMapFrame.interacting .skillNode,
+    .skillMapFrame.interacting .skillNode::before,
+    .skillMapFrame.interacting .skillNode::after,
+    .skillMapFrame.interacting .skillLine {
+      animation: none !important;
+    }
+    .skillMapFrame.interacting .skillNode,
+    .skillMapFrame.interacting .skillLine {
+      filter: none !important;
+    }
+    .skillMapFrame.interacting .skillNode::after {
+      display: none !important;
     }
 
   </style>
@@ -4165,7 +4322,6 @@
     </div>
 
     <div id="quotaBox" class="quotaBox"></div>
-    <div id="bakeBox" class="bakeBox"></div>
     <div id="dishBuffBar" class="dishBuffBar"></div>
 
     <div class="cookieWrap">
@@ -4185,12 +4341,6 @@
       <div id="monsterHpText">HP</div>
     </div>
 
-    <div class="stats">
-      <div>タップ <b id="power">1</b></div>
-      <div>毎秒 <b id="cps">0</b></div>
-      <div>ランク <b id="rank">初心者</b></div>
-    </div>
-
     <div id="message"></div>
   </section>
 
@@ -4198,6 +4348,7 @@
     <button class="tab active" data-tab="shopTab">強化</button>
     <button class="tab" data-tab="researchTab">研究</button>
     <button class="tab" data-tab="prestigeTab">?</button>
+    <button class="tab" data-tab="orderTab">?</button>
     <button class="tab" data-tab="infoTab">一覧</button>
     <button class="tab" data-tab="workshopTab">工房</button>
   </nav>
@@ -4231,6 +4382,13 @@
       <div id="prestigePanel" class="pageScroll"></div>
     </section>
 
+    <section id="orderTab" class="tabPage">
+      <div class="tabPageHead" data-full-target="orderTab">
+        <h2>注文ボード</h2>
+      </div>
+      <div id="orderPanel" class="pageScroll"></div>
+    </section>
+
     <section id="infoTab" class="tabPage">
       <div class="tabPageHead" data-full-target="infoTab">
         <h2>一覧</h2>
@@ -4251,7 +4409,8 @@
 <div id="rewardModal">
   <div class="rewardPanel">
     <h2>報酬を選択</h2>
-    <div class="rewardLockNotice" id="rewardLockNotice">撃破！報酬を確認中…</div>
+    <div class="rewardLockNotice" id="rewardLockNotice">報酬を手に入れた！</div>
+    <button id="rewardConfirmBtn" class="rewardConfirmBtn" type="button">OK ― 報酬を選ぶ</button>
     <div id="rewardChoices"></div>
   </div>
 </div>
@@ -4289,9 +4448,10 @@
 </section>
 
 <script>
-const saveKey = "cookie_game_compact";
+const saveKey = "cookie_game_compact_simple";
 
 const oldSaveKeys = [
+  "cookie_game_compact", // 旧: 2ゲーム共通だったキー(同一オリジンで衝突)。初回のみ引き継ぐ
   "cookie_game_compact_v11",
   "cookie_game_compact_v10",
   "cookie_game_compact_v9",
@@ -4452,29 +4612,29 @@ const UPGRADES = [
 ];
 
 const RESEARCH = [
-  // 序盤は体感しやすい研究。研究改造室以降は、設備ごとの特殊効果を一つずつ広げる。
-  { id: "fingerTechnique", name: "指先の型", cost: 30000, skill: "core", detail: "会心率は強い指の数で上がる。会心倍率は上限なく伸び続けるが、伸び方はだんだん緩やかになる。", desc: "タップ時、会心が発生するようになる。強い指が多いほど会心率と会心倍率が伸びる" },
-  { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 120000, skill: "core", detail: "おばあちゃんの数が多いほど強い指・オーブン・工場を補助する。数が増えるほど1人あたりの効果は小さくなる。", desc: "おばあちゃんが強い指・オーブン・工場を支援する" },
-  { id: "ovenBatch", name: "オーブン大量焼成", cost: 300000, skill: "core", detail: "現在のノルマ層が高いほどオーブン倍率が上がる。層が進むほど1層あたりの伸びは緩やかになる。", desc: "ノルマ層が進んでいる周回ほどオーブンが安定して強くなる" },
-  { id: "factoryNetwork", name: "工場ネットワーク", cost: 1600000, advanced: true, skill: "research_factory", detail: "強い指・おばあちゃん・オーブンの所持数と工場数で、工場倍率が伸びる。", desc: "強い指・おばあちゃん・オーブンの所持数に応じて工場が強化される" },
-  { id: "spiceBlend", name: "香料調合", cost: 8000000, advanced: true, skill: "research_spice", detail: "金クッキー取得後しばらく香料棚が強化される。", desc: "金クッキー取得後、一定時間だけ香料棚の生産倍率が上がる" },
-  { id: "portalNetwork", name: "異世界接続網", cost: 24000000, advanced: true, skill: "research_portal", detail: "金クッキー取得後、異世界クッキー炉の数に応じて一定時間モンスター出現間隔を短縮する。", desc: "金クッキー取得後、一定時間だけモンスター出現が少し早くなる" },
-  { id: "bankClickDividend", name: "銀行クリック配当", cost: 80000000, advanced: true, skill: "research_bank", detail: "銀行数と所持クッキー量が多いほどクリックが強くなる。", desc: "銀行数と所持クッキー量に応じてクリックが強化される" },
-  { id: "moonGlobalYeast", name: "月面発酵", cost: 800000000, advanced: true, skill: "research_moon", detail: "第3層以降のノルマ層と月面ベーカリー数に応じて全体生産が伸び、ノルマ上昇も少し抑える。", desc: "ノルマ第3層以降で全体生産が少し伸び、ノルマ上昇も少し抑える" },
-  { id: "portalGlobalFold", name: "異世界増幅", cost: 8000000000, advanced: true, skill: "research_portalGlobal", detail: "異世界炉数、金ブースト、出現中モンスター数に応じて全体生産が伸びる。", desc: "異世界炉・金ブースト・モンスター数がかみ合うほど全体生産が伸びる" },
-  { id: "galaxyAssembly", name: "銀河分業", cost: 120000000000, advanced: true, skill: "research_galaxy", detail: "所持している設備種類数と銀河工場数に応じて銀河工場倍率が伸びる。", desc: "所持設備の種類数が多いほど銀河工場が強くなる" },
-  { id: "blackHoleCompression", name: "重力圧縮", cost: 3200000000000, advanced: true, skill: "research_blackhole", detail: "ノルマ未達寸前で、周回中1回だけブラックホール数に応じて必要ノルマを圧縮する。全体生産も上げる。", desc: "ノルマ未達寸前で一度だけ必要ノルマを圧縮し、全体生産も強化する" },
-  { id: "quantumProofing", name: "量子発酵", cost: 64000000000000, advanced: true, skill: "research_quantum", detail: "取得済み研究数と量子ベーカリー数に応じて量子ベーカリーが伸びる。", desc: "研究数が多いほど量子ベーカリーの生産が伸びる" },
-  { id: "antimatterRecipe", name: "反物質配合", cost: 1280000000000000, advanced: true, skill: "research_antimatter", detail: "反物質オーブン数と取得スキル数に応じて全体生産が伸びる。", desc: "反物質オーブンと取得スキル数が多いほど全体生産が伸びる" },
+  // 研究はスキル不要。「対応する設備をこの周回で1つ以上購入済み」なら表示・購入できる(upgradeフィールド)。
+  { id: "fingerTechnique", name: "指先の型", cost: 30000, upgrade: "finger", detail: "会心率は強い指の数で上がる。会心倍率は上限なく伸び続けるが、伸び方はだんだん緩やかになる。", desc: "タップ時、会心が発生するようになる。強い指が多いほど会心率と会心倍率が伸びる" },
+  { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 120000, upgrade: "grandma", detail: "おばあちゃんの数が多いほど強い指・オーブン・工場を補助する。数が増えるほど1人あたりの効果は小さくなる。", desc: "おばあちゃんが強い指・オーブン・工場を支援する" },
+  { id: "ovenBatch", name: "オーブン大量焼成", cost: 300000, upgrade: "oven", detail: "現在のノルマ層が高いほどオーブン倍率が上がる。層が進むほど1層あたりの伸びは緩やかになる。", desc: "ノルマ層が進んでいる周回ほどオーブンが安定して強くなる" },
+  { id: "factoryNetwork", name: "工場ネットワーク", cost: 1600000, upgrade: "factory", detail: "強い指・おばあちゃん・オーブンの所持数と工場数で、工場倍率が伸びる。", desc: "強い指・おばあちゃん・オーブンの所持数に応じて工場が強化される" },
+  { id: "spiceBlend", name: "香料調合", cost: 8000000, upgrade: "spiceRack", detail: "金クッキー取得後しばらく香料棚が強化される。", desc: "金クッキー取得後、一定時間だけ香料棚の生産倍率が上がる" },
+  { id: "portalNetwork", name: "異世界接続網", cost: 24000000, upgrade: "portal", detail: "金クッキー取得後、異世界クッキー炉の数に応じて一定時間モンスター出現間隔を短縮する。", desc: "金クッキー取得後、一定時間だけモンスター出現が少し早くなる" },
+  { id: "bankClickDividend", name: "銀行クリック配当", cost: 80000000, upgrade: "bank", detail: "銀行数と所持クッキー量が多いほどクリックが強くなる。", desc: "銀行数と所持クッキー量に応じてクリックが強化される" },
+  { id: "moonGlobalYeast", name: "月面発酵", cost: 800000000, upgrade: "moonBakery", detail: "第3層以降のノルマ層と月面ベーカリー数に応じて全体生産が伸び、ノルマ上昇も少し抑える。", desc: "ノルマ第3層以降で全体生産が少し伸び、ノルマ上昇も少し抑える" },
+  { id: "portalGlobalFold", name: "異世界増幅", cost: 8000000000, upgrade: "portal", detail: "異世界炉数、金ブースト、出現中モンスター数に応じて全体生産が伸びる。", desc: "異世界炉・金ブースト・モンスター数がかみ合うほど全体生産が伸びる" },
+  { id: "galaxyAssembly", name: "銀河分業", cost: 120000000000, upgrade: "galaxyFactory", detail: "所持している設備種類数と銀河工場数に応じて銀河工場倍率が伸びる。", desc: "所持設備の種類数が多いほど銀河工場が強くなる" },
+  { id: "blackHoleCompression", name: "重力圧縮", cost: 3200000000000, upgrade: "blackHoleMixer", detail: "ノルマ未達寸前で、周回中1回だけブラックホール数に応じて必要ノルマを圧縮する。全体生産も上げる。", desc: "ノルマ未達寸前で一度だけ必要ノルマを圧縮し、全体生産も強化する" },
+  { id: "quantumProofing", name: "量子発酵", cost: 64000000000000, upgrade: "quantumBakery", detail: "取得済み研究数と量子ベーカリー数に応じて量子ベーカリーが伸びる。", desc: "研究数が多いほど量子ベーカリーの生産が伸びる" },
+  { id: "antimatterRecipe", name: "反物質配合", cost: 1280000000000000, upgrade: "antimatterOven", detail: "反物質オーブン数と取得スキル数に応じて全体生産が伸びる。", desc: "反物質オーブンと取得スキル数が多いほど全体生産が伸びる" },
 
   // 設備増幅研究の全設備化：増幅研究を持たないcps設備に、生産x9x複利型(1+レート)^所持数の増幅を追加
-  { id: "bankVault", name: "複利金庫", cost: 160000000, advanced: true, skill: "research_bank", detail: "銀行の生産に固定x9と、銀行数に応じた複利(1.006^銀行数)が掛かる。", desc: "銀行の生産x9。銀行が多いほど複利でさらに伸びる" },
-  { id: "moonBake", name: "月光焼成", cost: 1600000000, advanced: true, skill: "research_moon", detail: "月面ベーカリーの生産に固定x9と、月面ベーカリー数に応じた複利(1.005^月面数)が掛かる。", desc: "月面ベーカリーの生産x9。数が多いほど複利でさらに伸びる" },
-  { id: "timeLayer", name: "時間差焼成", cost: 16000000000, advanced: true, skill: "upgrade_time", detail: "時空オーブンの生産に固定x9と、時空オーブン数に応じた複利(1.005^時空数)が掛かる。", desc: "時空オーブンの生産x9。数が多いほど複利でさらに伸びる" },
-  { id: "eventHorizon", name: "事象縁焼成", cost: 6400000000000, advanced: true, skill: "research_blackhole", detail: "ブラックホールミキサーの生産に固定x9と、ミキサー数に応じた複利(1.004^BH数)が掛かる。", desc: "ブラックホールミキサーの生産x9。数が多いほど複利でさらに伸びる" },
-  { id: "cosmicConvection", name: "宇宙対流", cost: 128000000000000, advanced: true, skill: "upgrade_universe", detail: "宇宙焼成炉の生産に固定x9と、宇宙焼成炉数に応じた複利(1.004^宇宙炉数)が掛かる。", desc: "宇宙焼成炉の生産x9。数が多いほど複利でさらに伸びる" },
-  { id: "singularityFlow", name: "特異点整流", cost: 2560000000000000, advanced: true, skill: "upgrade_singularity", detail: "クッキー特異点の生産に固定x9と、特異点数に応じた複利(1.004^特異点数)が掛かる。", desc: "クッキー特異点の生産x9。数が多いほど複利でさらに伸びる" },
-  { id: "annihilationCore", name: "対消滅炉心", cost: 25600000000000000, advanced: true, skill: "research_antimatter", detail: "反物質オーブンの生産に固定x9と、反物質オーブン数に応じた複利(1.004^反物質数)が掛かる。", desc: "反物質オーブンの生産x9。数が多いほど複利でさらに伸びる" }
+  { id: "bankVault", name: "複利金庫", cost: 160000000, upgrade: "bank", detail: "銀行の生産に固定x9と、銀行数に応じた複利(1.006^銀行数)が掛かる。", desc: "銀行の生産x9。銀行が多いほど複利でさらに伸びる" },
+  { id: "moonBake", name: "月光焼成", cost: 1600000000, upgrade: "moonBakery", detail: "月面ベーカリーの生産に固定x9と、月面ベーカリー数に応じた複利(1.005^月面数)が掛かる。", desc: "月面ベーカリーの生産x9。数が多いほど複利でさらに伸びる" },
+  { id: "timeLayer", name: "時間差焼成", cost: 16000000000, upgrade: "timeOven", detail: "時空オーブンの生産に固定x9と、時空オーブン数に応じた複利(1.005^時空数)が掛かる。", desc: "時空オーブンの生産x9。数が多いほど複利でさらに伸びる" },
+  { id: "eventHorizon", name: "事象縁焼成", cost: 6400000000000, upgrade: "blackHoleMixer", detail: "ブラックホールミキサーの生産に固定x9と、ミキサー数に応じた複利(1.004^BH数)が掛かる。", desc: "ブラックホールミキサーの生産x9。数が多いほど複利でさらに伸びる" },
+  { id: "cosmicConvection", name: "宇宙対流", cost: 128000000000000, upgrade: "universeOven", detail: "宇宙焼成炉の生産に固定x9と、宇宙焼成炉数に応じた複利(1.004^宇宙炉数)が掛かる。", desc: "宇宙焼成炉の生産x9。数が多いほど複利でさらに伸びる" },
+  { id: "singularityFlow", name: "特異点整流", cost: 2560000000000000, upgrade: "cookieSingularity", detail: "クッキー特異点の生産に固定x9と、特異点数に応じた複利(1.004^特異点数)が掛かる。", desc: "クッキー特異点の生産x9。数が多いほど複利でさらに伸びる" },
+  { id: "annihilationCore", name: "対消滅炉心", cost: 25600000000000000, upgrade: "antimatterOven", detail: "反物質オーブンの生産に固定x9と、反物質オーブン数に応じた複利(1.004^反物質数)が掛かる。", desc: "反物質オーブンの生産x9。数が多いほど複利でさらに伸びる" }
 ].sort((a, b) => a.cost - b.cost);
 
 const REWARD_POOL = [
@@ -4523,7 +4683,8 @@ const MATERIALS = [
   { id: "bossCore4", name: "ボス核・砂丘", tier: "b" },
   { id: "bossCore5", name: "ボス核・銀河", tier: "b" },
   { id: "voidSugar", name: "虚空糖", tier: "r" },
-  { id: "deepCore", name: "深層核", tier: "b" }
+  { id: "deepCore", name: "深層核", tier: "b" },
+  { id: "universalFlour", name: "万能粉", tier: "u" }
 ];
 
 // 料理(消費・時限バフ。転生で効果消滅、レシピは永続。同時3品・基本600秒)
@@ -4570,23 +4731,29 @@ const STAGES = [
 ];
 
 // ステージxモンスター種類 → 落とす素材(ボス核は撃破処理側で付与)
+// 条件ドロップ制: この表は「通常撃破の基本素材」のみ。
+// レア素材はオーバーキル、黄金粉は金ブースト中撃破、ボス核は連続撃破…と「どう倒したか」で決まる
 const STAGE_DROPS = {
-  1: { normal: "butter", swarm: "butter", speedy: "flour", tank: "ironShard", goldenBeast: "flour", normalAlt: { id: "flour", chance: 0.30 } },
-  2: { normal: "cacao", swarm: "cacao", speedy: "lavaSugar", tank: "ironShard", goldenBeast: "ironShard" },
-  3: { normal: "mint", swarm: "mint", speedy: "frostSugar", tank: "silentCore", goldenBeast: "silentCore" },
-  4: { normal: "spice", swarm: "spice", speedy: "spice", tank: "goldDust", goldenBeast: "goldDust" },
-  5: { normal: "stardust", swarm: "stardust", speedy: "stardust", tank: "cometShard", goldenBeast: "cometShard" }
+  1: { normal: "butter", swarm: "butter", speedy: "flour", tank: "butter", goldenBeast: "butter", normalAlt: { id: "flour", chance: 0.30 } },
+  2: { normal: "cacao", swarm: "cacao", speedy: "lavaSugar", tank: "cacao", goldenBeast: "cacao" },
+  3: { normal: "mint", swarm: "mint", speedy: "frostSugar", tank: "mint", goldenBeast: "mint" },
+  4: { normal: "spice", swarm: "spice", speedy: "spice", tank: "spice", goldenBeast: "spice" },
+  5: { normal: "stardust", swarm: "stardust", speedy: "stardust", tank: "stardust", goldenBeast: "stardust" }
 };
 
-// 深層領域(S6+)のドロップ表。虚空糖はレア枠(tank/黄金獣は確定、全種が低確率で代替ドロップ)
+// 深層領域(S6)の基本素材は虚空糖。低確率で深層核も落ちる
 const DEEP_STAGE_DROPS = {
-  normal: "stardust",
-  swarm: "stardust",
-  speedy: "stardust",
+  normal: "voidSugar",
+  swarm: "voidSugar",
+  speedy: "voidSugar",
   tank: "voidSugar",
   goldenBeast: "voidSugar",
-  anyAlt: { id: "voidSugar", chance: 0.18 }
+  anyAlt: { id: "deepCore", chance: 0.08 }
 };
+
+// 撃破条件ドロップ用: ステージごとのレア枠(オーバーキル時)と発酵枠(ノルマ余裕率2倍以上)
+const STAGE_RARE_DROPS = { 1: "ironShard", 2: "ironShard", 3: "silentCore", 4: "goldDust", 5: "cometShard", 6: "deepCore" };
+const STAGE_FERMENT_DROPS = { 1: "flour", 2: "lavaSugar", 3: "frostSugar", 4: "spice", 5: "stardust", 6: "voidSugar" };
 
 const SKILL_GROUPS = {
   core: "中核",
@@ -4616,7 +4783,7 @@ const SKILL_NODES = [
   { id: "click_1", name: "会心の指", branchId: "click", cost: 337500, x: 800, y: 980, icon: "◆", prereqs: ["core"], desc: "タップ生産 +800%。会心タップ型への入口。", effects: [{ type: "click", value: 8 }] },
   { id: "click_2", name: "連打の呼吸", branchId: "click", cost: 2.04073e53, x: 620, y: 860, icon: "◆", prereqs: ["click_1"], desc: "タップ生産 x285474。", effects: [{ type: "click", value: 285472.96 }] },
   { id: "click_3", name: "焼き印タップ", branchId: "click", cost: 8.16293e55, x: 440, y: 740, icon: "◆", prereqs: ["click_2", "golden_2"], desc: "タップ生産 x2569257.6、金獲得量 +30%。", effects: [{ type: "click", value: 2569256.64 }, { type: "goldenAmount", value: 0.3 }] },
-  { id: "click_4", name: "神経直結", branchId: "click", cost: 4.70716e77, x: 260, y: 620, icon: "◆", prereqs: ["golden_3", "research_bank"], desc: "タップ生産 +24%、全生産 x499452.7。銀行配当の増幅先。", effects: [{ type: "click", value: 0.24 }, { type: "all", value: 499451.68 }] },
+  { id: "click_4", name: "神経直結", branchId: "click", cost: 4.70716e77, x: 260, y: 620, icon: "◆", prereqs: ["golden_3", "research_remodel"], desc: "タップ生産 +24%、全生産 x499452.7。銀行配当の増幅先。", effects: [{ type: "click", value: 0.24 }, { type: "all", value: 499451.68 }] },
 
   // 左下：金クッキー型
   { id: "golden_1", name: "金色の匂い", branchId: "golden", cost: 1.9929e40, x: 800, y: 1260, icon: "✦", prereqs: ["core"], desc: "金クッキー出現間隔を短縮。", effects: [{ type: "goldenRate", value: 0.24 }] },
@@ -4629,8 +4796,7 @@ const SKILL_NODES = [
   { id: "auto_1", name: "火種", branchId: "auto", cost: 2250, x: 1200, y: 980, icon: "◇", prereqs: ["core"], desc: "毎秒生産 +1300%。自動焼成型への入口。", effects: [{ type: "cps", value: 13 }] },
   { id: "auto_2", name: "炉の列", branchId: "auto", cost: 1139062500000, x: 1380, y: 860, icon: "◇", prereqs: ["auto_1"], desc: "毎秒生産 x183。", effects: [{ type: "cps", value: 182 }] },
   { id: "auto_3", name: "同期炉", branchId: "auto", cost: 3.84434e18, x: 1560, y: 740, icon: "◇", prereqs: ["auto_2", "monster_2"], desc: "毎秒生産 x2549、モンスターダメージ +60%。", effects: [{ type: "cps", value: 2548 }, { type: "monsterDamageSkill", value: 0.6 }] },
-  { id: "auto_4", name: "無人ライン", branchId: "auto", cost: 1.9462e27, x: 1740, y: 620, icon: "◇", prereqs: ["monster_3", "research_factory"], desc: "毎秒生産 +24%、全生産 x35676.1。工場理論の増幅先。", effects: [{ type: "cps", value: 0.24 }, { type: "all", value: 35675.12 }] },
-  { id: "bake_temperature", name: "焼き加減管理", branchId: "auto", cost: 1.1533e20, x: 1740, y: 500, icon: "♨", prereqs: ["auto_3", "research_remodel"], desc: "通常画面に焼き加減を追加する。焼き加減によって、金クッキー・毎秒生産・狩猟の有利時間が切り替わる。", effects: [{ type: "unlockSystem", target: "bakeTemperature" }] },
+  { id: "auto_4", name: "無人ライン", branchId: "auto", cost: 1.9462e27, x: 1740, y: 620, icon: "◇", prereqs: ["monster_3", "research_remodel"], desc: "毎秒生産 +24%、全生産 x35676.1。工場理論の増幅先。", effects: [{ type: "cps", value: 0.24 }, { type: "all", value: 35675.12 }] },
 
   // 右下：怪物狩り型
   { id: "monster_1", name: "狩りの合図", branchId: "monster", cost: 50625000, x: 1200, y: 1260, icon: "◉", prereqs: ["core"], desc: "モンスター出現間隔を短縮。", effects: [{ type: "monsterRate", value: 0.24 }] },
@@ -4644,33 +4810,25 @@ const SKILL_NODES = [
   // 上：研究と設備解放。研究解放は1つずつ。
   { id: "economy_1", name: "仕入れ", branchId: "economy", cost: 7593750000, x: 1000, y: 900, icon: "⬡", prereqs: ["core"], desc: "アップグレード費用 -21%、研究費用 -21%。経済型への入口。", effects: [{ type: "upgradeDiscount", value: 0.24 }, { type: "researchDiscount", value: 0.24 }] },
   { id: "research_1", name: "研究机", branchId: "research", cost: 2.56289e16, x: 1000, y: 740, icon: "⌬", prereqs: ["economy_1"], desc: "研究費用 -38%。研究系の入口。", effects: [{ type: "researchDiscount", value: 0.48 }] },
-  { id: "research_remodel", name: "研究改造室", branchId: "research", cost: 5.7665e20, x: 1000, y: 580, icon: "⌬", prereqs: ["research_1"], desc: "特殊研究の入口。研究費用 -30%。研究が固定倍率だけでなく、設備ごとの特殊効果を持つようになる。", effects: [{ type: "researchDiscount", value: 0.36 }, { type: "unlockSystem", target: "researchRemodel" }] },
+  { id: "research_remodel", name: "研究改造室", branchId: "research", cost: 5.7665e20, x: 1000, y: 580, icon: "⌬", prereqs: ["research_1"], desc: "研究費用 -30%。研究系スキルの中継点。", effects: [{ type: "researchDiscount", value: 0.36 }] },
   { id: "economy_2", name: "まとめ買い", branchId: "economy", cost: 1.24556e35, x: 800, y: 580, icon: "⬡", prereqs: ["economy_1"], desc: "アップグレード費用 -45%。", effects: [{ type: "upgradeDiscount", value: 0.6 }] },
   { id: "economy_analysis", name: "経済分析", branchId: "economy", cost: 2.49113e34, x: 620, y: 460, icon: "⬡", prereqs: ["economy_2"], desc: "強化カードに、価格あたりの増加量を追加表示する。", effects: [{ type: "unlockSystem", target: "economyAnalysis" }] },
   { id: "order_board", name: "注文ボード", branchId: "economy", cost: 4.98226e33, x: 440, y: 340, icon: "⬡", prereqs: ["economy_analysis"], desc: "一覧タブに注文ボードを追加する。ノルマ進行度に応じて要求量と報酬倍率が上がる短期目標を表示する。", effects: [{ type: "unlockSystem", target: "orderBoard" }] },
-  { id: "research_bank", name: "銀行配当論", branchId: "research", cost: 1.22444e58, x: 820, y: 420, icon: "⌬", prereqs: ["research_remodel", "click_3"], desc: "銀行クリック配当研究を解放。", effects: [{ type: "unlockResearch", target: "bankClickDividend" }] },
-  { id: "research_factory", name: "工場理論", branchId: "research", cost: 8.64976e22, x: 1180, y: 420, icon: "⌬", prereqs: ["research_remodel", "auto_3"], desc: "工場ネットワーク研究を解放。", effects: [{ type: "unlockResearch", target: "factoryNetwork" }] },
-  { id: "research_spice", name: "香料調合論", branchId: "research", cost: 1.27546e48, x: 1000, y: 260, icon: "⌬", prereqs: ["research_remodel", "golden_2", "auto_2"], desc: "香料調合研究を解放。金クッキー型と自動焼成型をつなぐ。", effects: [{ type: "unlockResearch", target: "spiceBlend" }] },
 
-  { id: "upgrade_moon", name: "月面許可", branchId: "upgrade", cost: 1.55696e31, x: 1180, y: 260, icon: "◌", prereqs: ["research_factory"], desc: "月面ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "moonBakery" }] },
-  { id: "upgrade_time", name: "時空免許", branchId: "upgrade", cost: 4.98226e37, x: 1360, y: 140, icon: "◌", prereqs: ["upgrade_moon", "economy_2"], desc: "時空オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "timeOven" }] },
-  { id: "research_moon", name: "月面酵母", branchId: "research", cost: 4.13249e64, x: 820, y: 140, icon: "⌬", prereqs: ["research_bank", "upgrade_moon"], desc: "月面発酵研究を解放。", effects: [{ type: "unlockResearch", target: "moonGlobalYeast" }] },
-  { id: "research_portal", name: "異世界理論", branchId: "research", cost: 5.10183e50, x: 1180, y: 20, icon: "⌬", prereqs: ["research_factory", "upgrade_time"], desc: "異世界接続網研究を解放。", effects: [{ type: "unlockResearch", target: "portalNetwork" }] },
-  { id: "upgrade_galaxy", name: "銀河契約", branchId: "upgrade", cost: 3.18865e45, x: 1540, y: 20, icon: "✺", prereqs: ["upgrade_time", "auto_4"], desc: "銀河工場を解放。", effects: [{ type: "unlockUpgrade", target: "galaxyFactory" }] },
-  { id: "research_galaxy", name: "銀河設計図", branchId: "research", cost: 9.29809e68, x: 640, y: 20, icon: "⌬", prereqs: ["upgrade_galaxy", "research_moon"], desc: "銀河分業研究を解放。", effects: [{ type: "unlockResearch", target: "galaxyAssembly" }] },
-  { id: "upgrade_blackhole", name: "重力設備", branchId: "upgrade", cost: 1.83666e60, x: 1360, y: -120, icon: "●", prereqs: ["upgrade_galaxy", "research_portal"], desc: "ブラックホールミキサーを解放。", effects: [{ type: "unlockUpgrade", target: "blackHoleMixer" }] },
-  { id: "research_blackhole", name: "重力研究", branchId: "research", cost: 1.44767e97, x: 1000, y: -120, icon: "⌬", prereqs: ["upgrade_blackhole", "research_galaxy"], desc: "重力圧縮研究を解放。", effects: [{ type: "unlockResearch", target: "blackHoleCompression" }] },
-  { id: "research_portalGlobal", name: "増幅論", branchId: "research", cost: 1.58867e84, x: 1540, y: -120, icon: "⌬", prereqs: ["research_portal", "upgrade_blackhole"], desc: "異世界増幅研究を解放。", effects: [{ type: "unlockResearch", target: "portalGlobalFold" }] },
-  { id: "research_analysis", name: "研究解析", branchId: "research", cost: 8.26497e63, x: 820, y: -120, icon: "⌬", prereqs: ["research_moon", "research_portal"], desc: "研究カードに現在効果・相性・弱点を表示する。経済分析も取得済みなら、強化カードの効率表示が研究効果込みになる。", effects: [{ type: "unlockSystem", target: "researchAnalysis" }] },
+  { id: "upgrade_moon", name: "月面許可", branchId: "upgrade", cost: 1.55696e31, x: 1180, y: 420, icon: "◌", prereqs: ["research_remodel", "auto_3"], desc: "月面ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "moonBakery" }] },
+  { id: "upgrade_time", name: "時空免許", branchId: "upgrade", cost: 4.98226e37, x: 1360, y: 300, icon: "◌", prereqs: ["upgrade_moon", "economy_2"], desc: "時空オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "timeOven" }] },
+  { id: "upgrade_galaxy", name: "銀河契約", branchId: "upgrade", cost: 3.18865e45, x: 1540, y: 180, icon: "✺", prereqs: ["upgrade_time", "auto_4"], desc: "銀河工場を解放。", effects: [{ type: "unlockUpgrade", target: "galaxyFactory" }] },
+  { id: "upgrade_blackhole", name: "重力設備", branchId: "upgrade", cost: 1.83666e60, x: 1360, y: 40, icon: "●", prereqs: ["upgrade_galaxy"], desc: "ブラックホールミキサーを解放。", effects: [{ type: "unlockUpgrade", target: "blackHoleMixer" }] },
+  { id: "research_analysis", name: "研究解析", branchId: "research", cost: 8.26497e63, x: 820, y: 420, icon: "⌬", prereqs: ["upgrade_moon"], desc: "研究カードに現在効果・相性・弱点を表示する。経済分析も取得済みなら、強化カードの効率表示が研究効果込みになる。", effects: [{ type: "unlockSystem", target: "researchAnalysis" }] },
 
   // 下：報酬。選択肢数は有限スキルでのみ増える。
   { id: "reward_1", name: "選択の目", branchId: "reward", cost: 1.23975e66, x: 1000, y: 1360, icon: "✧", prereqs: ["monster_4"], desc: "モンスター報酬の選択肢 +1。", effects: [{ type: "rewardChoices", value: 1 }] },
   { id: "reward_synergy", name: "報酬系統化", branchId: "reward", cost: 2.47949e65, x: 1000, y: 1520, icon: "✧", prereqs: ["reward_1"], desc: "同じ系統の報酬を重ねるほど、系統ボーナスが発動する。", effects: [{ type: "unlockSystem", target: "rewardSynergy" }] },
   { id: "reward_choice_2", name: "選択の眼光", branchId: "reward", cost: 4.95898e64, x: 1000, y: 1680, icon: "✧", prereqs: ["reward_synergy"], desc: "モンスター報酬の選択肢 +1。選択肢増加はこの有限スキルで止める。", effects: [{ type: "rewardChoices", value: 1 }] },
-  { id: "reward_2", name: "強化圧縮", branchId: "reward", cost: 2.09207e73, x: 820, y: 1680, icon: "✧", prereqs: ["reward_synergy", "research_galaxy"], desc: "アップグレード個別強化の効果 +120%。設備報酬系統の増幅先。", effects: [{ type: "upgradePerkPower", value: 1.2 }] },
+  { id: "reward_2", name: "強化圧縮", branchId: "reward", cost: 2.09207e73, x: 820, y: 1680, icon: "✧", prereqs: ["reward_synergy", "upgrade_galaxy"], desc: "アップグレード個別強化の効果 +120%。設備報酬系統の増幅先。", effects: [{ type: "upgradePerkPower", value: 1.2 }] },
 
-  { id: "unlock_reward_crackedFang", name: "割れた牙", branchId: "reward", cost: 1.39471e71, x: 1360, y: 1360, icon: "✧", prereqs: ["monster_4"], desc: "報酬カード『割れた牙』を解禁。モンスターへのダメージが上がる。", effects: [{ type: "unlockReward", target: "crackedFang" }] },
-  { id: "unlock_reward_chainPrep", name: "連戦準備", branchId: "reward", cost: 2.383e86, x: 1540, y: 1520, icon: "✧", prereqs: ["unlock_reward_crackedFang"], desc: "報酬カード『連戦準備』を解禁。撃破後、次出現が早くなるが次HPも上がる。", effects: [{ type: "unlockReward", target: "chainPrep" }] },
+  { id: "unlock_reward_crackedFang", name: "割れた牙", branchId: "reward", cost: 1.39471e71, x: 1540, y: 1360, icon: "✧", prereqs: ["monster_4"], desc: "報酬カード『割れた牙』を解禁。モンスターへのダメージが上がる。", effects: [{ type: "unlockReward", target: "crackedFang" }] },
+  { id: "unlock_reward_chainPrep", name: "連戦準備", branchId: "reward", cost: 2.383e86, x: 1720, y: 1440, icon: "✧", prereqs: ["unlock_reward_crackedFang"], desc: "報酬カード『連戦準備』を解禁。撃破後、次出現が早くなるが次HPも上がる。", effects: [{ type: "unlockReward", target: "chainPrep" }] },
   { id: "unlock_reward_huntFocus", name: "狩猟集中", branchId: "reward", cost: 1.20639e95, x: 1360, y: 1520, icon: "✧", prereqs: ["unlock_reward_crackedFang", "hunt_analysis"], desc: "報酬カード『狩猟集中』を解禁。成功・失敗で次の狩り方が変わる。", effects: [{ type: "unlockReward", target: "huntFocus" }] },
   { id: "unlock_reward_biteRecovery", name: "甘噛み回収", branchId: "reward", cost: 5.18727e111, x: 1360, y: 1680, icon: "✧", prereqs: ["unlock_reward_huntFocus", "reward_1"], desc: "報酬カード『甘噛み回収』を解禁。攻撃ごとに少量のクッキーを得る。", effects: [{ type: "unlockReward", target: "biteRecovery" }] },
   { id: "unlock_reward_beastHeatFerment", name: "獣熱発酵", branchId: "reward", cost: 3.60227e107, x: 1540, y: 1680, icon: "✧", prereqs: ["unlock_reward_chainPrep", "reward_2"], desc: "報酬カード『獣熱発酵』を解禁。撃破数で全生産が上がる。", effects: [{ type: "unlockReward", target: "beastHeatFerment" }] },
@@ -4678,8 +4836,8 @@ const SKILL_NODES = [
   { id: "unlock_reward_brandHunt", name: "焼き印狩り", branchId: "reward", cost: 8.9636e117, x: 1360, y: 1840, icon: "✧", prereqs: ["unlock_reward_biteRecovery", "click_4"], desc: "報酬カード『焼き印狩り』を解禁。タップ系設備数でダメージ上昇。", effects: [{ type: "unlockReward", target: "brandHunt" }] },
   { id: "unlock_reward_deepPursuit", name: "深追いの契約", branchId: "reward", cost: 1.29076e122, x: 1540, y: 2000, icon: "✧", prereqs: ["unlock_reward_huntingCore", "upgrade_universe"], desc: "報酬カード『深追いの契約』を解禁。出現が速くなり、HPも報酬Lvも増える。", effects: [{ type: "unlockReward", target: "deepPursuit" }] },
 
-  { id: "unlock_reward_goldenChain", name: "黄金連鎖", branchId: "reward", cost: 1.05911e82, x: 640, y: 1360, icon: "✧", prereqs: ["monster_4", "golden_4"], desc: "報酬カード『黄金連鎖』を解禁。金クッキー後、次のモンスターへのダメージが上がる。", effects: [{ type: "unlockReward", target: "goldenChain" }] },
-  { id: "unlock_reward_goldenTarget", name: "金色標的", branchId: "reward", cost: 5.36175e90, x: 460, y: 1520, icon: "✧", prereqs: ["unlock_reward_goldenChain"], desc: "報酬カード『金色標的』を解禁。金ブースト中、モンスターダメージが上がる。", effects: [{ type: "unlockReward", target: "goldenTarget" }] },
+  { id: "unlock_reward_goldenChain", name: "黄金連鎖", branchId: "reward", cost: 1.05911e82, x: 820, y: 1440, icon: "✧", prereqs: ["monster_4", "golden_4"], desc: "報酬カード『黄金連鎖』を解禁。金クッキー後、次のモンスターへのダメージが上がる。", effects: [{ type: "unlockReward", target: "goldenChain" }] },
+  { id: "unlock_reward_goldenTarget", name: "金色標的", branchId: "reward", cost: 5.36175e90, x: 300, y: 1480, icon: "✧", prereqs: ["unlock_reward_goldenChain"], desc: "報酬カード『金色標的』を解禁。金ブースト中、モンスターダメージが上がる。", effects: [{ type: "unlockReward", target: "goldenTarget" }] },
   { id: "unlock_reward_goldenFirstHit", name: "金粉の初撃", branchId: "reward", cost: 1.73721e99, x: 640, y: 1520, icon: "✧", prereqs: ["unlock_reward_goldenChain"], desc: "報酬カード『金粉の初撃』を解禁。金クッキー後、次の初撃が強くなる。", effects: [{ type: "unlockReward", target: "goldenFirstHit" }] },
   { id: "unlock_reward_beastScent", name: "獣の嗅覚", branchId: "reward", cost: 2.50158e103, x: 460, y: 1680, icon: "✧", prereqs: ["unlock_reward_goldenChain", "reward_1"], desc: "報酬カード『獣の嗅覚』を解禁。撃破後、次の金クッキーが早くなる。", effects: [{ type: "unlockReward", target: "beastScent" }] },
   { id: "unlock_reward_goldenBeastMutation", name: "金獣変異", branchId: "reward", cost: 1.54891e124, x: 640, y: 1840, icon: "✧", prereqs: ["unlock_reward_deepPursuit", "golden_4"], desc: "報酬カード『金獣変異』を解禁。金ブースト中撃破で、まれに報酬Lvが増える。", effects: [{ type: "unlockReward", target: "goldenBeastMutation" }] },
@@ -4689,17 +4847,16 @@ const SKILL_NODES = [
   { id: "start_1", name: "帰還貯蔵", branchId: "start", cost: 1.41215e79, x: 260, y: 2060, icon: "▣", prereqs: ["golden_4"], desc: "転生後に750,000クッキーから開始。次周回の立ち上がりを早める。", effects: [{ type: "startCookies", value: 750000 }] },
   { id: "offline_1", name: "長期保存", branchId: "start", cost: 3.89239e26, x: 1740, y: 2060, icon: "▣", prereqs: ["auto_4"], desc: "放置上限 +4時間。", effects: [{ type: "offlineHours", value: 4 }] },
   { id: "start_2", name: "帰還神殿", branchId: "start", cost: 2.8243e78, x: 1000, y: 2220, icon: "▣", prereqs: ["start_1", "offline_1"], desc: "転生後に合計15,000,000クッキーから開始、放置上限 +4時間。", effects: [{ type: "startCookies", value: 14250000 }, { type: "offlineHours", value: 4 }] },
+  { id: "offline_infinite", name: "終わらぬ焼窯", branchId: "start", cost: 2.8e80, x: 760, y: 2320, icon: "▣", prereqs: ["start_2"], desc: "放置(オフライン)生産の時間上限がなくなる。閉じている間もずっと焼き続ける。", effects: [{ type: "offlineInfinite", value: 1 }] },
 
   // 後半設備
   { id: "upgrade_universe", name: "宇宙炉心", branchId: "upgrade", cost: 3.13811e75, x: 1000, y: 1900, icon: "✺", prereqs: ["upgrade_blackhole", "reward_2"], desc: "宇宙焼成炉を解放。後半設備解放の主軸。", effects: [{ type: "unlockUpgrade", target: "universeOven" }] },
   { id: "upgrade_godfinger", name: "神指契約", branchId: "upgrade", cost: 8.04262e92, x: 640, y: 2060, icon: "◆", prereqs: ["upgrade_universe", "click_4"], desc: "神の指を解放。会心タップ型の後半解放。", effects: [{ type: "unlockUpgrade", target: "godFinger" }] },
-  { id: "upgrade_singularity", name: "特異点管理", branchId: "upgrade", cost: 3.5745e88, x: 1360, y: 2060, icon: "◎", prereqs: ["upgrade_universe", "research_portalGlobal"], desc: "クッキー特異点を解放、全生産 x6992324.5。", effects: [{ type: "unlockUpgrade", target: "cookieSingularity" }, { type: "all", value: 6992323.52 }] },
-  { id: "upgrade_quantum", name: "量子厨房", branchId: "upgrade", cost: 2.08465e101, x: 1000, y: 2380, icon: "✺", prereqs: ["upgrade_singularity", "research_blackhole"], desc: "量子ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "quantumBakery" }] },
-  { id: "research_quantum", name: "量子酵母", branchId: "research", cost: 3.00189e105, x: 820, y: 2540, icon: "⌬", prereqs: ["upgrade_quantum", "upgrade_godfinger"], desc: "量子発酵研究を解放。", effects: [{ type: "unlockResearch", target: "quantumProofing" }] },
+  { id: "upgrade_singularity", name: "特異点管理", branchId: "upgrade", cost: 3.5745e88, x: 1360, y: 2060, icon: "◎", prereqs: ["upgrade_universe"], desc: "クッキー特異点を解放、全生産 x6992324.5。", effects: [{ type: "unlockUpgrade", target: "cookieSingularity" }, { type: "all", value: 6992323.52 }] },
+  { id: "upgrade_quantum", name: "量子厨房", branchId: "upgrade", cost: 2.08465e101, x: 1000, y: 2380, icon: "✺", prereqs: ["upgrade_singularity"], desc: "量子ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "quantumBakery" }] },
   { id: "upgrade_antimatter", name: "反物質炉", branchId: "upgrade", cost: 4.32273e109, x: 1180, y: 2540, icon: "✹", prereqs: ["upgrade_quantum", "upgrade_singularity"], desc: "反物質オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "antimatterOven" }] },
-  { id: "research_antimatter", name: "反物質配合論", branchId: "research", cost: 6.22472e113, x: 1000, y: 2700, icon: "⌬", prereqs: ["upgrade_antimatter", "research_quantum"], desc: "反物質配合研究を解放。", effects: [{ type: "unlockResearch", target: "antimatterRecipe" }] },
 
-  { id: "master_final", name: "超越体", branchId: "master", cost: 1.85869e126, x: 1000, y: 2920, icon: "✹", prereqs: ["research_antimatter", "start_2"], desc: "全生産 x97892530.3、タップ +20%、毎秒 +20%、報酬選択肢数の期待値 +80%。", effects: [{ type: "all", value: 97892529.28 }, { type: "click", value: 0.2 }, { type: "cps", value: 0.2 }, { type: "rewardBonus", value: 0.8 }] }
+  { id: "master_final", name: "超越体", branchId: "master", cost: 1.85869e126, x: 1000, y: 2720, icon: "✹", prereqs: ["upgrade_antimatter", "upgrade_godfinger", "start_2"], desc: "全生産 x97892530.3、タップ +20%、毎秒 +20%、報酬選択肢数の期待値 +80%。", effects: [{ type: "all", value: 97892529.28 }, { type: "click", value: 0.2 }, { type: "cps", value: 0.2 }, { type: "rewardBonus", value: 0.8 }] }
 ];
 
 const SKILLS = SKILL_NODES.map(skill => ({
@@ -4709,6 +4866,42 @@ const SKILLS = SKILL_NODES.map(skill => ({
   branchName: SKILL_GROUPS[skill.branchId] || "スキル",
   prereqs: skill.prereqs || []
 }));
+
+// スキルコスト規則:
+// (a) コストは上2桁を残して以下切り捨て(表示だけでなく内部値・購入判定・PT消費も同じ値)
+// (b) ツリーで接続された隣接ノード間のコスト比は100倍まで。超える辺は子側を「親x100」に切り下げる
+function truncTwoDigits(v) {
+  const n = Number(v) || 0;
+  if (n <= 0) return 0;
+  const exp = Math.floor(Math.log10(n));
+  if (exp < 2) return Math.floor(n);
+  const unit = Math.pow(10, exp - 1);
+  return Math.floor(n / unit) * unit;
+}
+
+(function normalizeSkillCosts() {
+  const byId = {};
+  SKILLS.forEach(s => byId[s.id] = s);
+  SKILLS.forEach(s => s.cost = truncTwoDigits(s.cost));
+
+  let changed = true;
+  let guard = 0;
+  while (changed && guard < 100) {
+    changed = false;
+    guard += 1;
+    SKILLS.forEach(s => {
+      s.prereqs.forEach(pid => {
+        const parent = byId[pid];
+        if (!parent) return;
+        const cap = truncTwoDigits(parent.cost * 100);
+        if (s.cost > cap) {
+          s.cost = cap;
+          changed = true;
+        }
+      });
+    });
+  }
+})();
 
 const UPGRADE_UNLOCK_SKILLS = {
   moonBakery: "upgrade_moon",
@@ -4849,6 +5042,9 @@ function freshState() {
     dishBuffs: {},
     parfaitBoosted: {},
     workshopUnlocked: false,
+    killStreak: 0,
+    lastKillAt: 0,
+    nextOrderAt: 0,
     stage: 1,
     stageUnlocked: 1,
     deepLayer: 1,
@@ -4954,6 +5150,9 @@ function ensureState() {
     else delete state.parfaitBoosted[u.id];
   });
   state.workshopUnlocked = Boolean(state.workshopUnlocked);
+  state.killStreak = Math.max(0, Math.floor(Number(state.killStreak) || 0));
+  state.lastKillAt = Math.max(0, Number(state.lastKillAt) || 0);
+  state.nextOrderAt = Math.max(0, Number(state.nextOrderAt) || 0);
   // ステージは有限6個。旧セーブ(無限ステージ時代)の stageUnlocked>6 は深層の層に変換する
   state.deepLayer = Math.max(1, Math.floor(Number(state.deepLayer) || 1));
   let unlockedRaw = Math.max(1, Math.floor(Number(state.stageUnlocked) || 1));
@@ -5377,9 +5576,10 @@ function advancedResearchUnlocked() {
   return hasSkillEffect("unlockSystem", "researchRemodel");
 }
 
+// 研究はスキル不要:「対応する設備をこの周回で1つ以上購入済み」なら表示・購入できる
 function researchUnlocked(r) {
-  if (r.advanced && !advancedResearchUnlocked()) return false;
-  return !r.skill || hasSkill(r.skill) || hasSkillEffect("unlockResearch", r.id);
+  if (!r.upgrade) return true;
+  return (state.upgrades[r.upgrade] || 0) > 0;
 }
 
 
@@ -5397,13 +5597,13 @@ function runPolicyUnlocked() {
   return hasSkillEffect("unlockSystem", "runPolicy");
 }
 
-// 方針は素材ドロップにもバイアスを掛ける(工房の全解放には多様な方針の周回が必要になる)
+// 素材は「どう倒したか」の条件ドロップ制(方針の直接補正はなし)。標準方針のみ万能粉が落ちる
 const RUN_POLICIES = [
-  { id: "balanced", name: "標準", desc: "補正なし。いつもの周回。素材バイアス: 全素材ドロップ x1.25。" },
-  { id: "click", name: "会心型", desc: "タップと会心を伸ばし、手動クリック寄りにする。素材バイアス: こつぶ群れ出現 x2、共通素材 x2・レア素材 x0.5。" },
-  { id: "bake", name: "焼成型", desc: "毎秒生産とオーブン・工場寄りにする。素材バイアス: ボス周期 x0.8、ボス核 +1/撃破。" },
-  { id: "hunt", name: "狩猟型", desc: "モンスター火力と滞在時間を伸ばす。素材バイアス: 鉄焼きガード/はやての運び屋出現 x2、レア素材 x2・共通素材 x0.5。" },
-  { id: "golden", name: "金色型", desc: "金クッキーの回転とブーストを伸ばす。素材バイアス: 黄金獣の置換率 +20%、黄金獣ドロップと黄金粉 x2。" }
+  { id: "balanced", name: "標準", desc: "補正なし。いつもの周回。この方針の間だけ撃破時に「万能粉」(他の素材2個ぶんの代用品)も落ちる。" },
+  { id: "click", name: "会心型", desc: "タップと会心を伸ばし、手動クリック寄りにする。" },
+  { id: "bake", name: "焼成型", desc: "毎秒生産とオーブン・工場寄りにする。" },
+  { id: "hunt", name: "狩猟型", desc: "モンスター火力と滞在時間を伸ばす。" },
+  { id: "golden", name: "金色型", desc: "金クッキーの回転とブーストを伸ばす。" }
 ];
 
 function runPolicyIs(id) {
@@ -5669,6 +5869,16 @@ function orderRewardScale(scale) {
   return 1 + (s - 1) * 0.35;
 }
 
+// 注文1件の制限時間: 240 + 4x√経過秒(周回開始直後4分 → 1時間で約8分 → 長周回ほど余裕が増える)
+function orderTimeLimitMs() {
+  return (240 + 4 * Math.sqrt(Math.max(0, quotaElapsedSeconds()))) * 1000;
+}
+
+// 次の注文までの間隔: 1800 x 0.85^転生回数 秒(最初は30分に1件 → 転生を重ねるほど頻繁に)
+function orderIntervalMs() {
+  return 1800 * Math.pow(0.85, Math.max(0, state.prestigeRuns || 0)) * 1000;
+}
+
 const ORDER_DEFS = [
   { id: "ovenOrder", name: "追加焼成", target: "buyUpgrade", targetId: "oven", unit: "個", desc: "オーブンを増やす", rewardName: "一時CPS上昇" },
   { id: "monsterOrder", name: "討伐依頼", target: "monster", unit: "体", desc: "モンスターを倒す", rewardName: "次報酬Lv加算" },
@@ -5689,42 +5899,95 @@ function orderAvailable(def) {
   return true;
 }
 
-function orderNeedFor(def, scale) {
-  const s = Math.max(1, Number(scale) || 1);
-  if (def.id === "ovenOrder") return Math.ceil(2 * s);
-  if (def.id === "monsterOrder") return Math.ceil(1 * s);
-  if (def.id === "goldenOrder") return Math.ceil(Math.sqrt(s));
-  if (def.id === "quotaOrder") return Math.ceil(60 * s);
-  if (def.id === "researchOrder") return Math.ceil(Math.sqrt(s));
-  if (def.id === "spiceOrder") return Math.ceil(1 * s);
+// 必要数は現在の状態に相対化する:「達成可能だが放置では届かない」量
+function orderNeedFor(def, limitMs) {
+  const limitSec = Math.max(1, (Number(limitMs) || 0) / 1000);
+
+  // 設備購入系: 予算=毎秒生産x制限時間x0.25 で買える個数
+  if (def.target === "buyUpgrade") {
+    const u = getUpgrade(def.targetId);
+    if (!u) return 1;
+    let budget = Math.max(0, currentCps()) * limitSec * 0.25;
+    const owned = state.upgrades[u.id] || 0;
+    let n = 0;
+    while (n < 40) {
+      const c = costOf(u, owned + n);
+      if (budget < c) break;
+      budget -= c;
+      n += 1;
+    }
+    return Math.max(1, n);
+  }
+
+  // 討伐系: 現在の出現ペース x 制限時間 x 0.6
+  if (def.target === "monster") {
+    const spawnMs = 51000 * monsterSpawnFactor();
+    return Math.max(1, Math.floor((limitMs / Math.max(1000, spawnMs)) * 0.6));
+  }
+
+  // 金クッキー系: 出現ペース x 制限時間 x 0.6
+  if (def.target === "golden") {
+    const spawnMs = 65000 * goldenSpawnFactor();
+    return Math.max(1, Math.floor((limitMs / Math.max(1000, spawnMs)) * 0.6));
+  }
+
+  // ノルマ維持系: 制限時間の50%
+  if (def.target === "quotaHold") return Math.ceil(limitSec * 0.5);
+
+  // 研究系
+  if (def.target === "buyResearch") return 1;
+
   return 1;
 }
 
 function createOrderSnapshot(id) {
   const available = ORDER_DEFS.filter(orderAvailable);
   const picked = id ? orderDef(id) : available[Math.floor(Math.random() * available.length)] || ORDER_DEFS[0];
-  const scale = orderScale();
-  const rewardScale = orderRewardScale(scale);
   const stage = currentQuotaStageNumber();
+  const limitMs = orderTimeLimitMs();
 
   return {
     id: picked.id,
-    scale,
-    rewardScale,
     stage,
-    need: orderNeedFor(picked, scale),
+    limitMs,
+    need: orderNeedFor(picked, limitMs),
     progress: 0,
     createdAt: Date.now(),
+    expiresAt: Date.now() + limitMs,
     createdElapsed: quotaElapsedSeconds()
   };
 }
 
+// 別タブを開いている間に注文が出たら、注文タブのボタンを点滅させる(タブを開くと消える)
+function flagOrderAlert() {
+  if (activeTab === "orderTab") return;
+  const tabBtn = document.querySelector('.tab[data-tab="orderTab"]');
+  if (tabBtn) tabBtn.classList.add("orderAlert");
+}
+
+function clearOrderAlert() {
+  const tabBtn = document.querySelector('.tab[data-tab="orderTab"]');
+  if (tabBtn) tabBtn.classList.remove("orderAlert");
+}
+
 function ensureActiveOrder() {
   if (!orderBoardUnlocked()) return null;
-  const def = state.activeOrder ? orderDef(state.activeOrder.id) : null;
-  if (!state.activeOrder || !def || !orderAvailable(def)) {
-    state.activeOrder = createOrderSnapshot();
+
+  // 同時に受けられる注文は常に1件。達成か時間切れになるまで次は出ず、上書きもされない。
+  // 次の注文は間隔(1800x0.85^転生回数 秒)が経つと自動で出現する
+  if (state.activeOrder && orderDef(state.activeOrder.id)) {
+    if (!state.activeOrder.expiresAt) {
+      state.activeOrder.limitMs = orderTimeLimitMs();
+      state.activeOrder.expiresAt = Date.now() + state.activeOrder.limitMs;
+    }
+    return state.activeOrder;
   }
+
+  const now = Date.now();
+  if ((state.nextOrderAt || 0) > now) return null;
+
+  state.activeOrder = createOrderSnapshot();
+  flagOrderAlert();
   return state.activeOrder;
 }
 
@@ -5735,39 +5998,31 @@ function orderProgressRatio(order) {
 
 function orderRewardText(order) {
   const def = orderDef(order.id);
-  const R = Math.max(1, Number(order.rewardScale) || 1);
-  const stage = Math.max(1, Number(order.stage) || 1);
+  const limitMs = Math.max(1, Number(order.limitMs) || orderTimeLimitMs());
 
-  if (def.id === "ovenOrder") {
-    return `一時CPS倍率 x${(1 + 0.08 * R).toFixed(3)} / 効果 ${fmtTime((90000 * levelGrowth(stage - 1, 0.01)) / 1000)}`;
+  // 報酬はすべて相対型: クッキー(毎秒生産x制限時間x0.5) / 素材セット / 短時間の全生産x2
+  if (def.target === "buyUpgrade") {
+    return `クッキー +${fmt(Math.max(1, Math.floor(currentCps() * (limitMs / 1000) * 0.5)))}(毎秒生産x制限時間x0.5)`;
   }
-  if (def.id === "monsterOrder") {
-    return `次回報酬Lv +${1 + Math.floor((Math.max(1, order.scale) - 1) / 3)} / 次モンスター滞在 x${(1 + 0.06 * R).toFixed(3)}`;
+
+  if (def.target === "monster" || def.target === "buyResearch") {
+    if (materialDropsEnabled()) {
+      const st = stageDef(currentStageNo());
+      const table = st.deep ? DEEP_STAGE_DROPS : (STAGE_DROPS[st.deep ? 6 : st.no] || STAGE_DROPS[1]);
+      const amount = Math.max(4, Math.ceil(4 * (st.dropMult || 1)));
+      return `素材セット: ${materialName(table.normal)} x${fmt(amount)}`;
+    }
+    return `クッキー +${fmt(Math.max(1, Math.floor(currentCps() * (limitMs / 1000) * 0.5)))}(毎秒生産x制限時間x0.5)`;
   }
-  if (def.id === "goldenOrder") {
-    return `金ブースト x${(1 + 0.12 * R).toFixed(3)}追加 / 時間 ${fmtTime((7000 * levelGrowth(stage - 1, 0.015)) / 1000)}`;
-  }
-  if (def.id === "quotaOrder") {
-    return `次の良焼き加減重み +${(0.18 * R).toFixed(2)}`;
-  }
-  if (def.id === "researchOrder") {
-    return `一時研究費用 x${(1 / (1 + 0.06 * R)).toFixed(3)} / 効果 ${fmtTime((120000 * levelGrowth(stage - 1, 0.01)) / 1000)}`;
-  }
-  if (def.id === "spiceOrder") {
-    return `香料棚一時倍率 x${(1 + 0.10 * R).toFixed(3)} / 効果 ${fmtTime((100000 * levelGrowth(stage - 1, 0.012)) / 1000)}`;
-  }
-  return def.rewardName;
+
+  // golden / quotaHold
+  return `全生産 x2(120秒)`;
 }
 
 function orderFormulaText(order) {
   const def = orderDef(order.id);
-  const s = Number(order.scale) || 1;
-  const r = Number(order.rewardScale) || 1;
-  const stage = Number(order.stage) || 1;
-
-  return `注文スケール S = 1.10^(層-1) × 1.06^floor(経過秒/180) × 1.025^討伐数 = ${s.toFixed(3)}<br>`
-    + `報酬スケール R = 1 + (S - 1) × 0.35 = ${r.toFixed(3)}<br>`
-    + `要求：${def.desc} ${fmt(order.need)}${def.unit} / 生成時ノルマ層：第${fmt(stage)}層`;
+  return `要求は現在の状態に合わせて決まる(生産系=毎秒生産x制限時間x0.25で買える数 / 討伐系=出現ペースx制限時間x0.6)。<br>`
+    + `制限時間 = 240秒 + 4x√周回経過秒 / 要求: ${def.desc} ${fmt(order.need)}${def.unit}`;
 }
 
 function orderTempCpsMultiplier() {
@@ -5784,37 +6039,26 @@ function orderSpiceMultiplier() {
 
 function applyOrderReward(order) {
   const def = orderDef(order.id);
-  const R = Math.max(1, Number(order.rewardScale) || 1);
-  const S = Math.max(1, Number(order.scale) || 1);
-  const stage = Math.max(1, Number(order.stage) || 1);
+  const limitMs = Math.max(1, Number(order.limitMs) || orderTimeLimitMs());
 
-  if (def.id === "ovenOrder") {
-    state.orderTempCpsMultiplier = 1 + 0.08 * R;
-    state.orderTempCpsUntil = Date.now() + 90000 * levelGrowth(stage - 1, 0.01);
+  // クッキー報酬(毎秒生産x制限時間x0.5)
+  if (def.target === "buyUpgrade" || ((def.target === "monster" || def.target === "buyResearch") && !materialDropsEnabled())) {
+    earn(Math.max(1, Math.floor(currentCps() * (limitMs / 1000) * 0.5)));
+    return;
   }
 
-  if (def.id === "monsterOrder") {
-    state.nextRewardCountBonus = Math.max(0, state.nextRewardCountBonus || 0) + 1 + Math.floor((S - 1) / 3);
-    state.nextMonsterStayMultiplier = (state.nextMonsterStayMultiplier || 1) * (1 + 0.06 * R);
+  // 素材セット報酬(現在ステージの基本素材)
+  if (def.target === "monster" || def.target === "buyResearch") {
+    const st = stageDef(currentStageNo());
+    const table = st.deep ? DEEP_STAGE_DROPS : (STAGE_DROPS[st.deep ? 6 : st.no] || STAGE_DROPS[1]);
+    const amount = Math.max(4, Math.ceil(4 * (st.dropMult || 1)));
+    addMaterials(table.normal, amount);
+    return;
   }
 
-  if (def.id === "goldenOrder") {
-    addGoldenBoost(1 + 0.12 * R, 7000 * levelGrowth(stage - 1, 0.015));
-  }
-
-  if (def.id === "quotaOrder") {
-    state.nextBakeGoodBias = Math.max(0, state.nextBakeGoodBias || 0) + 0.18 * R;
-  }
-
-  if (def.id === "researchOrder") {
-    state.orderTempResearchMultiplier = 1 / (1 + 0.06 * R);
-    state.orderTempResearchUntil = Date.now() + 120000 * levelGrowth(stage - 1, 0.01);
-  }
-
-  if (def.id === "spiceOrder") {
-    state.orderTempSpiceMultiplier = 1 + 0.10 * R;
-    state.orderTempSpiceUntil = Date.now() + 100000 * levelGrowth(stage - 1, 0.012);
-  }
+  // 短時間の全生産x2(金クッキー系・ノルマ維持系)
+  state.orderTempCpsMultiplier = 2;
+  state.orderTempCpsUntil = Date.now() + 120000;
 }
 
 function completeOrder() {
@@ -5825,6 +6069,7 @@ function completeOrder() {
   applyOrderReward(order);
   state.completedOrders = Math.max(0, Number(state.completedOrders) || 0) + 1;
   state.activeOrder = null;
+  state.nextOrderAt = Date.now() + orderIntervalMs();
 
   showMessage(`注文達成：${def.name}`);
   saveGame();
@@ -5859,6 +6104,26 @@ function tickOrderProgress(seconds) {
   if (order.progress >= order.need) completeOrder();
 }
 
+// 制限時間切れの注文は消え、次の注文は出現間隔が経つまで来ない(上書きなし)
+function checkOrderExpiry() {
+  if (!orderBoardUnlocked()) return;
+  const order = state.activeOrder;
+  if (!order || !order.expiresAt) return;
+  if (Date.now() >= order.expiresAt) {
+    state.activeOrder = null;
+    state.nextOrderAt = Date.now() + orderIntervalMs();
+    state.expiredOrders = Math.max(0, Number(state.expiredOrders) || 0) + 1;
+    showMessage("注文の期限切れ：次の注文を待とう");
+    saveGame();
+    renderActiveTab();
+  }
+}
+
+function orderTimeRemainingMs(order) {
+  if (!order || !order.expiresAt) return 0;
+  return Math.max(0, order.expiresAt - Date.now());
+}
+
 function renderOrderBoard() {
   if (!orderBoardUnlocked()) {
     return `
@@ -5870,6 +6135,17 @@ function renderOrderBoard() {
   }
 
   const order = ensureActiveOrder();
+
+  if (!order) {
+    const waitMs = Math.max(0, (state.nextOrderAt || 0) - Date.now());
+    return `
+      <div class="infoBox orderBoardBox">
+        <h3>注文ボード</h3>
+        <div class="desc">次の注文まで ${fmtTime(Math.ceil(waitMs / 1000))}(注文は同時に1件。転生を重ねるほど頻繁に届く)</div>
+      </div>
+    `;
+  }
+
   const def = orderDef(order.id);
   const ratio = orderProgressRatio(order);
   const progressText = def.target === "quotaHold" ? fmtTime(order.progress || 0) : fmt(order.progress || 0);
@@ -5878,14 +6154,12 @@ function renderOrderBoard() {
   return `
     <div class="infoBox orderBoardBox">
       <h3>注文ボード</h3>
-      <div class="desc">ノルマ進行度に応じて要求量と報酬倍率が上がる短期目標。達成すると自動で報酬を得て、次の注文に切り替わる。</div>
+      <div class="desc">短期の依頼。制限時間内に達成すると報酬。詳細は「注文」タブで確認できる。</div>
       <div class="orderCard">
         <div class="orderHead"><span>${def.name}</span><span>${progressText} / ${needText}${def.unit}</span></div>
         <div class="desc">条件：${def.desc}</div>
         <div class="orderProgressBar"><div class="orderProgressFill" style="width:${(ratio * 100).toFixed(1)}%"></div></div>
         <div class="desc">報酬：${orderRewardText(order)}</div>
-        <div class="orderFormula">${orderFormulaText(order)}</div>
-        <button id="orderRerollBtn" class="orderMiniBtn" type="button">別の注文にする</button>
       </div>
       <div class="desc">達成済み注文：${fmt(state.completedOrders || 0)}</div>
     </div>
@@ -5893,14 +6167,69 @@ function renderOrderBoard() {
 }
 
 function installOrderBoardButtons() {
-  const btn = $("orderRerollBtn");
-  if (!btn) return;
-  addTap(btn, () => {
-    state.activeOrder = createOrderSnapshot();
-    showMessage("注文を変更");
-    saveGame();
-    renderInfo();
-  });
+  // 注文の任意変更は廃止(達成か時間切れでのみ入れ替わる)。ボタンは存在しない
+}
+
+// 注文ボード専用タブの描画。制限時間のカウントダウン付き、任意変更ボタンは無し。
+function renderOrder() {
+  const box = $("orderPanel");
+  if (!box) return;
+
+  if (!orderBoardUnlocked()) {
+    box.innerHTML = `
+      <div class="infoBox orderBoardBox">
+        <h3>注文ボード</h3>
+        <div class="desc">経済分析の先にある「注文ボード」スキルで解放されます。解放後は、短期の依頼が届き、達成すると今の状態に見合った報酬を得られます。</div>
+      </div>
+    `;
+    return;
+  }
+
+  const order = ensureActiveOrder();
+
+  if (!order) {
+    const waitMs = Math.max(0, (state.nextOrderAt || 0) - Date.now());
+    box.innerHTML = `
+      <div class="infoBox orderBoardBox">
+        <h3>注文ボード</h3>
+        <div class="desc">注文は同時に1件だけ届き、達成か時間切れになるまで次は来ない。次の注文が届く間隔は転生を重ねるほど短くなる(現在 ${fmtTime(Math.round(orderIntervalMs() / 1000))}間隔)。</div>
+        <div class="desc">次の注文まで：${fmtTime(Math.ceil(waitMs / 1000))}</div>
+        <div class="desc">達成済み注文：${fmt(state.completedOrders || 0)}${(state.expiredOrders ? ` ／ 期限切れ：${fmt(state.expiredOrders)}` : "")}</div>
+      </div>
+    `;
+    return;
+  }
+
+  const def = orderDef(order.id);
+  const ratio = orderProgressRatio(order);
+  const progressText = def.target === "quotaHold" ? fmtTime(order.progress || 0) : fmt(order.progress || 0);
+  const needText = def.target === "quotaHold" ? fmtTime(order.need || 0) : fmt(order.need || 0);
+
+  const limitMs = Math.max(1, Number(order.limitMs) || orderTimeLimitMs());
+  const remainMs = orderTimeRemainingMs(order);
+  const timeRatio = Math.min(1, Math.max(0, remainMs / limitMs));
+  const remainSec = Math.ceil(remainMs / 1000);
+  const timeClass = remainMs <= 30000 ? " orderTimeFill--low" : "";
+
+  box.innerHTML = `
+    <div class="infoBox orderBoardBox">
+      <h3>注文ボード</h3>
+      <div class="desc">要求量は今の生産・討伐ペースに合わせて決まる短期目標。制限時間内に達成すると報酬。時間切れの注文は消え、次の注文は少し待つと届く。注文は選び直せない。</div>
+      <div class="orderCard">
+        <div class="orderHead"><span>${def.name}</span><span>${progressText} / ${needText}${def.unit}</span></div>
+        <div class="desc">条件：${def.desc}</div>
+        <div class="orderProgressBar"><div class="orderProgressFill" style="width:${(ratio * 100).toFixed(1)}%"></div></div>
+        <div class="orderTimeRow">
+          <span class="orderTimeLabel">残り時間</span>
+          <div class="orderTimeBar"><div class="orderTimeFill${timeClass}" style="width:${(timeRatio * 100).toFixed(1)}%"></div></div>
+          <span class="orderTimeVal">${fmtTime(remainSec)}</span>
+        </div>
+        <div class="desc">報酬：${orderRewardText(order)}</div>
+        <div class="orderFormula">${orderFormulaText(order)}</div>
+      </div>
+      <div class="desc">達成済み注文：${fmt(state.completedOrders || 0)}${(state.expiredOrders ? ` ／ 期限切れ：${fmt(state.expiredOrders)}` : "")}</div>
+    </div>
+  `;
 }
 
 function ownedUpgradeTypeCount() {
@@ -5957,6 +6286,9 @@ function resetRunLimitedEffects() {
   state.quotaPausedMs = 0;
   state.quotaPauseStartedAt = 0;
   state.activeOrder = null;
+  state.nextOrderAt = 0;
+  state.killStreak = 0;
+  state.lastKillAt = 0;
   state.orderTempCpsUntil = 0;
   state.orderTempCpsMultiplier = 1;
   state.orderTempResearchUntil = 0;
@@ -6602,11 +6934,28 @@ function equipmentAscendCost(id) {
   return cost;
 }
 
-// bossCoreAny はいずれかのボス核で支払える
+// 万能粉で代用できる素材か(共通/レア素材のみ。ボス核系は不可)
+function universalSubstitutable(matId) {
+  if (matId === "bossCoreAny" || matId === "universalFlour") return false;
+  const def = materialDef(matId);
+  return Boolean(def && (def.tier === "c" || def.tier === "r"));
+}
+
+// bossCoreAny はいずれかのボス核で支払える。
+// 不足分は万能粉が「2個=1個ぶん」として自動で代用される(ボス核を除く)
 function canPayMaterials(cost) {
+  let flourBudget = materialCount("universalFlour");
+
   return Object.entries(cost).every(([matId, n]) => {
     if (matId === "bossCoreAny") return bossCoreTotal() >= n;
-    return materialCount(matId) >= n;
+
+    const shortage = n - materialCount(matId);
+    if (shortage <= 0) return true;
+    if (!universalSubstitutable(matId)) return false;
+
+    if (flourBudget < shortage * 2) return false;
+    flourBudget -= shortage * 2;
+    return true;
   });
 }
 
@@ -6624,7 +6973,15 @@ function payMaterials(cost) {
       });
       return;
     }
-    state.materials[matId] = materialCount(matId) - n;
+
+    const have = materialCount(matId);
+    const used = Math.min(have, n);
+    const shortage = n - used;
+    state.materials[matId] = have - used;
+
+    if (shortage > 0) {
+      state.materials.universalFlour = materialCount("universalFlour") - shortage * 2;
+    }
   });
 
   return true;
@@ -6808,13 +7165,11 @@ function killRecordDropBonus(typeId) {
   return Math.floor(killMilestonesAchieved(typeId) / 2);
 }
 
-// ボス出現に必要な討伐数(周期)。コンパスとステージ補正で減り、焼成型方針でx0.8。
-// 深層領域(S6)は層に応じて 65+10L
+// ボス出現に必要な討伐数(周期)。コンパスとステージ補正で減る。深層領域(S6)は層に応じて 65+10L
 function bossKillPeriod(no) {
   const st = stageDef(no);
   const base = st.deep ? 65 + 10 * deepLayerNow() : 25 + 10 * (st.no - 1);
-  const period = base + (st.bossPeriodAdd || 0) - equipmentLv("dimensionCompass");
-  return Math.max(5, Math.round(period * (runPolicyIs("bake") ? 0.8 : 1)));
+  return Math.max(5, base + (st.bossPeriodAdd || 0) - equipmentLv("dimensionCompass"));
 }
 
 function bossDue(no) {
@@ -7192,7 +7547,7 @@ function renderQuota() {
 }
 
 // ===== 設定(音量・演出・画像・省略表示) =====
-const SETTINGS_KEY = "cookie_game_settings_v1";
+const SETTINGS_KEY = "cookie_game_settings_v1_simple";
 const settings = {
   seVolume: 100,
   bgmVolume: 35,
@@ -7654,9 +8009,6 @@ function checkQuotaStageTransition() {
 
 function updateTopOnly() {
   $("cookies").textContent = fmt(state.cookies);
-  $("power").textContent = fmt(currentClickPower());
-  $("cps").textContent = pausedForSkillChoice() ? "準備中" : fmt(currentCps());
-  $("rank").textContent = rankName();
 
   $("cookie").classList.toggle("boost-all", goldenBoostActive());
 
@@ -7664,7 +8016,6 @@ function updateTopOnly() {
   checkPrestigeUnlockNotice();
   renderQuota();
   checkQuotaStageTransition();
-  renderBakeBox();
   renderStageBar();
   renderDishBuffBar();
 
@@ -8644,7 +8995,7 @@ function renderResearch() {
 
   if (list.length === 0) {
     const anyBought = RESEARCH.some(r => state.research[r.id]);
-    box.innerHTML = `<div class="desc">${anyBought ? "解放できる研究はすべて取得済み" : "研究はまだない"}</div>`;
+    box.innerHTML = `<div class="desc">${anyBought ? "いま解放できる研究はすべて取得済み。新しい設備を買うと次の研究が現れる" : "対応する設備をこの周回で購入すると、研究が現れる"}</div>`;
     appendResearchAnalysisPanel(box);
     return;
   }
@@ -8724,9 +9075,11 @@ function prestigeUnlocked() {
 
 function updatePrestigeTabLabel() {
   const tab = document.querySelector('.tab[data-tab="prestigeTab"]');
-  if (!tab) return;
+  if (tab) tab.textContent = prestigeUnlocked() ? "転生" : "?";
 
-  tab.textContent = prestigeUnlocked() ? "転生" : "?";
+  // 注文ボードタブは最初から表示し、未解放の間は「?」で機能を隠す
+  const otab = document.querySelector('.tab[data-tab="orderTab"]');
+  if (otab) otab.textContent = orderBoardUnlocked() ? "注文" : "?";
 }
 
 function checkPrestigeUnlockNotice() {
@@ -8903,7 +9256,11 @@ function renderInfo() {
 
 
   box.innerHTML = `
-    ${renderOrderBoard()}
+    <div class="infoBox">
+      <h3>生産の実数値</h3>
+      <div class="infoRow">クリック（タップ1回の生産）：${fmt(currentClickPower())}</div>
+      <div class="infoRow">毎秒（CPS・自動生産）：${pausedForSkillChoice() ? "準備中" : fmt(currentCps())}</div>
+    </div>
 
     <div class="infoBox">
       <h3>現在の倍率・状態</h3>
@@ -8932,7 +9289,7 @@ function renderInfo() {
       <div class="infoRow">現在ステージ：S${currentStageNo()} ${stageDef(currentStageNo()).name}(解放済み：S${stageUnlockedMax()}まで)</div>
       <div class="infoRow">このステージの討伐数：${fmt(stageKillCount(currentStageNo()))} / 次のボスまで あと${fmt(killsUntilNextBoss(currentStageNo()))}体</div>
       <div class="infoRow">ステージは転生時(スキル選択→方針選択の後)に1つ選び、その周回中は固定。ステージが進むほどモンスターは強くなり、落とす素材が変わる。S6深層領域はボス撃破ごとに層が進む(現在 第${fmt(deepLayerNow())}層)。</div>
-      <div class="infoRow">周回方針は素材ドロップにもバイアスを掛ける：${RUN_POLICIES.find(p => p.id === state.runPolicy)?.desc || ""}</div>
+      <div class="infoRow">素材は撃破の仕方で決まる：タップとどめ=共通+1 / 金ブースト中=黄金粉 / 残HP5倍以上のとどめ=レア / 60秒内3体連続=ボス核+1 / ノルマ余裕2倍=発酵系 / 標準方針中=万能粉。</div>
       <div class="infoRow">モンスターには種類がある：こつぶ群れ(3体同時)・鉄焼きガード(高HP/高報酬)・はやての運び屋(短滞在/素材2倍)・黄金獣(金ブースト中のみ)・ステージボス(討伐数で出現)。</div>
       <div class="infoRow">タップ力には毎秒生産の一部が上乗せされる(強い指で強化、神の指は1個ごとにタップ全体x1.012)。</div>
       ${workshopUnlockedNow() ? `
@@ -8961,8 +9318,6 @@ function renderInfo() {
       ${upgradeRows}
     </div>
   `;
-
-  installOrderBoardButtons();
 }
 
 // ===== 実装追加：工房タブ(料理/作成/素材庫) =====
@@ -9136,7 +9491,7 @@ function renderWorkshop() {
     .filter(m => materialEverObtained(m.id))
     .map(m => `
       <div class="wsMatRow">
-        <span>${m.name}${m.tier === "r" ? "(レア)" : m.tier === "b" ? "(ボス核)" : ""}</span>
+        <span>${m.name}${m.tier === "r" ? "(レア)" : m.tier === "b" ? "(ボス核)" : m.tier === "u" ? "(万能)" : ""}</span>
         <b>${fmt(materialCount(m.id))}</b>
       </div>
     `)
@@ -9174,7 +9529,8 @@ function renderWorkshop() {
 
     <div class="infoBox">
       <h3>素材庫(転生持ち越し)</h3>
-      ${matRows || `<div class="desc">まだ素材なし。モンスターを倒すとステージと種類に応じた素材を落とす。</div>`}
+      <div class="desc">素材は「どう倒したか」で決まる：通常撃破=ステージの基本素材 / タップでとどめ=共通素材+1 / 金ブースト中に撃破=黄金粉 / 残HPの5倍以上でとどめ=レア素材 / 60秒以内に3体連続=ボス核+1 / ノルマに2倍以上の余裕があると発酵系素材も。標準方針の間は万能粉(他の素材2個ぶんの代用品。ボス核には使えない)も落ちる。</div>
+      ${matRows || `<div class="desc">まだ素材なし。モンスターを倒すと素材を落とす。</div>`}
     </div>
 
     <div class="infoBox">
@@ -9200,6 +9556,7 @@ function renderActiveTab() {
   if (activeTab === "shopTab") renderShop();
   if (activeTab === "researchTab") renderResearch();
   if (activeTab === "prestigeTab") renderPrestige();
+  if (activeTab === "orderTab") renderOrder();
   if (activeTab === "infoTab") renderInfo();
   if (activeTab === "workshopTab") renderWorkshop();
 }
@@ -9208,6 +9565,7 @@ function renderAllTabs() {
   renderShop();
   renderResearch();
   renderPrestige();
+  renderOrder();
   renderInfo();
   renderWorkshop();
 }
@@ -9215,6 +9573,7 @@ function renderAllTabs() {
 function switchTab(tabId) {
   if (activeTab !== tabId) playSound("tab");
   activeTab = tabId;
+  if (tabId === "orderTab") clearOrderAlert();
   updatePrestigeTabLabel();
 
   document.body.classList.toggle("playTabActive", normalPlayScreenActive());
@@ -9338,6 +9697,8 @@ function installSkillTreePinchZoom() {
     if (e.target && e.target.closest && e.target.closest("button")) return;
 
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    // 操作中はノード/線のアニメと重いフィルタを止めて、スワイプのガクつきを防ぐ
+    frame.classList.add("interacting");
 
     try {
       frame.setPointerCapture(e.pointerId);
@@ -9403,6 +9764,7 @@ function installSkillTreePinchZoom() {
     } else {
       mode = null;
       lastPan = null;
+      frame.classList.remove("interacting");
     }
   }
 
@@ -9659,7 +10021,10 @@ function loadGame() {
     if (!pausedForSkillChoice()) {
       const baseLimit = OFFLINE_LIMIT_SECONDS;
       const extraLimit = skillEffect("offlineHours") * 60 * 60;
-      const seconds = Math.min(offlineMs / 1000, baseLimit + extraLimit);
+      // スキル「終わらぬ焼窯」: 放置上限なし
+      const seconds = hasSkillEffect("offlineInfinite")
+        ? offlineMs / 1000
+        : Math.min(offlineMs / 1000, baseLimit + extraLimit);
       const gained = earn(baseCps() * seconds);
 
       if (gained > 0) showMessage(`放置 +${fmt(gained)}`);
@@ -10080,32 +10445,23 @@ function monsterFootprint(typeId) {
   return { w: 236, h: 254 };
 }
 
-// 周回方針による出現バイアス(狩猟型: tank/speedy x2、会心型: swarm x2)
-function policyMonsterWeight(typeId) {
-  let w = (MONSTER_TYPES[typeId] || {}).weight || 0;
-  if (runPolicyIs("hunt") && (typeId === "tank" || typeId === "speedy")) w *= 2;
-  if (runPolicyIs("click") && typeId === "swarm") w *= 2;
-  return w;
-}
-
 // 出現する種類を決める。ボス周期到達→ボス、金ブースト中は確率で黄金獣、他はロスター抽選
-// 金色型方針は黄金獣の置換率+20%
+// (方針による出現重みの補正は廃止。素材の偏りは撃破条件ドロップが担う)
 function pickMonsterTypeId(stageNo) {
   const st = stageDef(stageNo);
 
   if (bossDue(stageNo)) return "boss";
 
-  const beastChance = 0.35 + (st.goldenBeastBonus || 0) + (runPolicyIs("golden") ? 0.20 : 0);
-  if (goldenBoostActive() && Math.random() < beastChance) {
+  if (goldenBoostActive() && Math.random() < 0.35 + (st.goldenBeastBonus || 0)) {
     return "goldenBeast";
   }
 
   const roster = (st.roster || ["normal"]).filter(t => MONSTER_TYPES[t]);
-  const total = roster.reduce((sum, t) => sum + policyMonsterWeight(t), 0);
+  const total = roster.reduce((sum, t) => sum + (MONSTER_TYPES[t].weight || 0), 0);
   let r = Math.random() * Math.max(1, total);
 
   for (const t of roster) {
-    r -= policyMonsterWeight(t);
+    r -= MONSTER_TYPES[t].weight || 0;
     if (r <= 0) return t;
   }
 
@@ -10290,6 +10646,15 @@ function hitMonster(id) {
     earn(gained);
   }
 
+  // 条件ドロップ用: とどめの状況を記録(タップとどめ / オーバーキル=残HPの5倍以上 / 金ブースト中)
+  if (damage >= mon.hp) {
+    mon.finishCtx = {
+      clickFinish: true,
+      overkill: damage >= mon.hp * 5,
+      goldenBoost: goldenBoostActive()
+    };
+  }
+
   mon.hp -= damage;
 
   playSound("monster");
@@ -10326,59 +10691,75 @@ function monsterDropCount(mon) {
   return Math.max(1, Math.floor(n));
 }
 
-// 周回方針による素材バイアス倍率(tier別/黄金系)。工房全解放には多様な方針の周回が要る
-function policyMaterialBias(matId, mon) {
-  const tier = (materialDef(matId) || {}).tier || "c";
-
-  if (runPolicyIs("hunt")) return tier === "r" ? 2 : tier === "c" ? 0.5 : 1;
-  if (runPolicyIs("click")) return tier === "c" ? 2 : tier === "r" ? 0.5 : 1;
-  if (runPolicyIs("golden")) return (matId === "goldDust" || (mon && mon.type === "goldenBeast")) ? 2 : 1;
-  if (runPolicyIs("balanced")) return 1.25;
-  return 1;
+// ノルマ余裕率(現在クッキー ÷ 必要ノルマ)。発酵系素材の条件判定に使う
+function quotaSurplusRatio() {
+  if (state.quotaFailed || !state.quotaActive) return 0;
+  const required = monsterQuotaRequired();
+  if (required <= 0) return 0;
+  return Math.max(0, state.runCookies || 0) / required;
 }
 
-// 端数は確率で切り上げる(期待値をバイアス倍率どおりにする)
-function probabilisticRound(v) {
-  const base = Math.floor(v);
-  return base + (Math.random() < v - base ? 1 : 0);
-}
-
-// 撃破時の素材ドロップ(ボス核はhandleBossDefeatで付与)。表示用テキストを返す
-// スキル「素材の嗅覚」未取得の間は素材を落とさない
-function dropMonsterMaterials(mon) {
+// 撃破時の素材ドロップ(条件ドロップ制)。表示用テキストを返す。
+// 「どう倒したか」で素材が決まる: タップとどめ=共通+1 / 金ブースト中=黄金粉 /
+// オーバーキル(残HPの5倍以上)=レア枠 / 余裕率2倍以上=発酵枠 / 標準方針=万能粉 / 通常=基本素材
+function dropMonsterMaterials(mon, ctx) {
   if (!materialDropsEnabled()) return "";
 
   const typeId = mon.type || "normal";
   if (typeId === "boss") return "";
 
   const st = stageDef(mon.stageNo || 1);
-  const table = st.deep ? DEEP_STAGE_DROPS : (STAGE_DROPS[mon.stageNo || 1] || STAGE_DROPS[1]);
-  let matId = table[typeId] || table.normal;
+  const stageKey = st.deep ? 6 : (mon.stageNo || 1);
+  const table = st.deep ? DEEP_STAGE_DROPS : (STAGE_DROPS[stageKey] || STAGE_DROPS[1]);
+  const count = monsterDropCount(mon);
+  const bonus = Math.max(1, Math.ceil(count / 2));
+  const gains = [];
+  const add = (id, n) => {
+    if (!id || n <= 0) return;
+    const hit = gains.find(g => g.id === id);
+    if (hit) hit.n += n;
+    else gains.push({ id, n });
+  };
 
-  // S1はspeedy不在のため、normalが低確率で小麦粉を代替ドロップする
+  // 通常撃破: ステージ基本素材
+  let baseId = table[typeId] || table.normal;
   if (typeId === "normal" && table.normalAlt && Math.random() < table.normalAlt.chance) {
-    matId = table.normalAlt.id;
+    baseId = table.normalAlt.id;
   }
+  add(baseId, count);
 
-  // 深層領域：全種が低確率で虚空糖を代替ドロップする(レア枠)
-  if (table.anyAlt && Math.random() < table.anyAlt.chance) {
-    matId = table.anyAlt.id;
-  }
+  // 深層領域: 低確率で深層核も落ちる
+  if (table.anyAlt && Math.random() < table.anyAlt.chance) add(table.anyAlt.id, 1);
 
-  if (!matId) return "";
+  // タップでとどめ: 共通素材+1
+  if (ctx && ctx.clickFinish) add(table.normal, 1);
 
-  const count = probabilisticRound(monsterDropCount(mon) * policyMaterialBias(matId, mon));
-  if (count <= 0) return "";
+  // 金ブースト中に撃破: 黄金粉
+  if (ctx && ctx.goldenBoost) add("goldDust", bonus);
 
-  addMaterials(matId, count);
+  // オーバーキル撃破(とどめが残HPの5倍以上): レア枠
+  if (ctx && ctx.overkill) add(STAGE_RARE_DROPS[stageKey] || "ironShard", bonus);
 
-  const text = `+${fmt(count)} ${materialName(matId)}`;
-  showFloat(text);
+  // ノルマ余裕率2倍以上で撃破: 発酵枠
+  if (quotaSurplusRatio() >= 2) add(STAGE_FERMENT_DROPS[stageKey] || table.normal, bonus);
+
+  // 標準方針: 万能粉(他の素材2個ぶんの代用品)
+  if (runPolicyIs("balanced")) add("universalFlour", bonus);
+
+  if (gains.length === 0) return "";
+
+  const parts = gains.map(g => {
+    addMaterials(g.id, g.n);
+    return `+${fmt(g.n)} ${materialName(g.id)}`;
+  });
+
+  const text = parts.join(" / ");
+  showFloat(parts[0]);
   return text;
 }
 
 // ボス撃破：ボス核付与(S6は共通の深層核+虚空糖)、初回なら次ステージ解放。
-// S6のボスは撃破ごとに深層の層+1(転生持ち越し・無限)。焼成型方針はボス核+1
+// S6のボスは撃破ごとに深層の層+1(転生持ち越し・無限)
 function handleBossDefeat(stageNo) {
   state.stageBossKills = state.stageBossKills && typeof state.stageBossKills === "object" ? state.stageBossKills : {};
   state.stageBossKills[stageNo] = stageBossKillCount(stageNo) + 1;
@@ -10386,7 +10767,7 @@ function handleBossDefeat(stageNo) {
   const st = stageDef(stageNo);
   const first = state.stageBossKills[stageNo] === 1;
   const coreId = st.deep ? "deepCore" : "bossCore" + stageNo;
-  const coreCount = (first ? 3 : 1) + (runPolicyIs("bake") ? 1 : 0);
+  const coreCount = first ? 3 : 1;
 
   let text = "";
 
@@ -10452,7 +10833,22 @@ function defeatMonster(id) {
     ? `討伐記録達成！${typeDef.name} 累計${fmt(killRecordCount(typeId))}体：ダメージx${killRecordDamageMultiplier(typeId).toFixed(2)}・ドロップ+${killRecordDropBonus(typeId)}`
     : "";
 
-  const dropText = dropMonsterMaterials(mon);
+  const dropText = dropMonsterMaterials(mon, mon.finishCtx || null);
+
+  // 連続撃破ボーナス: 60秒以内に3体連続で倒すと現在ステージのボス核+1
+  const nowMs = Date.now();
+  state.killStreak = (nowMs - (state.lastKillAt || 0) <= 60000) ? (state.killStreak || 0) + 1 : 1;
+  state.lastKillAt = nowMs;
+  let streakText = "";
+
+  if (typeId !== "boss" && state.killStreak >= 3) {
+    state.killStreak = 0;
+    if (materialDropsEnabled()) {
+      const streakCoreId = stageDef(stageNo).deep ? "deepCore" : "bossCore" + stageNo;
+      addMaterials(streakCoreId, 1);
+      streakText = `連続討伐！+1 ${materialName(streakCoreId)}`;
+    }
+  }
 
   // はやての運び屋：撃破すると次の金クッキー出現間隔x0.5
   if (typeId === "speedy") {
@@ -10471,7 +10867,7 @@ function defeatMonster(id) {
     && monsters.some(m => m.swarmGroup === mon.swarmGroup);
 
   if (partnersLeft) {
-    showMessage(`撃破${dropText ? ` ${dropText}` : ""}${recordText ? ` / ${recordText}` : ""}`);
+    showMessage(`撃破${dropText ? ` ${dropText}` : ""}${streakText ? ` / ${streakText}` : ""}${recordText ? ` / ${recordText}` : ""}`);
     saveGame();
     updateTopOnly();
     renderActiveTab();
@@ -10517,6 +10913,7 @@ function defeatMonster(id) {
   }
 
   if (dropText) message += ` ${dropText}`;
+  if (streakText) message += ` / ${streakText}`;
   if (bossText) message += ` ${bossText}`;
   if (recordText) message += ` / ${recordText}`;
 
@@ -10761,10 +11158,11 @@ function showRewardChoices(level) {
   const box = $("rewardChoices");
 
   box.innerHTML = "";
-  rewardLockUntil = Date.now() + 950;
+  rewardLockUntil = 0;
+  clearTimeout(rewardLockTimer);
   modal.classList.add("rewardLocked");
 
-  if (notice) notice.textContent = "撃破！報酬を確認中…";
+  if (notice) notice.textContent = "報酬を手に入れた！";
 
   pendingRewardChoices.forEach(choice => {
     const btn = document.createElement("button");
@@ -10782,15 +11180,16 @@ function showRewardChoices(level) {
 
   modal.style.display = "flex";
   startQuotaPause();
+}
 
-  clearTimeout(rewardLockTimer);
-  rewardLockTimer = setTimeout(() => {
-    modal.classList.remove("rewardLocked");
-    box.querySelectorAll(".rewardBtn").forEach(btn => {
-      btn.disabled = false;
-    });
-    if (notice) notice.textContent = "報酬を選択";
-  }, Math.max(0, rewardLockUntil - Date.now()));
+// 「報酬を手に入れた」画面でOKを押すと、遅延なしで報酬選択に移る
+function revealRewardChoices() {
+  const modal = $("rewardModal");
+  const notice = $("rewardLockNotice");
+  if (!modal || !modal.classList.contains("rewardLocked")) return;
+  modal.classList.remove("rewardLocked");
+  document.querySelectorAll("#rewardChoices .rewardBtn").forEach(btn => { btn.disabled = false; });
+  if (notice) notice.textContent = "報酬を選択";
 }
 
 function chooseReward(choice) {
@@ -10894,6 +11293,7 @@ addTap($("titleStartBtn"), () => {
   startGameFromTitle();
 });
 addTap($("backToTitleBtn"), returnToTitleScreen);
+addTap($("rewardConfirmBtn"), revealRewardChoices);
 
 addTap($("titleAboutBtn"), () => {
   playSound("tab");
@@ -10917,7 +11317,7 @@ setInterval(() => {
   if (!pausedForSkillChoice()) {
     earn(currentCps() / 20);
     checkQuotaState();
-    if (!rewardModalOpen()) tickOrderProgress(1 / 20);
+    if (!rewardModalOpen()) { tickOrderProgress(1 / 20); checkOrderExpiry(); }
   }
 
   updateTopOnly();
