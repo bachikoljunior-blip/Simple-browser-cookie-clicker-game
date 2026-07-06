@@ -3672,6 +3672,40 @@
       padding: 10px 6px;
     }
 
+    .saveCodeHint {
+      font-size: 11px;
+      line-height: 1.5;
+      color: #cbb494;
+    }
+
+    .saveCodeArea {
+      width: 100%;
+      box-sizing: border-box;
+      resize: vertical;
+      font-family: monospace;
+      font-size: 11px;
+      line-height: 1.4;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 213, 138, 0.3);
+      background: rgba(0, 0, 0, 0.25);
+      color: #ffe3a6;
+    }
+
+    .saveFileDetails {
+      margin-top: 4px;
+      color: #cbb494;
+      font-size: 12px;
+    }
+
+    .saveFileDetails summary {
+      cursor: pointer;
+    }
+
+    .saveFileDetails .settingBtnRow {
+      margin-top: 8px;
+    }
+
     /* ===== タブ操作域の拡大: 上部エリアをひとまわりコンパクトに ===== */
     /* 上部エリアは縦flexにし、情報欄(ノルマ・焼き加減)の増減はクッキー欄の
        伸縮だけで吸収する。タブとの境界やゲーム全体の比率は変わらない */
@@ -4016,7 +4050,7 @@
         <div class="infoBox">
           <h3>よくある質問</h3>
           <p><b>Q. 料金はかかりますか？</b><br>A. 完全無料です。アプリのインストールや会員登録も不要で、ブラウザだけで遊べます。</p>
-          <p><b>Q. セーブデータはどこに保存されますか？</b><br>A. お使いのブラウザのローカルストレージに自動保存されます。同じ端末・同じブラウザで開けば続きから遊べます。ブラウザのデータを削除するとセーブデータも消えるのでご注意ください。設定画面の「ファイルに書き出す」を使うと、セーブデータをJSONファイルとしてブラウザの外(端末のストレージなど)に保存でき、別の端末やブラウザで「ファイルから読み込む」から復元できます。</p>
+          <p><b>Q. セーブデータはどこに保存されますか？</b><br>A. お使いのブラウザのローカルストレージに自動保存されます。同じ端末・同じブラウザで開けば続きから遊べます。ブラウザのデータを削除するとセーブデータも消えるのでご注意ください。設定画面の「セーブコードをコピー」でコードをコピーし、メモ帳やLINEキープなどに保存しておけば、機種変更や別のブラウザでも「貼り付けて復元する」から続きから遊べます。ファイルとして保存したい場合は、設定画面の「ファイルとして保存したい場合はこちら」からファイルへの書き出し・読み込みも利用できます。</p>
           <p><b>Q. 放置していても進みますか？</b><br>A. はい。ゲームを閉じている間も一定時間分のクッキーが自動で生産され、次に開いたときにまとめて受け取れます。</p>
           <p><b>Q. スマートフォンでも遊べますか？</b><br>A. はい。スマートフォン・タブレット・パソコンのブラウザに対応しています。</p>
         </div>
@@ -4058,11 +4092,23 @@
     <div class="settingRow">カードの説明を省略表示<input type="checkbox" id="setCompact"></div>
     <div class="settingRow settingRowStack">
       <span>セーブデータの管理(ブラウザ外への保存)</span>
+      <div class="saveCodeHint">ボタンで「セーブコード」をコピーし、メモ帳やLINEキープなどに保存しておくと、機種変更や別のブラウザでも下の欄に貼り付けて続きから遊べます。</div>
       <div class="settingBtnRow">
-        <button id="exportSaveBtn" type="button" class="settingsWideBtn">ファイルに書き出す</button>
-        <button id="importSaveBtn" type="button" class="settingsWideBtn">ファイルから読み込む</button>
+        <button id="copySaveCodeBtn" type="button" class="settingsWideBtn">セーブコードをコピー</button>
       </div>
-      <input type="file" id="importSaveInput" accept="application/json,.json" style="display:none">
+      <textarea id="saveCodeOutput" class="saveCodeArea" readonly rows="3" placeholder="コピーがうまくいかない場合は、この欄を長押しして手動でコピーしてください"></textarea>
+      <textarea id="saveCodeInput" class="saveCodeArea" rows="3" placeholder="復元する場合は、保存しておいたセーブコードをここに貼り付けてください"></textarea>
+      <div class="settingBtnRow">
+        <button id="restoreSaveCodeBtn" type="button" class="settingsWideBtn">貼り付けて復元する</button>
+      </div>
+      <details class="saveFileDetails">
+        <summary>ファイルとして保存したい場合はこちら</summary>
+        <div class="settingBtnRow">
+          <button id="exportSaveBtn" type="button" class="settingsWideBtn">ファイルに書き出す</button>
+          <button id="importSaveBtn" type="button" class="settingsWideBtn">ファイルから読み込む</button>
+        </div>
+        <input type="file" id="importSaveInput" accept="application/json,.json" style="display:none">
+      </details>
     </div>
     <button id="settingsToTitleBtn" type="button" class="settingsWideBtn">タイトル画面に戻る</button>
   </div>
@@ -7568,6 +7614,23 @@ addTap($("settingsToTitleBtn"), () => {
   returnToTitleScreen();
 });
 
+addTap($("copySaveCodeBtn"), () => {
+  playSound("tab");
+  const code = buildSaveCode();
+  const output = $("saveCodeOutput");
+  output.value = code;
+  output.focus();
+  output.select();
+  copyTextToClipboard(code).then(ok => {
+    showMessage(ok ? "セーブコードをコピーしました" : "コードを表示しました。手動でコピーしてください");
+  });
+});
+
+addTap($("restoreSaveCodeBtn"), () => {
+  playSound("tab");
+  applySaveCode($("saveCodeInput").value);
+});
+
 addTap($("exportSaveBtn"), () => {
   playSound("tab");
   exportSaveToFile();
@@ -8722,6 +8785,22 @@ function saveGame() {
   localStorage.setItem(saveKey, JSON.stringify(state));
 }
 
+function applyImportedSaveJson(raw) {
+  const imported = JSON.parse(raw);
+  if (!imported || typeof imported !== "object") throw new Error("invalid save data");
+  if (!confirm("現在のセーブデータを上書きして読み込みます。よろしいですか？")) return;
+
+  state = imported;
+  ensureState();
+  state.lastSave = Date.now();
+  saveGame();
+
+  $("settingsOverlay").classList.remove("active");
+  updateTopOnly();
+  renderAllTabs();
+  showMessage("セーブデータを読み込みました");
+}
+
 function exportSaveToFile() {
   saveGame();
   const blob = new Blob([JSON.stringify(state)], { type: "application/json" });
@@ -8741,24 +8820,54 @@ function importSaveFromFile(file) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const imported = JSON.parse(reader.result);
-      if (!imported || typeof imported !== "object") throw new Error("invalid save data");
-      if (!confirm("現在のセーブデータを上書きして読み込みます。よろしいですか？")) return;
-
-      state = imported;
-      ensureState();
-      state.lastSave = Date.now();
-      saveGame();
-
-      $("settingsOverlay").classList.remove("active");
-      updateTopOnly();
-      renderAllTabs();
-      showMessage("セーブデータを読み込みました");
+      applyImportedSaveJson(reader.result);
     } catch (e) {
       alert("セーブデータの読み込みに失敗しました。ファイルが正しいか確認してください。");
     }
   };
   reader.readAsText(file);
+}
+
+function buildSaveCode() {
+  saveGame();
+  return btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+}
+
+function applySaveCode(code) {
+  const trimmed = (code || "").trim();
+  if (!trimmed) {
+    alert("セーブコードを入力してください");
+    return;
+  }
+  try {
+    applyImportedSaveJson(decodeURIComponent(escape(atob(trimmed))));
+  } catch (e) {
+    alert("セーブコードの読み込みに失敗しました。コードが正しいか確認してください。");
+  }
+}
+
+function copyTextToClipboard(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    return navigator.clipboard.writeText(text).then(() => true).catch(() => fallbackCopyToClipboard(text));
+  }
+  return Promise.resolve(fallbackCopyToClipboard(text));
+}
+
+function fallbackCopyToClipboard(text) {
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  } catch (e) {
+    return false;
+  }
 }
 
 function findSavedData() {
