@@ -3807,6 +3807,21 @@
       -webkit-overflow-scrolling: touch;
     }
 
+    /* ===== クッキー画面(上部)の各表示が潰れない調整 ===== */
+    .top {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      scrollbar-width: none;
+    }
+    .top::-webkit-scrollbar { display: none; }
+    .tabPages {
+      flex: 0 0 46% !important;
+      max-height: 46% !important;
+    }
+    .cookieWrap {
+      min-height: 116px !important;
+    }
+
   </style>
 </head>
 
