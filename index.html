@@ -2661,6 +2661,26 @@
       display: block;
     }
 
+    /* 報酬獲得→OKで選択へ。ロック中は選択肢を隠し、OKボタンだけ表示 */
+    .rewardConfirmBtn {
+      display: none;
+      width: 100%;
+      margin: 0 0 12px;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,218,137,0.5);
+      background: linear-gradient(180deg, rgba(191,118,43,0.96), rgba(98,52,16,0.98));
+      color: #fff4de;
+      font-weight: 900;
+      font-size: 16px;
+    }
+    #rewardModal.rewardLocked .rewardConfirmBtn {
+      display: block;
+    }
+    #rewardModal.rewardLocked #rewardChoices {
+      display: none;
+    }
+
     /* 追加実装：クッキー本体が見えている通常画面では、下タブが強化以外でも出現物を残す。全画面・スキル中は上の規則で非表示。 */
 
 
@@ -4083,7 +4103,8 @@
 <div id="rewardModal">
   <div class="rewardPanel">
     <h2>報酬を選択</h2>
-    <div class="rewardLockNotice" id="rewardLockNotice">撃破！報酬を確認中…</div>
+    <div class="rewardLockNotice" id="rewardLockNotice">報酬を手に入れた！</div>
+    <button id="rewardConfirmBtn" class="rewardConfirmBtn" type="button">OK ― 報酬を選ぶ</button>
     <div id="rewardChoices"></div>
   </div>
 </div>
@@ -9485,10 +9506,11 @@ function showRewardChoices(level) {
   const box = $("rewardChoices");
 
   box.innerHTML = "";
-  rewardLockUntil = Date.now() + 950;
+  rewardLockUntil = 0;
+  clearTimeout(rewardLockTimer);
   modal.classList.add("rewardLocked");
 
-  if (notice) notice.textContent = "撃破！報酬を確認中…";
+  if (notice) notice.textContent = "報酬を手に入れた！";
 
   pendingRewardChoices.forEach(choice => {
     const btn = document.createElement("button");
@@ -9506,15 +9528,16 @@ function showRewardChoices(level) {
 
   modal.style.display = "flex";
   startQuotaPause();
+}
 
-  clearTimeout(rewardLockTimer);
-  rewardLockTimer = setTimeout(() => {
-    modal.classList.remove("rewardLocked");
-    box.querySelectorAll(".rewardBtn").forEach(btn => {
-      btn.disabled = false;
-    });
-    if (notice) notice.textContent = "報酬を選択";
-  }, Math.max(0, rewardLockUntil - Date.now()));
+// 「報酬を手に入れた」画面でOKを押すと、遅延なしで報酬選択に移る
+function revealRewardChoices() {
+  const modal = $("rewardModal");
+  const notice = $("rewardLockNotice");
+  if (!modal || !modal.classList.contains("rewardLocked")) return;
+  modal.classList.remove("rewardLocked");
+  document.querySelectorAll("#rewardChoices .rewardBtn").forEach(btn => { btn.disabled = false; });
+  if (notice) notice.textContent = "報酬を選択";
 }
 
 function chooseReward(choice) {
@@ -9612,6 +9635,7 @@ addTap($("titleStartBtn"), () => {
   startGameFromTitle();
 });
 addTap($("backToTitleBtn"), returnToTitleScreen);
+addTap($("rewardConfirmBtn"), revealRewardChoices);
 
 addTap($("titleAboutBtn"), () => {
   playSound("tab");
