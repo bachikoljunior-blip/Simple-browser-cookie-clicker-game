@@ -9266,13 +9266,10 @@ async function pullCloudSaveIfNewer() {
     }
 
     const cloudPayload = doc.data();
-    const cloudStateJson = JSON.stringify(cloudPayload.state || {});
-    const verified = cloudPayload.state && computeSaveChecksum(cloudStateJson) === cloudPayload.checksum;
-
-    if (!cloudPayload.state || verified === false) {
-      alert("クラウド上のセーブデータが破損している可能性があるため、読み込みを中止しました。");
-      return;
-    }
+    // チェックサム照合は行わない。Firestoreの往復でキー順や数値表現が変わり、
+    // 実際は正常なのに「破損」と誤検知して開始時に警告が出ていたため。
+    // stateが無い(または不正な)場合だけ、警告を出さずに読み込みを見送る。
+    if (!cloudPayload || !cloudPayload.state || typeof cloudPayload.state !== "object") return;
 
     if ((cloudPayload.state.lastSave || 0) > (state.lastSave || 0)) {
       if (confirm("クラウドの方が新しいセーブデータがあります。読み込みますか？")) {
