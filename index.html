@@ -152,6 +152,16 @@
       white-space: nowrap;
     }
 
+    /* クッキー画面の合計毎秒生産(小さめのサブ表示) */
+    .cookieCps {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.2;
+      color: #f2d9a8;
+      opacity: 0.9;
+    }
+
     .quotaBox {
       display: block;
       background: #20140d;
@@ -510,6 +520,20 @@
 
     .item.done {
       background: var(--itemDone);
+    }
+
+    /* 購入済み研究: 枠を消し、名前と効果のみのプレーン表示にする */
+    .item.researchOwned {
+      background: transparent !important;
+      border-color: transparent !important;
+      box-shadow: none !important;
+      min-height: 0 !important;
+      padding-right: 10px !important;
+      opacity: 0.85;
+    }
+    .item.researchOwned::before,
+    .item.researchOwned::after {
+      display: none !important;
     }
 
     .artCard {
@@ -3639,17 +3663,20 @@
       flex-direction: column !important;
     }
 
-    #cookie {
-      height: 116px !important;
-      max-height: 100% !important;
-      aspect-ratio: 1 / 1 !important;
-      width: auto !important;
-    }
-
     .cookieWrap {
       flex: 1 1 auto !important;
-      min-height: 64px !important;
+      min-height: 120px !important;
       margin-top: 0 !important;
+      container-type: size !important;
+    }
+
+    /* クッキー画像はクッキー欄いっぱいの最大正方形にする(画面の半分以上を占める) */
+    #cookie {
+      width: min(100cqw, 100cqh) !important;
+      height: min(100cqw, 100cqh) !important;
+      max-width: 100% !important;
+      max-height: 100% !important;
+      aspect-ratio: 1 / 1 !important;
     }
 
     /* 情報欄(クッキー数・ノルマ・ステータス等)は縮ませない。
@@ -4022,6 +4049,7 @@
 
     <div class="cookieCount">
       <span id="cookies">0</span>
+      <span id="cookieCps" class="cookieCps">毎秒 0</span>
     </div>
 
     <div id="quotaBox" class="quotaBox"></div>
@@ -4965,6 +4993,26 @@ function fmt(n) {
   const unit = generateHugeUnit(level);
 
   return sign + fmtShortJapaneseUnitNumber(scaled) + unit;
+}
+
+// コスト表示用: 小数を出さない(切り捨て)。省略表記でも仮数部を整数化する
+function fmtCost(n) {
+  n = Math.floor(Number(n) || 0);
+  if (!Number.isFinite(n)) return "∞";
+
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(n);
+
+  if (abs < 10000) return sign + String(Math.floor(abs));
+
+  let level = Math.max(0, Math.floor(Math.log10(abs) / 4 + 1e-12));
+  level = Math.min(level, 77);
+
+  let scaled = abs / Math.pow(10000, level);
+  if (scaled >= 10000 && level < 77) { level += 1; scaled /= 10000; }
+  if (scaled < 1 && level > 0) { level -= 1; scaled *= 10000; }
+
+  return sign + String(Math.floor(scaled)) + generateHugeUnit(level);
 }
 
 function fmtTime(seconds) {
@@ -6527,26 +6575,15 @@ function renderQuota() {
     return;
   }
 
+  // 表記は最小限に。1行の要約＋ゲージのみ(クッキー画像を大きく見せるため)
   box.innerHTML = `
     <div class="quotaFutureLine">
-      <span>現在ノルマ：${fmt(quota)}</span>
-      <span class="quotaProgressPct">第${stageDisplay.stage}層 ${fmtShort(stageDisplay.pct)}%</span>
-    </div>
-    <div class="quotaHead">
-      <b>モンスター生成ノルマ</b>
-      <span>${ok ? "達成中" : "未達"}</span>
-    </div>
-    <div class="quotaNumbers">
-      <span class="quotaRunNumber">今回 ${fmt(run)}</span>
-      <span class="quotaNeedNumber">必要 ${fmt(quota)}</span>
+      <span>ノルマ ${fmt(run)} / ${fmt(quota)}</span>
+      <span class="quotaProgressPct">第${stageDisplay.stage}層 ${ok ? "達成" : "未達"}</span>
     </div>
     <div class="quotaGauge ${underTarget ? "quotaUnderTarget" : "quotaOverTarget"}" aria-label="現在ノルマ ${fmt(run)} / ${fmt(gaugeQuota)}">
       ${layerHtml}
       <div class="quotaStageBadge">第<span class="quotaStageNumber">${stageDisplay.stage}</span>層</div>
-    </div>
-    <div class="quotaMeta">
-      <span>${ok ? "経過 " + fmtTime(elapsed) : "不足 " + fmt(Math.abs(diff))}</span>
-      <span>${fmt(run)} / ${fmt(quota)}</span>
     </div>
   `;
 }
@@ -6621,15 +6658,16 @@ function startBgm() {
 
     // BGMは2トラック構成。タイトル画面ではコード進行のゆったりした
     // アルペジオ、ゲーム中は隣の音へ歩くだけの環境音を流し分ける
-    const gameScale = [174.61, 196.00, 220.00, 261.63, 293.66, 349.23];
+    const gameScale = [174.61, 196.00, 220.00, 261.63, 293.66, 349.23, 392.00];
     let noteIndex = 2;
+    let lastGameIndex = -1;
 
-    // タイトル用: F → Am → Dm → B♭ の循環をアルペジオで奏でる
+    // タイトル用: 明るめのメジャー進行(F → C → G → B♭)を上行アルペジオで奏でる
     const titleChords = [
-      [174.61, 220.00, 261.63, 349.23],
-      [164.81, 220.00, 261.63, 329.63],
-      [146.83, 174.61, 220.00, 293.66],
-      [116.54, 174.61, 233.08, 293.66]
+      [174.61, 220.00, 261.63, 349.23], // F  (F A C F)
+      [196.00, 261.63, 329.63, 392.00], // C  (G C E G)
+      [196.00, 246.94, 293.66, 392.00], // G  (G B D G)
+      [233.08, 293.66, 349.23, 466.16]  // B♭ (B♭ D F B♭)
     ];
 
     function playBgmNote(freq, len, attack, peak, type) {
@@ -6653,23 +6691,29 @@ function startBgm() {
         bgmStep += 1;
 
         if (titleScreenActive()) {
-          // タイトルBGM: 1.15秒ごとにコードの構成音を1音ずつ順番に鳴らす
+          // タイトルBGM: コードを4音ぶんで切り替え、上行→下行で往復するアルペジオ。
+          // 同じ音を連続させず、単調な繰り返しを避ける
           bgmFilter.frequency.value = 860;
-          const chord = titleChords[Math.floor(bgmStep / 8) % titleChords.length];
-          const pos = bgmStep % 4;
+          const chord = titleChords[Math.floor(bgmStep / 4) % titleChords.length];
+          const cyc = bgmStep % 8;          // 0..3 上行, 4..7 下行
+          const pos = cyc < 4 ? cyc : 7 - cyc;
           const freq = chord[pos];
-          playBgmNote(freq, 3.4, 0.55, pos === 0 ? 0.9 : 0.55, "triangle");
-          playBgmNote(freq * 2, 3.4, 0.55, 0.10, "sine");
+          playBgmNote(freq, 3.0, 0.5, pos === 0 ? 0.9 : 0.55, "triangle");
+          playBgmNote(freq * 2, 3.0, 0.5, 0.10, "sine");
           return;
         }
 
-        // ゲームBGM: 4.6秒に1音、隣の音にしか動かない歩行型の環境音
+        // ゲームBGM: 4.6秒に1音、隣の音へ歩く環境音。ただし同じ音は連続させない
         bgmFilter.frequency.value = 680;
         if (bgmStep % 4 !== 0) return;
 
-        const roll = Math.random();
-        const stepDir = roll < 0.38 ? -1 : roll < 0.62 ? 0 : 1;
+        let stepDir = Math.random() < 0.5 ? -1 : 1;         // 必ず動く(同音の停滞を避ける)
+        if (Math.random() < 0.18) stepDir *= 2;             // たまに跳ねる
         noteIndex = Math.max(0, Math.min(gameScale.length - 1, noteIndex + stepDir));
+        if (noteIndex === lastGameIndex) {                  // 直前と同じなら1つずらす
+          noteIndex = noteIndex > 0 ? noteIndex - 1 : noteIndex + 1;
+        }
+        lastGameIndex = noteIndex;
         const freq = gameScale[noteIndex];
 
         playBgmNote(freq, 6.5, 2.2, 1, "sine");
@@ -6682,9 +6726,10 @@ function startBgm() {
       } catch (e) {}
     }
 
-    // 最初のインターバルを待たず即座に1音鳴らす(タイトルで開始ボタンを
-    // すぐ押しても、その時点のモードのBGMが一音は必ず聞こえる)
+    // 最初のインターバルを待たず即座に1音鳴らす。resumeが非同期で
+    // 完了するまで最初の音が欠けることがあるため、復帰後にも即1音鳴らす
     bgmTick();
+    try { audioCtx.resume().then(() => { try { bgmTick(); } catch (e) {} }); } catch (e) {}
     bgmTimer = setInterval(bgmTick, 1150);
   } catch (e) {}
 }
@@ -7024,6 +7069,8 @@ function checkQuotaStageTransition() {
 
 function updateTopOnly() {
   $("cookies").textContent = fmt(state.cookies);
+  const cpsEl = $("cookieCps");
+  if (cpsEl) cpsEl.textContent = pausedForSkillChoice() ? "毎秒 準備中" : "毎秒 " + fmt(currentCps());
 
   $("cookie").classList.toggle("boost-all", goldenBoostActive());
 
@@ -7649,14 +7696,15 @@ function researchArt(r) {
   return "⌬";
 }
 
-function upgradeShopEffectText(u) {
+function upgradeShopEffectRows(u) {
   const owned = state.upgrades[u.id];
   const before = upgradeEffectiveContributionAtCount(u, owned, true);
   const after = upgradeEffectiveContributionAtCount(u, owned + 1, true);
   const add = Math.max(0, after - before);
   const kind = u.type === "cps" ? "毎秒" : "タップ";
 
-  return `1個買うと ${kind} +${fmt(add)} / いまの合計 ${kind} +${fmt(before)}`;
+  // 追加分は「+X」、合計は「毎秒 X(タップ X)」のみを表示する
+  return { addText: `+${fmt(add)}`, totalText: `${kind} ${fmt(before)}` };
 }
 
 // 経済分析スキル解放後のみ表示するコスパ行(表示条件・情報量は従来と同じ)
@@ -7712,21 +7760,24 @@ function renderShop() {
     let priceText;
     if (plan.isMax) {
       priceText = plan.affordable
-        ? `MAX ×${fmt(plan.count)} — 合計 ${fmt(plan.totalCost)} クッキー`
-        : `次の1個 ${fmt(plan.totalCost)} クッキー`;
+        ? `MAX ×${fmt(plan.count)} — 合計 ${fmtCost(plan.totalCost)} クッキー`
+        : `次の1個 ${fmtCost(plan.totalCost)} クッキー`;
     } else if (plan.count > 1) {
-      priceText = `×${plan.count} 合計 ${fmt(plan.totalCost)} クッキー`;
+      priceText = `×${plan.count} 合計 ${fmtCost(plan.totalCost)} クッキー`;
     } else {
-      priceText = `${fmt(plan.totalCost)} クッキー`;
+      priceText = `${fmtCost(plan.totalCost)} クッキー`;
     }
 
     const efficiency = upgradeEfficiencyText(u);
+    const eff = upgradeShopEffectRows(u);
 
     btn.classList.toggle("canBuy", plan.affordable && !pausedForSkillChoice());
     btn.innerHTML = `
       <b>${u.name}</b>
       <div class="price">${priceText}</div>
-      <div class="desc">${upgradeShopEffectText(u)} / 所持 ${fmt(state.upgrades[u.id])}</div>
+      <div class="desc">${eff.addText}</div>
+      <div class="desc">${eff.totalText}</div>
+      <div class="desc">所持 ${fmt(state.upgrades[u.id])}</div>
       ${efficiency ? `<div class="desc">${efficiency}</div>` : ""}
     `;
   });
@@ -7896,17 +7947,23 @@ function appendResearchAnalysisPanel(box) {
 
 function renderResearch() {
   const box = $("research");
-  // 購入済みの研究は購入欄から消す(効果は「研究解析」パネルと一覧タブで確認できる)
-  const list = RESEARCH.filter(r => researchUnlocked(r) && !state.research[r.id]);
 
-  if (list.length === 0) {
-    const anyBought = RESEARCH.some(r => state.research[r.id]);
-    box.innerHTML = `<div class="desc">${anyBought ? "解放できる研究はすべて取得済み" : "研究はまだない"}</div>`;
+  // 表示順はRESEARCH配列順で固定。
+  //  owned : 購入済み → 名前と効果のみ(枠なし・元の位置)
+  //  buy   : 解放済みで購入可能
+  const entries = [];
+  for (const r of RESEARCH) {
+    if (state.research[r.id]) entries.push({ r, mode: "owned", id: "own:" + r.id });
+    else if (researchUnlocked(r)) entries.push({ r, mode: "buy", id: r.id });
+  }
+
+  if (entries.length === 0) {
+    box.innerHTML = `<div class="desc">研究はまだない</div>`;
     appendResearchAnalysisPanel(box);
     return;
   }
 
-  const ids = list.map(r => r.id);
+  const ids = entries.map(e => e.id);
   let cards = [...box.querySelectorAll(".item.artCard")];
   const existingIds = cards.map(el => el.dataset.id);
   const sameList = ids.length === existingIds.length && ids.every((id, i) => id === existingIds[i]);
@@ -7914,15 +7971,17 @@ function renderResearch() {
   if (!sameList) {
     box.innerHTML = "";
 
-    list.forEach(r => {
+    entries.forEach(e => {
       const btn = document.createElement("button");
 
-      btn.className = "item artCard";
-      btn.dataset.id = r.id;
-      btn.dataset.art = researchArt(r);
-      setArtImage(btn, ASSETS.research[r.id]);
+      btn.className = "item artCard" + (e.mode === "owned" ? " researchOwned" : "");
+      btn.dataset.id = e.id;
+      btn.dataset.art = researchArt(e.r);
+      setArtImage(btn, ASSETS.research[e.r.id]);
 
-      addTap(btn, () => buyResearch(r.id));
+      if (e.mode === "buy") addTap(btn, () => buyResearch(e.r.id));
+      else btn.disabled = true;
+
       box.appendChild(btn);
     });
 
@@ -7932,18 +7991,29 @@ function renderResearch() {
     if (oldPanel) oldPanel.remove();
   }
 
-  cards.forEach((btn, i) => {
-    const r = list[i];
-    const cost = researchCost(r);
-    const done = Boolean(state.research[r.id]);
+  cards.forEach((btn) => {
+    const id = String(btn.dataset.id || "");
 
-    btn.classList.toggle("canBuy", !done && state.cookies >= cost && !pausedForSkillChoice());
-    btn.classList.toggle("done", done);
+    if (id.startsWith("own:")) {
+      const r = RESEARCH.find(x => ("own:" + x.id) === id);
+      if (!r) return;
+      btn.classList.remove("canBuy");
+      btn.innerHTML = `
+        <b>${r.name}</b>
+        <div class="desc">${r.desc}</div>
+      `;
+      return;
+    }
+
+    const r = RESEARCH.find(x => x.id === id);
+    if (!r) return;
+    const cost = researchCost(r);
+
+    btn.classList.toggle("canBuy", state.cookies >= cost && !pausedForSkillChoice());
     btn.innerHTML = `
       <b>${r.name}</b>
-      <div class="price">${done ? "解放済み" : fmt(cost) + " クッキー"}</div>
+      <div class="price">${fmtCost(cost) + " クッキー"}</div>
       <div class="desc">${r.desc}</div>
-      ${done && r.detail ? `<div class="desc">詳細：${r.detail}</div>` : ""}
     `;
   });
 
@@ -9343,14 +9413,10 @@ function buildMonsterRewardChoices(level) {
       desc: n => upgradeRewardDesc(u, n)
     }));
 
+  // 設備(所持設備の強化)を必ず1枠入れる保証はなくし、全候補から公平に抽選する
   const choices = [];
 
-  if (ownedUpgradeChoices.length > 0) {
-    choices.push(ownedUpgradeChoices[Math.floor(Math.random() * ownedUpgradeChoices.length)]);
-  }
-
   const restPool = [...coreChoices, ...ownedUpgradeChoices]
-    .filter(c => !choices.some(x => x.key === c.key))
     .sort(() => Math.random() - 0.5);
 
   while (choices.length < choiceLimit && restPool.length > 0) {
