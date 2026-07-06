@@ -3655,6 +3655,23 @@
       font-weight: 800;
     }
 
+    .settingRowStack {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .settingBtnRow {
+      display: flex;
+      gap: 8px;
+    }
+
+    .settingBtnRow .settingsWideBtn {
+      margin-top: 0;
+      font-size: 12px;
+      padding: 10px 6px;
+    }
+
     /* ===== タブ操作域の拡大: 上部エリアをひとまわりコンパクトに ===== */
     /* 上部エリアは縦flexにし、情報欄(ノルマ・焼き加減)の増減はクッキー欄の
        伸縮だけで吸収する。タブとの境界やゲーム全体の比率は変わらない */
@@ -3999,7 +4016,7 @@
         <div class="infoBox">
           <h3>よくある質問</h3>
           <p><b>Q. 料金はかかりますか？</b><br>A. 完全無料です。アプリのインストールや会員登録も不要で、ブラウザだけで遊べます。</p>
-          <p><b>Q. セーブデータはどこに保存されますか？</b><br>A. お使いのブラウザのローカルストレージに自動保存されます。同じ端末・同じブラウザで開けば続きから遊べます。ブラウザのデータを削除するとセーブデータも消えるのでご注意ください。</p>
+          <p><b>Q. セーブデータはどこに保存されますか？</b><br>A. お使いのブラウザのローカルストレージに自動保存されます。同じ端末・同じブラウザで開けば続きから遊べます。ブラウザのデータを削除するとセーブデータも消えるのでご注意ください。設定画面の「ファイルに書き出す」を使うと、セーブデータをJSONファイルとしてブラウザの外(端末のストレージなど)に保存でき、別の端末やブラウザで「ファイルから読み込む」から復元できます。</p>
           <p><b>Q. 放置していても進みますか？</b><br>A. はい。ゲームを閉じている間も一定時間分のクッキーが自動で生産され、次に開いたときにまとめて受け取れます。</p>
           <p><b>Q. スマートフォンでも遊べますか？</b><br>A. はい。スマートフォン・タブレット・パソコンのブラウザに対応しています。</p>
         </div>
@@ -4039,6 +4056,14 @@
     <div class="settingRow">画面の装飾アニメーション<input type="checkbox" id="setFancyFx"></div>
     <div class="settingRow">カードの画像表示<input type="checkbox" id="setCardArt"></div>
     <div class="settingRow">カードの説明を省略表示<input type="checkbox" id="setCompact"></div>
+    <div class="settingRow settingRowStack">
+      <span>セーブデータの管理(ブラウザ外への保存)</span>
+      <div class="settingBtnRow">
+        <button id="exportSaveBtn" type="button" class="settingsWideBtn">ファイルに書き出す</button>
+        <button id="importSaveBtn" type="button" class="settingsWideBtn">ファイルから読み込む</button>
+      </div>
+      <input type="file" id="importSaveInput" accept="application/json,.json" style="display:none">
+    </div>
     <button id="settingsToTitleBtn" type="button" class="settingsWideBtn">タイトル画面に戻る</button>
   </div>
 </div>
@@ -7543,6 +7568,22 @@ addTap($("settingsToTitleBtn"), () => {
   returnToTitleScreen();
 });
 
+addTap($("exportSaveBtn"), () => {
+  playSound("tab");
+  exportSaveToFile();
+});
+
+addTap($("importSaveBtn"), () => {
+  playSound("tab");
+  $("importSaveInput").click();
+});
+
+$("importSaveInput").addEventListener("change", e => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = "";
+  if (file) importSaveFromFile(file);
+});
+
 addTap($("policyChoiceBackBtn"), () => {
   playSound("tab");
   closePolicyChoiceScreen();
@@ -8679,6 +8720,45 @@ function saveGame() {
   }
   state.lastSave = now;
   localStorage.setItem(saveKey, JSON.stringify(state));
+}
+
+function exportSaveToFile() {
+  saveGame();
+  const blob = new Blob([JSON.stringify(state)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const stamp = new Date(Date.now()).toISOString().replace(/[:.]/g, "-");
+  a.href = url;
+  a.download = `cookie-game-save_${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showMessage("セーブデータを書き出しました");
+}
+
+function importSaveFromFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const imported = JSON.parse(reader.result);
+      if (!imported || typeof imported !== "object") throw new Error("invalid save data");
+      if (!confirm("現在のセーブデータを上書きして読み込みます。よろしいですか？")) return;
+
+      state = imported;
+      ensureState();
+      state.lastSave = Date.now();
+      saveGame();
+
+      $("settingsOverlay").classList.remove("active");
+      updateTopOnly();
+      renderAllTabs();
+      showMessage("セーブデータを読み込みました");
+    } catch (e) {
+      alert("セーブデータの読み込みに失敗しました。ファイルが正しいか確認してください。");
+    }
+  };
+  reader.readAsText(file);
 }
 
 function findSavedData() {
