@@ -5406,7 +5406,10 @@ function createOrderSnapshot(id) {
 function ensureActiveOrder() {
   if (!orderBoardUnlocked()) return null;
   const def = state.activeOrder ? orderDef(state.activeOrder.id) : null;
-  if (!state.activeOrder || !def || !orderAvailable(def)) {
+  // 注文の切り替えは「制限時間切れ」と「達成」の時のみ。
+  // 途中で対象が購入不可になっても勝手に別の注文へ差し替えない
+  // (対象が無くなった注文は制限時間切れで自然に入れ替わる)。
+  if (!state.activeOrder || !def) {
     state.activeOrder = createOrderSnapshot();
   } else if (!state.activeOrder.expiresAt) {
     state.activeOrder.expiresAt = Date.now() + ORDER_TIME_LIMIT_MS;
