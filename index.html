@@ -12,15 +12,15 @@
   <meta property="og:locale" content="ja_JP">
   <link rel="canonical" href="https://bachikoljunior-blip.github.io/Simple-browser-cookie-clicker-game/">
 
-  <!--
-    Google AdSense 用スニペット
-    AdSense の審査に申し込むと「サイトにコードを貼り付けてください」と
-    ca-pub-XXXXXXXXXXXXXXXX 形式のコードが発行されます。
-    発行されたら、下のコメントを外して client= の値を自分のIDに書き換えてください。
-
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
-          crossorigin="anonymous"></script>
-  -->
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3280484274197291"
+       crossorigin="anonymous"></script>
+  <script>
+    // 転生(周回)の区切りで広告を表示するためのGames Ad Placement API用フック
+    window.adsbygoogle = window.adsbygoogle || [];
+    window.adBreak = window.adBreak || function (o) { adsbygoogle.push(o); };
+    window.adConfig = window.adConfig || function (o) { adsbygoogle.push(o); };
+  </script>
 
   <style>
     * {
@@ -9027,7 +9027,19 @@ function prestigeReset() {
   saveGame();
   updateTopOnly();
   renderAllTabs();
-  openSkillChoiceScreen();
+
+  // 次の周回を始める前に広告を挟む(表示できない場合もafterAdはすぐ呼ばれる)
+  adBreak({
+    type: "next",
+    name: "prestige-next-run",
+    beforeAd: () => {
+      if (bgmGainNode) bgmGainNode.gain.value = 0;
+    },
+    afterAd: () => {
+      applySettings();
+      openSkillChoiceScreen();
+    },
+  });
 }
 
 function completeReset() {
