@@ -1546,10 +1546,9 @@
     }
 
     #shopTab { background-image: linear-gradient(180deg, rgba(42,24,12,0.74), rgba(20,11,6,0.94)), var(--screen-shop); }
-    /* 研究・転生・一覧は見出し文字が読みやすいよう背景の枠を濃いめにする */
-    #researchTab { background-image: linear-gradient(180deg, rgba(24,14,8,0.90), rgba(9,5,3,0.97)), var(--screen-research); }
-    #prestigeTab { background-image: linear-gradient(180deg, rgba(26,15,8,0.90), rgba(9,5,3,0.97)), var(--screen-prestige); }
-    #infoTab { background-image: linear-gradient(180deg, rgba(24,14,8,0.90), rgba(9,5,3,0.97)), var(--screen-info); }
+    #researchTab { background-image: linear-gradient(180deg, rgba(35,20,12,0.74), rgba(12,7,4,0.95)), var(--screen-research); }
+    #prestigeTab { background-image: linear-gradient(180deg, rgba(38,22,12,0.76), rgba(13,7,4,0.96)), var(--screen-prestige); }
+    #infoTab { background-image: linear-gradient(180deg, rgba(35,21,13,0.76), rgba(12,7,4,0.96)), var(--screen-info); }
 
     .quotaBox, .stats div, .infoBox, .skillSummary div {
       background: linear-gradient(180deg, rgba(48,28,15,0.82), rgba(23,13,7,0.90));
@@ -2016,9 +2015,10 @@
     }
 
     #shopTab { background-image: var(--screen-shop) !important; }
-    #researchTab { background-image: var(--screen-research) !important; }
-    #prestigeTab { background-image: var(--screen-prestige) !important; }
-    #infoTab { background-image: var(--screen-info) !important; }
+    /* 研究・転生・一覧は見出し文字(上部)が読みやすいよう、背景の枠を濃いめにする(上端を暗く) */
+    #researchTab { background-image: linear-gradient(180deg, rgba(12,7,3,0.80), rgba(8,4,2,0.40) 28%, rgba(8,4,2,0.58)), var(--screen-research) !important; }
+    #prestigeTab { background-image: linear-gradient(180deg, rgba(12,7,3,0.80), rgba(8,4,2,0.42) 28%, rgba(8,4,2,0.60)), var(--screen-prestige) !important; }
+    #infoTab { background-image: linear-gradient(180deg, rgba(12,7,3,0.80), rgba(8,4,2,0.42) 28%, rgba(8,4,2,0.60)), var(--screen-info) !important; }
 
     #rewardModal {
       background: rgba(0,0,0,0.24) !important;
