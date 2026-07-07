@@ -4071,7 +4071,7 @@
         <div class="infoBox">
           <h3>よくある質問</h3>
           <p><b>Q. 料金はかかりますか？</b><br>A. 完全無料です。アプリのインストールや会員登録も不要で、ブラウザだけで遊べます。</p>
-          <p><b>Q. セーブデータはどこに保存されますか？</b><br>A. お使いのブラウザのローカルストレージに自動保存されます。同じ端末・同じブラウザで開けば続きから遊べます。ブラウザのデータを削除するとセーブデータも消えるのでご注意ください。機種変更や別のブラウザに移したいときは、設定画面の「ファイルに書き出す」でセーブデータをファイルとして保存し、移行先で「ファイルから読み込む」から復元できます。Googleでログインすれば、クラウドに自動保存することもできます。</p>
+          <p><b>Q. セーブデータはどこに保存されますか？</b><br>A. お使いのブラウザのローカルストレージに自動保存されます。同じ端末・同じブラウザで開けば続きから遊べます。ブラウザのデータを削除するとセーブデータも消えるのでご注意ください。機種変更や別のブラウザに移したいときは、設定画面からGoogleでログインすると、セーブデータがクラウドに自動保存され、別の端末でも同じアカウントで続きから遊べます。</p>
           <p><b>Q. 放置していても進みますか？</b><br>A. はい。ゲームを閉じている間も一定時間分のクッキーが自動で生産され、次に開いたときにまとめて受け取れます。</p>
           <p><b>Q. スマートフォンでも遊べますか？</b><br>A. はい。スマートフォン・タブレット・パソコンのブラウザに対応しています。</p>
         </div>
@@ -4112,15 +4112,6 @@
     <div class="settingRow">カードの画像表示<input type="checkbox" id="setCardArt"></div>
     <div class="settingRow">カードの説明を省略表示<input type="checkbox" id="setCompact"></div>
     <div class="settingRow">購入数の変更バーを表示<input type="checkbox" id="setShowBuyMode"></div>
-    <div class="settingRow settingRowStack">
-      <span>セーブデータの管理(ブラウザ外への保存)</span>
-      <div class="saveCodeHint">セーブデータはファイルとして書き出して保存できます。機種変更や別のブラウザに移すときは、書き出したファイルを読み込んでください。</div>
-      <div class="settingBtnRow">
-        <button id="exportSaveBtn" type="button" class="settingsWideBtn">ファイルに書き出す</button>
-        <button id="importSaveBtn" type="button" class="settingsWideBtn">ファイルから読み込む</button>
-      </div>
-      <input type="file" id="importSaveInput" accept="application/json,.json" style="display:none">
-    </div>
     <div class="settingRow settingRowStack">
       <span>クラウド保存(自動・任意)</span>
       <div class="saveCodeHint" id="cloudSyncStatus">Googleでログインすると、セーブデータが自動でクラウドに保存されます。</div>
@@ -7880,22 +7871,6 @@ addTap($("settingsToTitleBtn"), () => {
   returnToTitleScreen();
 });
 
-addTap($("exportSaveBtn"), () => {
-  playSound("tab");
-  exportSaveToFile();
-});
-
-addTap($("importSaveBtn"), () => {
-  playSound("tab");
-  $("importSaveInput").click();
-});
-
-$("importSaveInput").addEventListener("change", e => {
-  const file = e.target.files && e.target.files[0];
-  e.target.value = "";
-  if (file) importSaveFromFile(file);
-});
-
 addTap($("cloudLoginBtn"), () => {
   playSound("tab");
   signInToCloud();
@@ -9097,64 +9072,6 @@ function buildSavePayload() {
   saveGame();
   const stateJson = JSON.stringify(state);
   return { state, checksum: computeSaveChecksum(stateJson), savedAt: Date.now() };
-}
-
-function parseSavePayload(raw) {
-  const data = JSON.parse(raw);
-  if (data && typeof data === "object" && data.state && typeof data.checksum === "string") {
-    const verified = computeSaveChecksum(JSON.stringify(data.state)) === data.checksum;
-    return { state: data.state, verified };
-  }
-  // 旧形式(チェックサムなしでstateそのものを書き出していたバージョン)との互換のため
-  return { state: data, verified: null };
-}
-
-function applyImportedSaveJson(raw) {
-  const parsed = parseSavePayload(raw);
-  if (!parsed.state || typeof parsed.state !== "object") throw new Error("invalid save data");
-
-  if (parsed.verified === false) {
-    if (!confirm("セーブデータが破損しているか、改ざんされている可能性があります。正しく復元されない場合があります。それでも読み込みますか？")) return;
-  } else if (!confirm("現在のセーブデータを上書きして読み込みます。よろしいですか？")) {
-    return;
-  }
-
-  state = parsed.state;
-  ensureState();
-  state.lastSave = Date.now();
-  saveGame();
-
-  $("settingsOverlay").classList.remove("active");
-  updateTopOnly();
-  renderAllTabs();
-  showMessage("セーブデータを読み込みました");
-}
-
-function exportSaveToFile() {
-  const payload = buildSavePayload();
-  const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  const stamp = new Date(Date.now()).toISOString().replace(/[:.]/g, "-");
-  a.href = url;
-  a.download = `cookie-game-save_${stamp}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-  showMessage("セーブデータを書き出しました");
-}
-
-function importSaveFromFile(file) {
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      applyImportedSaveJson(reader.result);
-    } catch (e) {
-      alert("セーブデータの読み込みに失敗しました。ファイルが正しいか確認してください。");
-    }
-  };
-  reader.readAsText(file);
 }
 
 /* ===== クラウド保存(Firebase) ===== */
