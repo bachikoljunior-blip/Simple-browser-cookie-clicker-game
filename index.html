@@ -1546,9 +1546,10 @@
     }
 
     #shopTab { background-image: linear-gradient(180deg, rgba(42,24,12,0.74), rgba(20,11,6,0.94)), var(--screen-shop); }
-    #researchTab { background-image: linear-gradient(180deg, rgba(35,20,12,0.74), rgba(12,7,4,0.95)), var(--screen-research); }
-    #prestigeTab { background-image: linear-gradient(180deg, rgba(38,22,12,0.76), rgba(13,7,4,0.96)), var(--screen-prestige); }
-    #infoTab { background-image: linear-gradient(180deg, rgba(35,21,13,0.76), rgba(12,7,4,0.96)), var(--screen-info); }
+    /* 研究・転生・一覧は見出し文字が読みやすいよう背景の枠を濃いめにする */
+    #researchTab { background-image: linear-gradient(180deg, rgba(24,14,8,0.90), rgba(9,5,3,0.97)), var(--screen-research); }
+    #prestigeTab { background-image: linear-gradient(180deg, rgba(26,15,8,0.90), rgba(9,5,3,0.97)), var(--screen-prestige); }
+    #infoTab { background-image: linear-gradient(180deg, rgba(24,14,8,0.90), rgba(9,5,3,0.97)), var(--screen-info); }
 
     .quotaBox, .stats div, .infoBox, .skillSummary div {
       background: linear-gradient(180deg, rgba(48,28,15,0.82), rgba(23,13,7,0.90));
@@ -3813,7 +3814,7 @@
     }
 
     .policyChoiceInner {
-      width: min(460px, 100%);
+      width: min(560px, 100%);
     }
 
     .policyChoiceHeader {
@@ -3835,30 +3836,40 @@
       color: #bdd5e8;
     }
 
+    /* 5つの方針をバランスよく上3・下2で並べる(6分割グリッド) */
     .policyChoiceRow {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
     }
 
     .policyChoiceBtn {
-      display: block;
-      width: 100%;
-      padding: 14px 16px;
+      grid-column: span 2;            /* 上段は3つ(2+2+2=6) */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 132px;
+      padding: 16px 14px;
       border-radius: 14px;
       border: 1px solid rgba(120, 185, 255, 0.34);
       background: linear-gradient(150deg, rgba(12, 28, 50, 0.96), rgba(4, 10, 20, 0.98));
       color: #dcefff;
-      text-align: left;
+      text-align: center;
       touch-action: manipulation;
       transition: transform 0.08s ease, filter 0.12s ease, border-color 0.15s ease;
+    }
+
+    /* 下段は2つ(3+3=6)で中央寄せ */
+    .policyChoiceBtn:nth-child(4),
+    .policyChoiceBtn:nth-child(5) {
+      grid-column: span 3;
     }
 
     .policyChoiceBtn b {
       display: block;
       font-size: 16px;
       color: #fff;
-      margin-bottom: 3px;
+      margin-bottom: 5px;
     }
 
     .policyChoiceBtn span {
@@ -3866,6 +3877,15 @@
       font-size: 12px;
       color: rgba(207, 232, 255, 0.72);
       line-height: 1.45;
+    }
+
+    @media (max-width: 380px) {
+      .policyChoiceBtn {
+        min-height: 122px;
+        padding: 13px 9px;
+      }
+      .policyChoiceBtn b { font-size: 15px; }
+      .policyChoiceBtn span { font-size: 11px; }
     }
 
     .policyChoiceBtn.pressed,
@@ -5896,10 +5916,11 @@ function orderTimeRemainingMs(order) {
 
 function renderOrderBoard() {
   if (!orderBoardUnlocked()) {
+    // スキルツリー以外では未解放スキル名を伏せる
     return `
       <div class="infoBox orderBoardBox">
-        <h3>注文ボード</h3>
-        <div class="desc">経済分析の先にある「注文ボード」スキルで解放。</div>
+        <h3>？？？</h3>
+        <div class="desc">まだ解放されていない機能です。ゲームを進めると解放されます。</div>
       </div>
     `;
   }
