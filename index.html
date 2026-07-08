@@ -4138,9 +4138,9 @@
   <div class="settingsPanel">
     <div class="settingsHead">
       <h2>次の周回へ</h2>
-      <button id="adChoiceCloseBtn" type="button" class="titleAboutCloseBtn" aria-label="スキルツリーを確認する">✕</button>
+      <button id="adChoiceCloseBtn" type="button" class="titleAboutCloseBtn" aria-label="閉じる">✕</button>
     </div>
-    <div class="saveCodeHint">広告を見るか、広告非表示(買い切り)を購入すると次の周回に進めます。(✕でスキルツリーだけ先に確認できます)</div>
+    <div class="saveCodeHint">広告を見るか、広告非表示(買い切り)を購入すると次の周回が始まります。(✕を押すとスキル選択画面に戻れます)</div>
     <button id="adChoiceWatchBtn" type="button" class="settingsWideBtn">広告を見て次の周回へ進む</button>
     <button id="adChoiceBuyBtn" type="button" class="settingsWideBtn">広告を消す(¥299・買い切り)</button>
   </div>
@@ -4831,7 +4831,6 @@ let goldenAfterheatTimers = [];
 let activeTab = "shopTab";
 let selectedSkillId = null;
 let skillViewMode = false;
-let returningToAdChoice = false; // 転生直後、広告選択ポップアップを閉じてスキルツリーを確認した後、選択ポップアップに戻すためのフラグ
 let skillMapZoom = 0.92;
 
 const SKILL_MAP_WIDTH = 2120;
@@ -7960,7 +7959,7 @@ addTap($("adChoiceWatchBtn"), () => {
     },
     afterAd: () => {
       applySettings();
-      openSkillChoiceScreen();
+      proceedAfterSkillStart();
     },
   });
 });
@@ -7973,8 +7972,6 @@ addTap($("adChoiceBuyBtn"), () => {
 addTap($("adChoiceCloseBtn"), () => {
   $("adChoiceOverlay").classList.remove("active");
   playSound("tab");
-  returningToAdChoice = true;
-  openSkillTreeView();
 });
 
 addTap($("policyChoiceBackBtn"), () => {
@@ -8083,16 +8080,27 @@ addTap($("skillStartBtn"), () => {
     closeSkillChoiceScreen();
     updateTopOnly();
     renderActiveTab();
-    // 広告選択ポップアップを閉じてスキルツリーを見に来た場合は、確認後にポップアップへ戻す
-    if (returningToAdChoice) {
-      returningToAdChoice = false;
-      showAdChoiceThenContinue();
-    }
     return;
   }
 
   if (!pausedForSkillChoice()) return;
 
+  attemptStartRun();
+});
+
+// スキル選択画面の「スタート」を押した時の入り口。
+// 広告非表示を購入済みなら即座に開始処理へ、未購入なら「広告を見る/購入する」の
+// 選択ポップアップを出し、選ぶまで開始処理(方針選択 or 周回開始)を保留する。
+// ポップアップの✕はスキル選択画面に戻るだけで、開始処理には進まない。
+function attemptStartRun() {
+  if (adsRemoved()) {
+    proceedAfterSkillStart();
+    return;
+  }
+  $("adChoiceOverlay").classList.add("active");
+}
+
+function proceedAfterSkillStart() {
   // 周回方針が解禁されていて未選択なら、スタート後に方針選択画面を表示する
   if (runPolicyUnlocked() && !state.runPolicyChosen) {
     openPolicyChoiceScreen();
@@ -8100,7 +8108,7 @@ addTap($("skillStartBtn"), () => {
   }
 
   beginRunAfterSkills();
-});
+}
 
 function upgradeArt(u) {
   const map = {
@@ -9105,8 +9113,7 @@ function prestigeReset() {
   updateTopOnly();
   renderAllTabs();
 
-  // 次の周回を始める前に「広告を見る/購入する」を選ばせる(購入済みならスキップ)
-  showAdChoiceThenContinue();
+  openSkillChoiceScreen();
 }
 
 function completeReset() {
@@ -9341,16 +9348,6 @@ function syncCloudSettingsUi() {
     logoutBtn.style.display = "none";
     syncNowBtn.style.display = "none";
   }
-}
-
-// 転生後、次の周回に進む前の分岐点。購入済みならそのまま進み、
-// 未購入なら「広告を見る/購入する」の2択を出す(選ぶまで先に進めない)
-function showAdChoiceThenContinue() {
-  if (adsRemoved()) {
-    openSkillChoiceScreen();
-    return;
-  }
-  $("adChoiceOverlay").classList.add("active");
 }
 
 function syncAdRemovalUi() {
