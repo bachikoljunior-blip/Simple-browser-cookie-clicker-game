@@ -4254,7 +4254,7 @@
 
       <div class="skillActionRow">
         <button id="takeSelectedSkillBtn" class="takeSkillBtn">この効果を取る</button>
-        <button id="skillStartBtn" class="startBtn locked">この構成でスタート</button>
+        <button id="skillStartBtn" class="startBtn locked">スタート</button>
       </div>
     </div>
 
@@ -7849,7 +7849,7 @@ function renderSkillChoiceScreen() {
   const startEnabled = skillViewMode || canStart;
   startBtn.classList.toggle("locked", !startEnabled);
   startBtn.disabled = !startEnabled;
-  startBtn.textContent = skillViewMode ? "閉じる" : "この構成でスタート";
+  startBtn.textContent = skillViewMode ? "閉じる" : "スタート";
 
   const lines = visibleSkills.flatMap(skill => {
     return skill.prereqs.map(reqId => {
