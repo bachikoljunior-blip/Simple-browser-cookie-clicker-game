@@ -4134,6 +4134,17 @@
   </div>
 </div>
 
+<div id="adChoiceOverlay" class="settingsOverlay">
+  <div class="settingsPanel">
+    <div class="settingsHead">
+      <h2>次の周回へ</h2>
+    </div>
+    <div class="saveCodeHint">広告を見るか、広告非表示(買い切り)を購入すると次の周回に進めます。</div>
+    <button id="adChoiceWatchBtn" type="button" class="settingsWideBtn">広告を見て次の周回へ進む</button>
+    <button id="adChoiceBuyBtn" type="button" class="settingsWideBtn">広告を消す(¥299・買い切り)</button>
+  </div>
+</div>
+
 <main class="game">
   <section class="top">
     <button id="settingsBtn" type="button" aria-label="設定">⚙</button>
@@ -7936,6 +7947,27 @@ addTap($("adRemoveBtn"), () => {
   location.href = AD_REMOVE_LINK_URL;
 });
 
+addTap($("adChoiceWatchBtn"), () => {
+  $("adChoiceOverlay").classList.remove("active");
+  playSound("tab");
+  adBreak({
+    type: "next",
+    name: "prestige-next-run",
+    beforeAd: () => {
+      if (bgmGainNode) bgmGainNode.gain.value = 0;
+    },
+    afterAd: () => {
+      applySettings();
+      openSkillChoiceScreen();
+    },
+  });
+});
+
+addTap($("adChoiceBuyBtn"), () => {
+  playSound("tab");
+  location.href = AD_REMOVE_LINK_URL;
+});
+
 addTap($("policyChoiceBackBtn"), () => {
   playSound("tab");
   closePolicyChoiceScreen();
@@ -9059,22 +9091,8 @@ function prestigeReset() {
   updateTopOnly();
   renderAllTabs();
 
-  // 次の周回を始める前に広告を挟む(広告非表示を購入済みならスキップ)
-  if (adsRemoved()) {
-    openSkillChoiceScreen();
-    return;
-  }
-  adBreak({
-    type: "next",
-    name: "prestige-next-run",
-    beforeAd: () => {
-      if (bgmGainNode) bgmGainNode.gain.value = 0;
-    },
-    afterAd: () => {
-      applySettings();
-      openSkillChoiceScreen();
-    },
-  });
+  // 次の周回を始める前に「広告を見る/購入する」を選ばせる(購入済みならスキップ)
+  showAdChoiceThenContinue();
 }
 
 function completeReset() {
@@ -9309,6 +9327,16 @@ function syncCloudSettingsUi() {
     logoutBtn.style.display = "none";
     syncNowBtn.style.display = "none";
   }
+}
+
+// 転生後、次の周回に進む前の分岐点。購入済みならそのまま進み、
+// 未購入なら「広告を見る/購入する」の2択を出す(選ぶまで先に進めない)
+function showAdChoiceThenContinue() {
+  if (adsRemoved()) {
+    openSkillChoiceScreen();
+    return;
+  }
+  $("adChoiceOverlay").classList.add("active");
 }
 
 function syncAdRemovalUi() {
