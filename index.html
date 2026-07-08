@@ -4123,6 +4123,13 @@
         <button id="cloudSyncNowBtn" type="button" class="settingsWideBtn" style="display:none">今すぐ同期する</button>
       </div>
     </div>
+    <div class="settingRow settingRowStack">
+      <span>広告の非表示(買い切り)</span>
+      <div class="saveCodeHint" id="adRemoveStatus">転生時に表示される広告を、購入して消すことができます。</div>
+      <div class="settingBtnRow">
+        <button id="adRemoveBtn" type="button" class="settingsWideBtn">広告を消す(購入する)</button>
+      </div>
+    </div>
     <button id="settingsToTitleBtn" type="button" class="settingsWideBtn">タイトル画面に戻る</button>
   </div>
 </div>
@@ -4404,6 +4411,28 @@ const FIREBASE_CONFIG = {
 };
 
 const saveKey = "cookie_game_compact_simple";
+
+// 広告非表示(買い切り)。Stripe Payment Linkの「支払い後のリダイレクト先」を
+// このページ+ ?adsRemoved=1 に設定しておくと、戻ってきたタイミングでフラグが立つ。
+// TODO: 実際に発行したStripe Payment LinkのURLに差し替える
+const AD_REMOVE_LINK_URL = "https://buy.stripe.com/XXXXXXXXXXXX";
+const AD_REMOVE_KEY = saveKey + "_ads_removed";
+
+function adsRemoved() {
+  try { return localStorage.getItem(AD_REMOVE_KEY) === "1"; } catch (e) { return false; }
+}
+
+(function handleAdRemovalReturn() {
+  try {
+    const params = new URLSearchParams(location.search);
+    if (params.get("adsRemoved") !== "1") return;
+    localStorage.setItem(AD_REMOVE_KEY, "1");
+    params.delete("adsRemoved");
+    params.delete("session_id");
+    const qs = params.toString();
+    history.replaceState(null, "", location.pathname + (qs ? `?${qs}` : "") + location.hash);
+  } catch (e) {}
+})();
 
 const oldSaveKeys = [
   "cookie_game_compact", // 旧: 2ゲーム共通だったキー(同一オリジンで衝突)。初回のみ引き継ぐ
@@ -7857,6 +7886,7 @@ function syncSettingsUi() {
 addTap($("settingsBtn"), () => {
   syncSettingsUi();
   syncCloudSettingsUi();
+  syncAdRemovalUi();
   $("settingsOverlay").classList.add("active");
   playSound("tab");
 });
@@ -7884,6 +7914,11 @@ addTap($("cloudLogoutBtn"), () => {
 addTap($("cloudSyncNowBtn"), () => {
   playSound("tab");
   pushCloudSave();
+});
+
+addTap($("adRemoveBtn"), () => {
+  playSound("tab");
+  location.href = AD_REMOVE_LINK_URL;
 });
 
 addTap($("policyChoiceBackBtn"), () => {
@@ -9007,7 +9042,11 @@ function prestigeReset() {
   updateTopOnly();
   renderAllTabs();
 
-  // 次の周回を始める前に広告を挟む(表示できない場合もafterAdはすぐ呼ばれる)
+  // 次の周回を始める前に広告を挟む(広告非表示を購入済みならスキップ)
+  if (adsRemoved()) {
+    openSkillChoiceScreen();
+    return;
+  }
   adBreak({
     type: "next",
     name: "prestige-next-run",
@@ -9252,6 +9291,20 @@ function syncCloudSettingsUi() {
     loginBtn.style.display = "";
     logoutBtn.style.display = "none";
     syncNowBtn.style.display = "none";
+  }
+}
+
+function syncAdRemovalUi() {
+  const statusEl = $("adRemoveStatus");
+  const btn = $("adRemoveBtn");
+  if (!statusEl || !btn) return;
+
+  if (adsRemoved()) {
+    statusEl.textContent = "購入済みです。広告は表示されません。";
+    btn.style.display = "none";
+  } else {
+    statusEl.textContent = "転生時に表示される広告を、購入して消すことができます。";
+    btn.style.display = "";
   }
 }
 
