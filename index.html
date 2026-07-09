@@ -21,6 +21,9 @@
     window.adsbygoogle = window.adsbygoogle || [];
     window.adBreak = window.adBreak || function (o) { adsbygoogle.push(o); };
     window.adConfig = window.adConfig || function (o) { adsbygoogle.push(o); };
+    // Ad Placement API を初期化しておく。これがないと adBreak のコールバック
+    // (adBreakDone 等)が呼ばれず、広告が出ない環境で進行判定ができない。
+    adConfig({ preloadAdBreaks: "on", sound: "on" });
   </script>
 
   <style>
@@ -861,13 +864,8 @@
       flex: 0 0 auto;
       position: relative;
       z-index: 30;
-      /* 上部パネルは画面の45%までに抑え、残りをスキルマップに回す。
-         中の説明パネルだけをスクロールさせ、見出しと操作ボタン(取得/スタート)は
-         常に表示されるようにする(短い画面でボタンが隠れて押せなくなるのを防ぐ)。 */
-      max-height: 45%;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+      /* 見出し・スキル説明・操作ボタンは内容に合わせた高さで常に全部表示する
+         (スクロールさせない)。余った高さは下のスキルマップが吸収して縮む。 */
       background:
         linear-gradient(135deg, rgba(37,155,255,0.14), rgba(176,72,255,0.08) 48%, rgba(255,185,62,0.09)),
         rgba(5, 8, 16, 0.94);
@@ -922,11 +920,7 @@
     }
 
     .selectedSkillPanel {
-      /* このパネルだけが伸縮・スクロールし、下の操作ボタンは常に見える位置に残す */
-      flex: 1 1 auto;
-      min-height: 0;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
+      /* 説明はスクロールさせず、内容の高さのまま表示する */
       background:
         linear-gradient(135deg, rgba(80,180,255,0.10), rgba(0,0,0,0.10)),
         rgba(2,8,18,0.92);
@@ -4916,11 +4910,10 @@
     }
 
     /* ===== クッキー画面(上部)の各表示が潰れない調整 ===== */
-    /* クッキー本体を最小116pxまでは縮めない(潰れ防止)。タブ表示域を50→46%に
-       わずかに譲り、それでも収まらない場合は切らずに縦スクロールさせる */
+    /* クッキー画面はスクロールさせない。収まらない分はクッキー画像(.cookieWrap)を
+       縮めて必ず画面内に全部を表示する(数値・ノルマ等は縮めない設定のまま)。 */
     .top {
-      overflow-y: auto !important;
-      overflow-x: hidden !important;
+      overflow: hidden !important;
       scrollbar-width: none;
     }
     .top::-webkit-scrollbar { display: none; }
@@ -4929,7 +4922,7 @@
       max-height: 46% !important;
     }
     .cookieWrap {
-      min-height: 116px !important;
+      min-height: 72px !important;
     }
 
     /* ===== スキルツリーのスワイプ中はアニメ/重フィルタを止めてガクつきを防ぐ ===== */
@@ -11087,13 +11080,16 @@ addTap($("adChoiceWatchBtn"), () => {
   $("adChoiceOverlay").classList.remove("active");
   playSound("tab");
 
-  // 周回開始は必ず1回だけ実行する。afterAd は「広告が実際に表示された時だけ」呼ばれるため、
-  // 広告が配信されない環境では周回が始まらず詰んでしまう。adBreakDone(広告の有無に関わらず
-  // 最後に必ず呼ばれる)とタイマーのフォールバックで、どんな環境でも確実に次の周回へ進める。
-  let started = false;
+  // 周回開始は必ず1回だけ実行する。
+  // 広告が配信されない環境(未承認/在庫なし等)では広告SDKのコールバックが来ず、
+  // 待たせると「進めない」と感じてしまう。そこで:
+  //   ・広告が実際に始まったら(beforeAd)フォールバックを止め、視聴後(afterAd)に進む
+  //   ・広告が出ない場合は adBreakDone、来なければ短時間のフォールバックで素早く進む
+  let done = false;
+  let adShowing = false;
   const startRun = () => {
-    if (started) return;
-    started = true;
+    if (done || adShowing) return;
+    done = true;
     applySettings();
     proceedAfterSkillStart();
   };
@@ -11103,17 +11099,24 @@ addTap($("adChoiceWatchBtn"), () => {
       type: "next",
       name: "prestige-next-run",
       beforeAd: () => {
+        adShowing = true; // 広告が出た → フォールバックでは進めない
         if (bgmGainNode) bgmGainNode.gain.value = 0;
       },
-      afterAd: startRun,
-      adBreakDone: startRun,
+      afterAd: () => {
+        adShowing = false;
+        startRun();
+      },
+      adBreakDone: () => {
+        // 広告が出なかった場合はここで即進む(出た場合は afterAd 側で進む)
+        if (!adShowing) startRun();
+      },
     });
   } catch (e) {
     startRun();
   }
 
-  // 広告SDKのコールバックが一切来ない環境でも、少し待って必ず周回を始める
-  setTimeout(startRun, 5000);
+  // 広告が出ない/コールバックが来ない環境でも、待たせず素早く次の周回へ進む
+  setTimeout(() => { if (!adShowing) startRun(); }, 1200);
 });
 
 // 「次の周回へ」ポップアップの✕:スキル選択画面に戻るだけ(周回開始は保留)
