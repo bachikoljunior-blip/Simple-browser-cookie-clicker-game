@@ -5095,13 +5095,6 @@
         <button id="cloudSyncNowBtn" type="button" class="settingsWideBtn" style="display:none">今すぐ同期する</button>
       </div>
     </div>
-    <div class="settingRow settingRowStack">
-      <span>広告の非表示(買い切り)</span>
-      <div class="saveCodeHint" id="adRemoveStatus">一部の場面で表示される広告を、購入して消すことができます。</div>
-      <div class="settingBtnRow">
-        <button id="adRemoveBtn" type="button" class="settingsWideBtn">広告を消す(購入する)</button>
-      </div>
-    </div>
     <button id="settingsToTitleBtn" type="button" class="settingsWideBtn">タイトル画面に戻る</button>
   </div>
 </div>
@@ -5112,9 +5105,8 @@
       <h2>次の周回へ</h2>
       <button id="adChoiceCloseBtn" type="button" class="titleAboutCloseBtn" aria-label="閉じる">✕</button>
     </div>
-    <div class="saveCodeHint">広告を見るか、広告非表示(買い切り)を購入すると次の周回が始まります。(✕を押すとスキル選択画面に戻れます)</div>
+    <div class="saveCodeHint">広告を見ると次の周回が始まります。(✕を押すとスキル選択画面に戻れます)</div>
     <button id="adChoiceWatchBtn" type="button" class="settingsWideBtn">広告を見て次の周回へ進む</button>
-    <button id="adChoiceBuyBtn" type="button" class="settingsWideBtn">広告を消す(¥299・買い切り)</button>
   </div>
 </div>
 
@@ -5417,9 +5409,8 @@ const FIREBASE_CONFIG = {
 
 const saveKey = "cookie_game_compact_simple";
 
-// 広告非表示(買い切り)。Stripe Payment Linkの「支払い後のリダイレクト先」を
-// このページ+ ?adsRemoved=1 に設定しておくと、戻ってきたタイミングでフラグが立つ。
-const AD_REMOVE_LINK_URL = "https://buy.stripe.com/28E00j9z25P99EEblS1kA01";
+// 広告非表示フラグの保存キー(過去に広告非表示だった端末の状態を引き継ぐためだけに参照する)。
+// 買い切りの有料販売は廃止したため、新たに広告を消す手段は提供していない。
 const AD_REMOVE_KEY = saveKey + "_ads_removed";
 
 // 端末のlocalStorageだけを見た購入フラグ(state読み込み前でも参照できる)
@@ -5437,18 +5428,6 @@ function setLocalAdsRemovedFlag() {
 function adsRemoved() {
   return localAdsRemovedFlag() || Boolean(typeof state !== "undefined" && state && state.adsRemoved);
 }
-
-(function handleAdRemovalReturn() {
-  try {
-    const params = new URLSearchParams(location.search);
-    if (params.get("adsRemoved") !== "1") return;
-    setLocalAdsRemovedFlag();
-    params.delete("adsRemoved");
-    params.delete("session_id");
-    const qs = params.toString();
-    history.replaceState(null, "", location.pathname + (qs ? `?${qs}` : "") + location.hash);
-  } catch (e) {}
-})();
 
 const oldSaveKeys = [
   "cookie_game_compact", // 旧: 2ゲーム共通だったキー(同一オリジンで衝突)。初回のみ引き継ぐ
@@ -11075,30 +11054,8 @@ function syncSettingsUi() {
 addTap($("settingsBtn"), () => {
   syncSettingsUi();
   syncCloudSettingsUi();
-  syncAdRemovalUi();
   $("settingsOverlay").classList.add("active");
   playSound("tab");
-});
-
-// 広告非表示(買い切り)の状態に合わせて設定画面の表示を切り替える
-function syncAdRemovalUi() {
-  const statusEl = $("adRemoveStatus");
-  const btn = $("adRemoveBtn");
-  if (!statusEl || !btn) return;
-
-  if (adsRemoved()) {
-    statusEl.textContent = "購入済みです。広告は表示されません。";
-    btn.style.display = "none";
-  } else {
-    statusEl.textContent = "一部の場面で表示される広告を、購入して消すことができます。";
-    btn.style.display = "";
-  }
-}
-
-// 設定画面「広告を消す(購入する)」→ Stripeの支払いページへ
-addTap($("adRemoveBtn"), () => {
-  playSound("tab");
-  location.href = AD_REMOVE_LINK_URL;
 });
 
 // 「次の周回へ」ポップアップ:広告を見て次の周回へ進む
@@ -11116,12 +11073,6 @@ addTap($("adChoiceWatchBtn"), () => {
       proceedAfterSkillStart();
     },
   });
-});
-
-// 「次の周回へ」ポップアップ:広告を消す(買い切り購入)
-addTap($("adChoiceBuyBtn"), () => {
-  playSound("tab");
-  location.href = AD_REMOVE_LINK_URL;
 });
 
 // 「次の周回へ」ポップアップの✕:スキル選択画面に戻るだけ(周回開始は保留)
