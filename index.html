@@ -5194,7 +5194,7 @@
 
       <div class="skillActionRow">
         <button id="takeSelectedSkillBtn" class="takeSkillBtn">この効果を取る</button>
-        <button id="skillStartBtn" class="startBtn locked">この構成でスタート</button>
+        <button id="skillStartBtn" class="startBtn locked">スタート</button>
       </div>
     </div>
 
@@ -10950,7 +10950,7 @@ function renderSkillChoiceScreen() {
   const startEnabled = skillViewMode || canStart;
   startBtn.classList.toggle("locked", !startEnabled);
   startBtn.disabled = !startEnabled;
-  startBtn.textContent = skillViewMode ? "閉じる" : (debugMode && !pausedForSkillChoice() ? "戻る" : "この構成でスタート");
+  startBtn.textContent = skillViewMode ? "閉じる" : (debugMode && !pausedForSkillChoice() ? "戻る" : "スタート");
 
   const lines = visibleSkills.flatMap(skill => {
     // 前提が全て解放される(=購入可能になる)まで線は繋がない
