@@ -977,6 +977,22 @@
       margin-top: 8px;
     }
 
+    .skillCancelBtn {
+      flex: 0 0 auto;
+      width: 100%;
+      margin-top: 8px;
+      padding: 9px;
+      border-radius: 10px;
+      border: 1px solid rgba(120,160,200,0.34);
+      background: rgba(20,30,48,0.72);
+      color: #c8d8ec;
+      font-size: 12px;
+      font-weight: 800;
+      touch-action: manipulation;
+    }
+
+    .skillCancelBtn:active { filter: brightness(0.88); }
+
     .takeSkillBtn,
     .startBtn {
       width: 100%;
@@ -5258,6 +5274,7 @@
         <button id="takeSelectedSkillBtn" class="takeSkillBtn">この効果を取る</button>
         <button id="skillStartBtn" class="startBtn locked">スタート</button>
       </div>
+      <button id="cancelRebirthBtn" class="skillCancelBtn" type="button" style="display:none">← 転生前に戻る</button>
     </div>
 
     <div class="skillFloatingControls">
@@ -11012,6 +11029,13 @@ function renderSkillChoiceScreen() {
   startBtn.disabled = !startEnabled;
   startBtn.textContent = skillViewMode ? "閉じる" : (debugMode && !pausedForSkillChoice() ? "戻る" : "スタート");
 
+  // 転生直後(周回開始前)だけ「転生前に戻る」を表示する。確認モードや周回中は出さない。
+  const cancelBtn = $("cancelRebirthBtn");
+  if (cancelBtn) {
+    const canCancel = !skillViewMode && pausedForSkillChoice() && preRebirthSnapshotAvailable();
+    cancelBtn.style.display = canCancel ? "" : "none";
+  }
+
   const lines = visibleSkills.flatMap(skill => {
     // 前提が全て解放される(=購入可能になる)まで線は繋がない
     if (!skill.prereqs.every(id => hasSkill(id))) return "";
@@ -11517,8 +11541,16 @@ document.addEventListener("fullscreenchange", () => {
 
 addTap($("takeSelectedSkillBtn"), takeSelectedSkill);
 
+// スキル画面から転生を取り消して転生前(周回途中)に戻る
+addTap($("cancelRebirthBtn"), () => {
+  playSound("tab");
+  cancelRebirth();
+});
+
 // スキル選択(→方針→ステージ選択)を終えてから実際に周回を開始する処理
 function beginRunAfterSkills() {
+  // 周回を開始したら転生は確定。以後は「転生前に戻る」できないようスナップショットを破棄する。
+  clearPreRebirthSnapshot();
   state.awaitingSkillChoice = false;
   state.skillChoiceStartCount = boughtSkillCount();
   state.runStart = Date.now();
@@ -12720,10 +12752,50 @@ document.querySelectorAll(".tab").forEach(btn => {
 
 if ($("playFullscreenBtn")) addTap($("playFullscreenBtn"), togglePlayFullscreen);
 
+// 転生前の状態スナップショット。転生直後のスキル画面から「転生前に戻る」で取り消せるようにする。
+// (周回を開始した時点で確定=スナップショットを破棄する)
+const PREREBIRTH_KEY = saveKey + "_prerebirth";
+
+function preRebirthSnapshotAvailable() {
+  try { return !!localStorage.getItem(PREREBIRTH_KEY); } catch (e) { return false; }
+}
+
+function clearPreRebirthSnapshot() {
+  try { localStorage.removeItem(PREREBIRTH_KEY); } catch (e) {}
+}
+
+// スキル画面から転生を取り消して、転生前(周回途中)の状態に戻す
+function cancelRebirth() {
+  let snap;
+  try { snap = localStorage.getItem(PREREBIRTH_KEY); } catch (e) { snap = null; }
+  if (!snap) return;
+  try {
+    state = JSON.parse(snap);
+  } catch (e) { return; }
+  ensureState();
+  clearPreRebirthSnapshot();
+
+  skillViewMode = false;
+  state.awaitingSkillChoice = false;
+  selectedSkillId = null;
+  closeSkillChoiceScreen();
+  applyStageTheme();
+  updateWorkshopTabVisibility();
+  saveGame();
+  updateTopOnly();
+  renderAllTabs();
+  switchTab("prestigeTab");
+  showMessage("転生前に戻しました");
+}
+
 function prestigeReset() {
   const gain = prestigeGain();
   if (gain <= 0 || pausedForSkillChoice()) return;
   if (state.cookies.lt(1000000)) return;
+
+  // 転生前の状態を保存(スキル画面から取り消せるように)。周回開始で破棄する。
+  try { localStorage.setItem(PREREBIRTH_KEY, JSON.stringify(state)); } catch (e) {}
+
   state.cookies = state.cookies.sub(1000000);
 
   const keepTotal = state.totalCookies;
