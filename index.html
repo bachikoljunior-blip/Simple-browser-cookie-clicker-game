@@ -11074,17 +11074,34 @@ addTap($("settingsBtn"), () => {
 addTap($("adChoiceWatchBtn"), () => {
   $("adChoiceOverlay").classList.remove("active");
   playSound("tab");
-  adBreak({
-    type: "next",
-    name: "prestige-next-run",
-    beforeAd: () => {
-      if (bgmGainNode) bgmGainNode.gain.value = 0;
-    },
-    afterAd: () => {
-      applySettings();
-      proceedAfterSkillStart();
-    },
-  });
+
+  // 周回開始は必ず1回だけ実行する。afterAd は「広告が実際に表示された時だけ」呼ばれるため、
+  // 広告が配信されない環境では周回が始まらず詰んでしまう。adBreakDone(広告の有無に関わらず
+  // 最後に必ず呼ばれる)とタイマーのフォールバックで、どんな環境でも確実に次の周回へ進める。
+  let started = false;
+  const startRun = () => {
+    if (started) return;
+    started = true;
+    applySettings();
+    proceedAfterSkillStart();
+  };
+
+  try {
+    adBreak({
+      type: "next",
+      name: "prestige-next-run",
+      beforeAd: () => {
+        if (bgmGainNode) bgmGainNode.gain.value = 0;
+      },
+      afterAd: startRun,
+      adBreakDone: startRun,
+    });
+  } catch (e) {
+    startRun();
+  }
+
+  // 広告SDKのコールバックが一切来ない環境でも、少し待って必ず周回を始める
+  setTimeout(startRun, 5000);
 });
 
 // 「次の周回へ」ポップアップの✕:スキル選択画面に戻るだけ(周回開始は保留)
