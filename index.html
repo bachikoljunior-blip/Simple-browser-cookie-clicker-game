@@ -12961,7 +12961,10 @@ function computeSaveChecksum(stateJson) {
 function buildSavePayload() {
   saveGame();
   const stateJson = JSON.stringify(state);
-  return { state, checksum: computeSaveChecksum(stateJson), savedAt: Date.now() };
+  // Firestore には state を JSON 文字列として保存する。
+  // stateオブジェクトのまま渡すと、Decimal(クラスのインスタンス)のシリアライズが不安定で
+  // (空オブジェクト化・カスタム型拒否など)、復元時にデータが壊れる/戻せないことがあるため。
+  return { stateJson, savedAt: Date.now() };
 }
 
 /* ===== クラウド保存(Firebase) ===== */
@@ -13068,6 +13071,20 @@ async function pushCloudSave(silent) {
 // セーブの進行度スコア。転生回数→累計転生PT→総プレイ秒 の優先順で大小を比較する。
 // タイムスタンプではなく「実際の進み具合」で判断するため、別端末や初期化後の
 // ログインでも取り違えない。
+// クラウド保存ペイロードから state オブジェクトを取り出す。
+// 新形式: { stateJson: "<JSON文字列>", ... } / 旧形式: { state: {...}, ... }
+function resolveCloudState(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  if (typeof payload.stateJson === "string") {
+    try {
+      const s = JSON.parse(payload.stateJson);
+      return (s && typeof s === "object") ? s : null;
+    } catch (e) { return null; }
+  }
+  if (payload.state && typeof payload.state === "object") return payload.state;
+  return null;
+}
+
 function saveProgressScore(s) {
   if (!s || typeof s !== "object") return -1;
   const runs = Math.max(0, Number(s.prestigeRuns) || 0);
@@ -13097,13 +13114,14 @@ async function pullCloudSaveIfNewer() {
     }
 
     const cloudPayload = doc.data();
-    // stateが無い(または不正な)場合だけ、警告を出さずに読み込みを見送る。
-    if (!cloudPayload || !cloudPayload.state || typeof cloudPayload.state !== "object") {
+    // 新形式(stateJson=JSON文字列)・旧形式(stateオブジェクト)の両方に対応してstateを取り出す。
+    const cloudState = resolveCloudState(cloudPayload);
+    if (!cloudState) {
+      // 読み取れるクラウドデータが無い → 今の端末のデータを保存する
       pushCloudSave(true);
       return;
     }
 
-    const cloudState = cloudPayload.state;
     const cloudScore = saveProgressScore(cloudState);
     const localScore = saveProgressScore(state);
 
@@ -13118,13 +13136,21 @@ async function pullCloudSaveIfNewer() {
         "「キャンセル」でこの端末のデータを保持します。"
       );
       if (loadCloud) {
-        state = cloudState;
-        ensureState();
-        saveGame();
-        pushCloudSave(true); // ローカルとクラウドの保存時刻を揃える
-        updateTopOnly();
-        renderAllTabs();
-        showMessage("クラウドのセーブデータを読み込みました");
+        // 万一読み込みに失敗しても現在のデータを失わないよう、先にバックアップを取る
+        const backup = JSON.stringify(state);
+        try {
+          state = cloudState;
+          ensureState();
+          saveGame();
+          pushCloudSave(true); // 新形式(JSON文字列)でクラウドを更新し、時刻も揃える
+          updateTopOnly();
+          renderAllTabs();
+          showMessage("クラウドのセーブデータを読み込みました");
+        } catch (e) {
+          console.error(e);
+          try { state = JSON.parse(backup); ensureState(); updateTopOnly(); renderAllTabs(); } catch (_) {}
+          alert("クラウドデータの読み込みに失敗しました。この端末のデータはそのままです。");
+        }
       }
       // キャンセル時はローカルを保持。自動同期で後からクラウドへ反映される。
     } else {
