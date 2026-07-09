@@ -63,6 +63,8 @@
       margin: 0;
       height: 100%;
       overflow: hidden;
+      /* プレイ画面をスクロール/バウンスさせない(タップ操作で画面が動かないように) */
+      overscroll-behavior: none;
       background:
         radial-gradient(circle at 50% -10%, rgba(255,211,138,0.09), transparent 35%),
         linear-gradient(180deg, #25170f, var(--bg) 50%, #120b07);
@@ -74,8 +76,9 @@
     }
 
     body {
-      padding: 8px;
-      padding-bottom: max(8px, env(safe-area-inset-bottom));
+      /* 端末のノッチ/ステータスバー(セーフエリア)分を上下に確保し、
+         クッキー数などの表示が上端で見切れないようにする */
+      padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
       display: flex;
       align-items: center;
       justify-content: center;
@@ -106,8 +109,10 @@
       /* 横幅は画面幅いっぱいに使う(左右の黒帯を出さない)。上限640pxでPCでも自然。
          高さはURLバー開閉で変わらないsvh基準にして、プレイ中の伸縮を防ぐ */
       width: min(calc(100vw - 12px), 640px);
-      height: calc(100dvh - 12px);
-      height: calc(100svh - 12px);
+      /* 高さはURLバー開閉で変わらないsvh基準。上下のセーフエリア確保分も差し引き、
+         プレイ画面全体が常に画面内に収まる(見切れ/はみ出しを防ぐ)ようにする */
+      height: calc(100dvh - max(8px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
+      height: calc(100svh - max(8px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
       max-width: none;
       margin: auto;
       display: flex;
@@ -2339,8 +2344,10 @@
     }
 
     body.sectionFullscreen .tabPage {
-      width: min(100vw, calc(100dvh * 1024 / 1536)) !important;
-      height: min(100dvh, calc(100vw * 1536 / 1024)) !important;
+      /* 高さの基準は「タブバーを除いた表示領域(=.tabPagesの高さ)」。
+         100dvh基準だとタブバー分(fsTabH)はみ出し、中央寄せで上(見出し)が見切れるため。 */
+      width: min(100vw, calc((100dvh - var(--fsTabH, 60px)) * 1024 / 1536)) !important;
+      height: min(calc(100dvh - var(--fsTabH, 60px)), calc(100vw * 1536 / 1024)) !important;
       max-width: 1024px !important;
       max-height: 1536px !important;
       margin: 0 !important;
@@ -3787,6 +3794,31 @@
       border: 1px solid rgba(255, 213, 138, 0.18);
     }
 
+    /* 購入数バーは「強化」見出しと同じ行・同じ高さに収める。
+       余計な枠/余白を外し、メダルは見出しテキストと同程度の高さに縮める。 */
+    .tabPageHead .buyModeBar {
+      flex: 0 1 auto;
+      min-width: 0;
+      gap: 4px;
+      margin: 0;
+      padding: 0;
+      background: none;
+      border: none;
+      border-radius: 0;
+    }
+
+    .tabPageHead .buyModeLabel {
+      font-size: 10px;
+    }
+
+    .tabPageHead .buyModeBtn {
+      flex: 0 0 auto;
+    }
+
+    .tabPageHead .buyModeBtn .buyIcon {
+      height: 26px;
+    }
+
     .buyModeLabel {
       font-size: 11px;
       color: var(--sub);
@@ -5035,11 +5067,6 @@
     </div>
     <div class="settingRow">効果音の音量<input type="range" id="setSeVol" min="0" max="100" step="5"><span class="settingVal" id="setSeVolVal">100</span></div>
     <div class="settingRow">BGMの音量<input type="range" id="setBgmVol" min="0" max="100" step="5"><span class="settingVal" id="setBgmVolVal">35</span></div>
-    <div class="settingRow">タップ演出(数字・かけら)<input type="checkbox" id="setTapFx"></div>
-    <div class="settingRow">画面の装飾アニメーション<input type="checkbox" id="setFancyFx"></div>
-    <div class="settingRow">カードの画像表示<input type="checkbox" id="setCardArt"></div>
-    <div class="settingRow">カードの説明を省略表示<input type="checkbox" id="setCompact"></div>
-    <div class="settingRow">購入数の変更バーを表示<input type="checkbox" id="setShowBuyMode"></div>
     <div class="settingRow settingRowStack">
       <span>クラウド保存(自動・任意)</span>
       <div class="saveCodeHint" id="cloudSyncStatus">Googleでログインすると、セーブデータが自動でクラウドに保存されます。</div>
@@ -5132,13 +5159,13 @@
     <section id="shopTab" class="tabPage active">
       <div class="tabPageHead" data-full-target="shopTab">
         <h2>強化</h2>
-      </div>
-      <div id="buyModeBar" class="buyModeBar">
-        <span class="buyModeLabel">購入数</span>
-        <button type="button" class="buyModeBtn active" data-buymode="1">×1</button>
-        <button type="button" class="buyModeBtn" data-buymode="10">×10</button>
-        <button type="button" class="buyModeBtn" data-buymode="100">×100</button>
-        <button type="button" class="buyModeBtn" data-buymode="max">MAX</button>
+        <div id="buyModeBar" class="buyModeBar">
+          <span class="buyModeLabel">購入数</span>
+          <button type="button" class="buyModeBtn active" data-buymode="1">×1</button>
+          <button type="button" class="buyModeBtn" data-buymode="10">×10</button>
+          <button type="button" class="buyModeBtn" data-buymode="100">×100</button>
+          <button type="button" class="buyModeBtn" data-buymode="max">MAX</button>
+        </div>
       </div>
       <div id="shop" class="pageScroll"></div>
     </section>
@@ -6144,6 +6171,7 @@ function freshState() {
     awaitingSkillChoice: false,
     skillChoiceStartCount: 0,
     seenPrestigeUnlockNotice: false,
+    prestigeUnlockedEver: false, // 所持クッキーが初めて100万を超えたら立つ、転生解放のラッチ
     adsRemoved: false, // 広告非表示の購入フラグ。クラウド保存経由で端末間に引き継ぐための状態
 
     upgrades,
@@ -6244,6 +6272,8 @@ function ensureState() {
   state.awaitingSkillChoice = Boolean(state.awaitingSkillChoice);
   state.skillChoiceStartCount = Math.floor(Number(state.skillChoiceStartCount) || 0);
   state.seenPrestigeUnlockNotice = Boolean(state.seenPrestigeUnlockNotice);
+  // 既存セーブ互換: すでに解放条件を満たしていた(通知済み/転生経験あり)プレイヤーは解放のまま維持する
+  state.prestigeUnlockedEver = Boolean(state.prestigeUnlockedEver) || Boolean(state.seenPrestigeUnlockNotice) || (Number(state.prestigeTotal) || 0) > 0 || (Number(state.prestigeRuns) || 0) > 0;
   // 広告非表示フラグは端末のlocalStorageとクラウド保存(state)のどちらかがtrueなら両方をtrueに揃える
   state.adsRemoved = Boolean(state.adsRemoved) || localAdsRemovedFlag();
   if (state.adsRemoved) setLocalAdsRemovedFlag();
@@ -7351,9 +7381,17 @@ function rewardModalOpen() {
   return Boolean(modal && modal.style.display === "flex");
 }
 
+// 図鑑・設定オーバーレイを開いている間は、ゲーム進行(生産・ノルマ・出現)を止める
+function overlayFreezesGame() {
+  const codex = document.getElementById("codexOverlay");
+  const settings = document.getElementById("settingsOverlay");
+  return Boolean((codex && codex.classList.contains("active")) || (settings && settings.classList.contains("active")));
+}
+
 function quotaClockPaused() {
-  // ゲームを閉じている・バックグラウンド/画面ロック中(タブ非表示)もノルマを止める
-  return pausedForSkillChoice() || rewardModalOpen() || titleScreenActive() || document.hidden;
+  // ゲームを閉じている・バックグラウンド/画面ロック中(タブ非表示)もノルマを止める。
+  // 図鑑・設定を開いている間も止める。
+  return pausedForSkillChoice() || rewardModalOpen() || titleScreenActive() || document.hidden || overlayFreezesGame();
 }
 
 function startQuotaPause() {
@@ -11015,11 +11053,6 @@ function syncSettingsUi() {
   $("setSeVolVal").textContent = settings.seVolume;
   $("setBgmVol").value = settings.bgmVolume;
   $("setBgmVolVal").textContent = settings.bgmVolume;
-  $("setTapFx").checked = settings.tapFx;
-  $("setFancyFx").checked = settings.fancyFx;
-  $("setCardArt").checked = settings.cardArt;
-  $("setCompact").checked = settings.compactCards;
-  $("setShowBuyMode").checked = settings.showBuyMode;
 }
 
 addTap($("settingsBtn"), () => {
@@ -11358,6 +11391,7 @@ function renderCodex() {
   else if (codexTabId === "order") html = codexOrderHtml();
   else if (codexTabId === "workshop") html = codexWorkshopHtml();
   $("codexBody").innerHTML = html;
+  maskSkillWordIfPreFirstPrestige($("codexOverlay"));
 }
 
 function openCodex() {
@@ -11429,16 +11463,6 @@ $("setBgmVol").addEventListener("input", () => {
   applySettings();
 });
 
-[["setTapFx", "tapFx"], ["setFancyFx", "fancyFx"], ["setCardArt", "cardArt"], ["setCompact", "compactCards"], ["setShowBuyMode", "showBuyMode"]].forEach(([id, key]) => {
-  $(id).addEventListener("change", () => {
-    settings[key] = $(id).checked;
-    saveSettings();
-    applySettings();
-    renderActiveTab();
-    playSound("tab");
-  });
-});
-
 document.querySelectorAll(".buyModeBtn").forEach(btn => {
   addTap(btn, () => {
     buyMode = btn.dataset.buymode;
@@ -11447,6 +11471,16 @@ document.querySelectorAll(".buyModeBtn").forEach(btn => {
     renderShop();
   });
 });
+
+// 購入数バーは「強化」見出し(タップで全画面切替)の中に置くため、
+// バー上の操作が見出しのタップ判定へ伝播して全画面が切り替わらないようにする。
+(function isolateBuyModeBarTaps() {
+  const bar = document.getElementById("buyModeBar");
+  if (!bar) return;
+  ["pointerdown", "pointerup", "pointermove", "click"].forEach(type => {
+    bar.addEventListener(type, e => e.stopPropagation());
+  });
+})();
 
 addTap($("skillZoomOutBtn"), () => setSkillMapZoom(skillMapZoom - SKILL_ZOOM_STEP));
 addTap($("skillZoomInBtn"), () => setSkillMapZoom(skillMapZoom + SKILL_ZOOM_STEP));
@@ -12073,7 +12107,8 @@ function prestigeGain() {
 }
 
 function prestigeUnlocked() {
-  return state.totalCookies.gte(1000000) || state.prestigeTotal > 0 || state.prestigeRuns > 0;
+  // 所持クッキーが初めて100万を超えた時点で解放し、以後は消費して下回っても解放のまま(ラッチ)
+  return Boolean(state.prestigeUnlockedEver) || state.prestigeTotal > 0 || state.prestigeRuns > 0;
 }
 
 function updatePrestigeTabLabel() {
@@ -12084,7 +12119,9 @@ function updatePrestigeTabLabel() {
 }
 
 function checkPrestigeUnlockNotice() {
-  if (!state.seenPrestigeUnlockNotice && state.totalCookies.gte(1000000)) {
+  // 所持クッキーが初めて100万を超えたら転生を解放する
+  if (!state.prestigeUnlockedEver && state.cookies.gte(1000000)) {
+    state.prestigeUnlockedEver = true;
     state.seenPrestigeUnlockNotice = true;
     showMessage("新たな機能が解放されます");
     saveGame();
@@ -12126,7 +12163,6 @@ function renderPrestige() {
     <div class="skillSummary">
       <div>所持PT<br><b>${fmt(state.prestige)}</b></div>
       <div>累計PT<br><b>${fmt(state.prestigeTotal)}</b></div>
-      <div>解放数<br><b>${boughtSkillCount()} / ${SKILLS.length}</b></div>
     </div>
 
     ${state.prestigeRuns >= 1 ? `<button id="skillViewBtn" class="item skillViewBtn">スキルツリーを確認する</button>` : ""}
@@ -12135,7 +12171,6 @@ function renderPrestige() {
 
     <div class="infoBox">
       <h3>転生</h3>
-      <div class="infoRow">今回クッキー基礎PT：${fmt(totalPrestigeFromCookies(state.runCookies))}</div>
       <div class="infoRow">今回の総クッキー：${fmt(state.runCookies)}</div>
       <div class="infoRow">今回のノルマ維持記録：${fmtTime(state.quotaHoldSeconds || 0)} / ノルマ中討伐 ${fmt(state.quotaMonsterKills || 0)}体</div>
       <div class="infoRow">獲得済み総PT：${fmt(state.prestigeTotal)}</div>
@@ -12348,6 +12383,22 @@ function renderInfo() {
   box.scrollTop = savedScroll;
 }
 
+// 初回転生を終えるまでは、UI上の「スキル」という語を伏せる。
+// (スキルという仕組みの存在自体を、まだ転生していないプレイヤーに明かさないため。
+//  固有名「同期炉」等や説明本文は残し、"スキル" の語だけを取り除く。転生後は通常表示に戻る)
+function maskSkillWordIfPreFirstPrestige(root) {
+  if (typeof state === "undefined" || !state || (state.prestigeRuns || 0) > 0) return;
+  root = root || document.querySelector(".game");
+  if (!root) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  const targets = [];
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (node.nodeValue && node.nodeValue.indexOf("スキル") !== -1) targets.push(node);
+  }
+  targets.forEach(node => { node.nodeValue = node.nodeValue.replace(/スキル/g, ""); });
+}
+
 function renderActiveTab() {
   if (activeTab === "shopTab") renderShop();
   if (activeTab === "researchTab") renderResearch();
@@ -12355,6 +12406,7 @@ function renderActiveTab() {
   if (activeTab === "orderTab") renderOrder();
   if (activeTab === "infoTab") renderInfo();
   if (activeTab === "workshopTab") renderWorkshop();
+  maskSkillWordIfPreFirstPrestige();
 }
 
 function renderAllTabs() {
@@ -12364,6 +12416,7 @@ function renderAllTabs() {
   renderOrder();
   renderInfo();
   renderWorkshop();
+  maskSkillWordIfPreFirstPrestige();
 }
 
 function switchTab(tabId) {
@@ -13085,7 +13138,7 @@ function clearMonsterSpawnTimer() {
 // 報酬選択モーダルが開いている間、金クッキー・モンスターの出現カウントダウンを
 // 一時停止し、閉じたときに残り時間から再開する(ノルマと同様にじっくり考えられるように)
 function updateSpawnTimerPauseState() {
-  const shouldPause = rewardModalOpen();
+  const shouldPause = rewardModalOpen() || overlayFreezesGame();
 
   if (shouldPause && !rewardSpawnPauseActive) {
     rewardSpawnPauseActive = true;
@@ -14203,7 +14256,7 @@ setInterval(() => {
   if (titleScreenActive()) return;
 
   updateSpawnTimerPauseState();
-  if (!pausedForSkillChoice()) {
+  if (!pausedForSkillChoice() && !overlayFreezesGame()) {
     state.totalPlaySec = (state.totalPlaySec || 0) + 0.05; // v4: 総プレイ秒(転生持ち越し)
     earn(currentCps() / 20);
     // 最高到達ノルマ層を記録(段階式研究の変数)
