@@ -4955,6 +4955,21 @@
       font-weight: 800;
     }
 
+    /* 設備(強化)・研究カードの画像を、カード右側の空きスペースいっぱいに大きく表示する。
+       サイズ指定のみ上書き(シルエット用の filter/opacity は据え置き)。 */
+    #shop .artCard::before,
+    #research .artCard::before {
+      top: -6px;
+      bottom: -6px;
+      right: 2px;
+      width: 58%;
+      height: auto;
+      transform: none;
+      background-position: right center;
+      background-size: contain;
+      opacity: 0.72;
+    }
+
   </style>
 </head>
 
