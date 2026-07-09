@@ -861,9 +861,13 @@
       flex: 0 0 auto;
       position: relative;
       z-index: 30;
-      /* 上部パネルは画面の4割までに抑え、残りをスキルマップに回す */
-      max-height: 40%;
-      overflow-y: auto;
+      /* 上部パネルは画面の45%までに抑え、残りをスキルマップに回す。
+         中の説明パネルだけをスクロールさせ、見出しと操作ボタン(取得/スタート)は
+         常に表示されるようにする(短い画面でボタンが隠れて押せなくなるのを防ぐ)。 */
+      max-height: 45%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
       background:
         linear-gradient(135deg, rgba(37,155,255,0.14), rgba(176,72,255,0.08) 48%, rgba(255,185,62,0.09)),
         rgba(5, 8, 16, 0.94);
@@ -879,12 +883,15 @@
     }
 
     .skillScreenTitle {
+      flex: 0 0 auto;
       display: flex;
       justify-content: space-between;
       gap: 8px;
       align-items: center;
       margin-bottom: 8px;
     }
+
+    .skillScreenGuide { flex: 0 0 auto; }
 
     .skillScreenTitle h2 {
       margin: 0;
@@ -915,6 +922,11 @@
     }
 
     .selectedSkillPanel {
+      /* このパネルだけが伸縮・スクロールし、下の操作ボタンは常に見える位置に残す */
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       background:
         linear-gradient(135deg, rgba(80,180,255,0.10), rgba(0,0,0,0.10)),
         rgba(2,8,18,0.92);
@@ -922,7 +934,6 @@
       border-radius: 14px;
       padding: 8px;
       margin-top: 6px;
-      min-height: 62px;
       box-shadow: inset 0 0 18px rgba(37,155,255,0.08);
     }
 
@@ -965,6 +976,7 @@
     }
 
     .skillActionRow {
+      flex: 0 0 auto;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 8px;
