@@ -12924,13 +12924,15 @@ function ensureFirebaseReady() {
 
 const CLOUD_SAVE_USED_KEY = "cookie_game_cloud_save_used";
 
-function onCloudAuthStateChanged(user) {
+async function onCloudAuthStateChanged(user) {
   cloudUser = user;
   syncCloudSettingsUi();
   if (user) {
     localStorage.setItem(CLOUD_SAVE_USED_KEY, "1");
+    // 先にクラウドからの復元判断を済ませてから自動同期を始める。
+    // (自動同期が先に走ると、復元前にローカルでクラウドを上書きしてしまう)
+    await pullCloudSaveIfNewer();
     startCloudAutoSync();
-    pullCloudSaveIfNewer();
   } else {
     localStorage.removeItem(CLOUD_SAVE_USED_KEY);
     stopCloudAutoSync();
@@ -12976,31 +12978,70 @@ async function pushCloudSave(silent) {
   }
 }
 
+// セーブの進行度スコア。転生回数→累計転生PT→総プレイ秒 の優先順で大小を比較する。
+// タイムスタンプではなく「実際の進み具合」で判断するため、別端末や初期化後の
+// ログインでも取り違えない。
+function saveProgressScore(s) {
+  if (!s || typeof s !== "object") return -1;
+  const runs = Math.max(0, Number(s.prestigeRuns) || 0);
+  const pt = Math.max(0, Number(s.prestigeTotal) || 0);
+  const play = Math.max(0, Number(s.totalPlaySec) || 0);
+  return runs * 1e12 + pt * 1e6 + play;
+}
+
+function cloudSaveSummary(s) {
+  try {
+    const pt = Math.floor(Number(s.prestigeTotal) || 0);
+    const runs = Math.floor(Number(s.prestigeRuns) || 0);
+    const sec = Math.floor(Number(s.totalPlaySec) || 0);
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+    return `累計転生PT ${pt} / 転生 ${runs}回 / プレイ ${h}時間${m}分`;
+  } catch (e) { return "進行状況 不明"; }
+}
+
 async function pullCloudSaveIfNewer() {
   if (!cloudUser || !firebaseDb) return;
   try {
     const doc = await firebaseDb.collection("saves").doc(cloudUser.uid).get();
     if (!doc.exists) {
+      // クラウドにまだ保存がない → 今の端末のデータを初回保存する
       pushCloudSave(true);
       return;
     }
 
     const cloudPayload = doc.data();
-    // チェックサム照合は行わない。Firestoreの往復でキー順や数値表現が変わり、
-    // 実際は正常なのに「破損」と誤検知して開始時に警告が出ていたため。
     // stateが無い(または不正な)場合だけ、警告を出さずに読み込みを見送る。
-    if (!cloudPayload || !cloudPayload.state || typeof cloudPayload.state !== "object") return;
+    if (!cloudPayload || !cloudPayload.state || typeof cloudPayload.state !== "object") {
+      pushCloudSave(true);
+      return;
+    }
 
-    if ((cloudPayload.state.lastSave || 0) > (state.lastSave || 0)) {
-      if (confirm("クラウドの方が新しいセーブデータがあります。読み込みますか？")) {
-        state = cloudPayload.state;
+    const cloudState = cloudPayload.state;
+    const cloudScore = saveProgressScore(cloudState);
+    const localScore = saveProgressScore(state);
+
+    // クラウドの方が進んでいる(=別端末で進めた/この端末を初期化した)場合は、
+    // 必ず確認の上でクラウドのデータを復元する。ローカルで黙って上書きしない。
+    if (cloudScore > localScore) {
+      const loadCloud = confirm(
+        "クラウドに、この端末より進んだセーブデータが見つかりました。読み込みますか？\n\n" +
+        "▼クラウド\n" + cloudSaveSummary(cloudState) + "\n\n" +
+        "▼この端末\n" + cloudSaveSummary(state) + "\n\n" +
+        "「OK」でクラウドのデータを読み込みます（この端末の現在のデータは上書きされます）。\n" +
+        "「キャンセル」でこの端末のデータを保持します。"
+      );
+      if (loadCloud) {
+        state = cloudState;
         ensureState();
         saveGame();
+        pushCloudSave(true); // ローカルとクラウドの保存時刻を揃える
         updateTopOnly();
         renderAllTabs();
         showMessage("クラウドのセーブデータを読み込みました");
       }
+      // キャンセル時はローカルを保持。自動同期で後からクラウドへ反映される。
     } else {
+      // この端末の方が進んでいる/同等 → クラウドへ保存(クラウドの進行を失わない)
       pushCloudSave(true);
     }
   } catch (e) {
