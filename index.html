@@ -2951,7 +2951,9 @@
         linear-gradient(180deg, rgba(14, 8, 4, 0.80), rgba(6, 3, 1, 0.94)),
         var(--screen-play);
       background-size: cover;
-      background-position: center 30%;
+      /* 初期位置を下のドリフトアニメーションの開始フレームに合わせておく。
+         ズレ防止: 表示された瞬間にアニメが from へスナップして背景が飛ぶのを避ける */
+      background-position: 50% 0%, 50% 100%, center, center 26%;
       /* 背景の工房絵をゆっくり上下にドリフトさせる */
       animation: titleBgDrift 22s ease-in-out infinite alternate;
     }
@@ -3866,15 +3868,11 @@
       display: none;
     }
 
-    /* 音声解禁ゲートをタップするまではタイトル(名前ロゴ・背景・ボタン)を隠し、
-       タップ後にふわっと表示する。ゲート越しにタイトル名の画像が先に見えるのを防ぐ */
-    #titleScreen {
-      transition: opacity 0.45s ease;
-    }
-
+    /* 音声解禁ゲートをタップするまではタイトルを非表示にする。display:none にすることで、
+       タップして表示された瞬間に元のロゴ入場アニメーション(logoEnter 等)が改めて再生される
+       (ゲート越しにタイトル名の画像が先に見えるのは防ぎつつ、出現アニメは従来どおり) */
     body.audioGateUp #titleScreen {
-      visibility: hidden;
-      opacity: 0;
+      display: none;
     }
 
     .audioGateInner {
@@ -4997,7 +4995,7 @@
         <div class="infoBox">
           <h3>サイト情報</h3>
           <p>本サイトのご利用にあたっては、<a href="privacy.html">プライバシーポリシー</a>をご確認ください。</p>
-          <p>ゲームへのご意見・ご感想・不具合のご報告は、メール（<a href="mailto:bachikoljunior@gmail.com">bachikoljunior@gmail.com</a>）までお気軽にお寄せください。</p>
+          <p>ゲームへのご意見・ご感想・不具合のご報告は、メール（<a href="mailto:cookiestrateger@gmail.com">cookiestrateger@gmail.com</a>）までお気軽にお寄せください。</p>
         </div>
       </div>
     </div>
