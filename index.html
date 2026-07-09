@@ -3866,6 +3866,17 @@
       display: none;
     }
 
+    /* 音声解禁ゲートをタップするまではタイトル(名前ロゴ・背景・ボタン)を隠し、
+       タップ後にふわっと表示する。ゲート越しにタイトル名の画像が先に見えるのを防ぐ */
+    #titleScreen {
+      transition: opacity 0.45s ease;
+    }
+
+    body.audioGateUp #titleScreen {
+      visibility: hidden;
+      opacity: 0;
+    }
+
     .audioGateInner {
       font-size: 20px;
       font-weight: 900;
@@ -4917,7 +4928,7 @@
   </style>
 </head>
 
-<body class="titleScreenMode">
+<body class="titleScreenMode audioGateUp">
 
 <!-- 初起動時の音声解禁ゲート。最初にここをタップするとBGMが解禁され、タイトルへ進む -->
 <div id="audioGate" class="audioGate">
@@ -14162,6 +14173,8 @@ function returnToTitleScreen() {
   const dismiss = () => {
     try { startBgm(); } catch (e) {}
     gate.classList.add("hidden");
+    // タイトル(名前ロゴ・背景)をここで初めて表示する
+    document.body.classList.remove("audioGateUp");
   };
   gate.addEventListener("pointerdown", dismiss, { once: true });
 })();
