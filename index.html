@@ -4961,11 +4961,11 @@
        透明度は状態別の既存ルール(所持=1 / シルエット=0.42)に委ねる。 */
     #shop .artCard::before,
     #research .artCard::before {
-      top: 6px !important;
-      bottom: 6px !important;
+      top: -4px !important;
+      bottom: -4px !important;
       right: 8px !important;
       left: auto !important;
-      width: 48% !important;
+      width: 50% !important;
       height: auto !important;
       transform: none !important;
       background-position: center right !important;
@@ -5097,7 +5097,7 @@
     </div>
     <div class="settingRow settingRowStack">
       <span>広告の非表示(買い切り)</span>
-      <div class="saveCodeHint" id="adRemoveStatus">転生時に表示される広告を、購入して消すことができます。</div>
+      <div class="saveCodeHint" id="adRemoveStatus">一部の場面で表示される広告を、購入して消すことができます。</div>
       <div class="settingBtnRow">
         <button id="adRemoveBtn" type="button" class="settingsWideBtn">広告を消す(購入する)</button>
       </div>
@@ -11090,7 +11090,7 @@ function syncAdRemovalUi() {
     statusEl.textContent = "購入済みです。広告は表示されません。";
     btn.style.display = "none";
   } else {
-    statusEl.textContent = "転生時に表示される広告を、購入して消すことができます。";
+    statusEl.textContent = "一部の場面で表示される広告を、購入して消すことができます。";
     btn.style.display = "";
   }
 }
@@ -12404,16 +12404,27 @@ function renderInfo() {
 // (スキルという仕組みの存在自体を、まだ転生していないプレイヤーに明かさないため。
 //  固有名「同期炉」等や説明本文は残し、"スキル" の語だけを取り除く。転生後は通常表示に戻る)
 function maskSkillWordIfPreFirstPrestige(root) {
-  if (typeof state === "undefined" || !state || (state.prestigeRuns || 0) > 0) return;
+  if (typeof state === "undefined" || !state) return;
+  // 「スキル」は初回転生を終えるまで伏せる(スキルは初回転生で初めて触れる要素)。
+  // 「転生」は転生が解放される(所持100万到達)まで伏せる(それまで発展性を明かさない)。
+  const maskSkill = (state.prestigeRuns || 0) === 0;
+  const maskRebirth = !prestigeUnlocked();
+  if (!maskSkill && !maskRebirth) return;
   root = root || document.querySelector(".game");
   if (!root) return;
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
   const targets = [];
   while (walker.nextNode()) {
     const node = walker.currentNode;
-    if (node.nodeValue && node.nodeValue.indexOf("スキル") !== -1) targets.push(node);
+    const v = node.nodeValue;
+    if (v && ((maskSkill && v.indexOf("スキル") !== -1) || (maskRebirth && v.indexOf("転生") !== -1))) targets.push(node);
   }
-  targets.forEach(node => { node.nodeValue = node.nodeValue.replace(/スキル/g, ""); });
+  targets.forEach(node => {
+    let v = node.nodeValue;
+    if (maskSkill) v = v.replace(/スキル/g, "");
+    if (maskRebirth) v = v.replace(/転生/g, "");
+    node.nodeValue = v;
+  });
 }
 
 function renderActiveTab() {
