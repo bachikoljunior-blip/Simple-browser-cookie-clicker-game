@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://bachikoljunior-blip.github.io/Simple-browser-cookie-clicker-game/sitemap.xml
+Sitemap: https://cookiestrateger.com/sitemap.xml

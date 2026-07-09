@@ -1,0 +1,40 @@
+rules_version = '2';
+
+// クッキーストラテジャー クラウドセーブ用 Firestore セキュリティルール
+//
+// 【重要】このファイルはリポジトリに置いてあるだけでは有効になりません。
+// 反映するには、Firebase コンソール →「Firestore Database」→「ルール」に
+// 下記の内容を貼り付けて「公開」するか、Firebase CLI で
+//   firebase deploy --only firestore:rules
+// を実行してください。
+//
+// セーブデータは saves/{uid} に保存され、uid はログインした Google
+// アカウントの ID です。下記ルールにより:
+//   - 未ログインのユーザーは一切読み書きできない
+//   - ログイン済みでも、他人のセーブデータは読み書きできない（自分のものだけ）
+// これにより、他人のデータの改ざん・盗み見や、無認証の大量書き込みによる
+// 従量課金の増大を防ぎます。
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // クラウドセーブ: 本人のドキュメントのみ読み書きを許可
+    match /saves/{uid} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == uid;
+    }
+
+    // 上記以外はすべて拒否
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// 【将来: BASE 等での「広告非表示」有料販売を導入するときの補足】
+// 広告非表示フラグ（adsRemoved 相当）を購入者だけに付与したい場合、
+// クライアントから書き換えられないよう、そのフラグは
+// Cloud Functions（管理者権限）からのみ更新する構成にしてください。
+// 具体的には、購入コードの検証結果を別ドキュメント（例: entitlements/{uid}）に
+// Functions から書き込み、ここでは「クライアントは read のみ・write 不可」に
+// 制限すると安全です。
