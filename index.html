@@ -3349,46 +3349,6 @@
     }
 
 
-    /* デバッグあり版：固定デバッグパネル */
-    #debugPanel {
-      position: fixed;
-      left: 8px;
-      bottom: 62px;
-      z-index: 20000;
-      width: min(320px, calc(100vw - 16px));
-      background: rgba(16, 8, 4, 0.88);
-      border: 1px solid rgba(255, 213, 132, 0.46);
-      border-radius: 12px;
-      padding: 8px;
-      color: #fff4de;
-      text-align: left;
-      font-size: 12px;
-      box-shadow: 0 8px 22px rgba(0,0,0,0.36);
-    }
-
-    #debugPanel b {
-      color: #ffe28a;
-    }
-
-    #debugPanel .debugGrid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 5px;
-      margin-top: 6px;
-    }
-
-    #debugPanel button {
-      border: 1px solid rgba(255, 213, 132, 0.36);
-      border-radius: 8px;
-      padding: 7px 5px;
-      background: rgba(112, 58, 20, 0.82);
-      color: #fff4de;
-      font-size: 11px;
-      font-weight: 800;
-    }
-
-  
-
     /* 実装修正：通常画面内だけに出現物を置き、ノルマ表示より後ろにする */
     .top {
       position: relative !important;
@@ -3471,60 +3431,6 @@
     #monsterWrap {
       display: none !important;
     }
-
-    /* デバッグあり版：小さく畳める・スワイプ移動対応 */
-    #debugPanel {
-      left: var(--debug-left, auto) !important;
-      top: var(--debug-top, auto) !important;
-      right: var(--debug-right, 8px) !important;
-      bottom: var(--debug-bottom, 62px) !important;
-      width: auto !important;
-      max-width: calc(100vw - 16px);
-      padding: 0 !important;
-      overflow: hidden;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    #debugPanel.dragging {
-      opacity: 0.86;
-      transition: none !important;
-    }
-
-    #debugPanelMiniBtn {
-      display: block;
-      border: 1px solid rgba(255, 213, 132, 0.36);
-      border-radius: 10px;
-      padding: 8px 10px;
-      background: rgba(112, 58, 20, 0.92);
-      color: #fff4de;
-      font-size: 11px;
-      font-weight: 900;
-      cursor: grab;
-      touch-action: none;
-    }
-
-    #debugPanel.dragging #debugPanelMiniBtn {
-      cursor: grabbing;
-    }
-
-    #debugPanelBody {
-      display: none;
-      width: min(320px, calc(100vw - 16px));
-      padding: 8px;
-    }
-
-    #debugPanel.open #debugPanelBody {
-      display: block;
-    }
-
-    #debugPanel.open #debugPanelMiniBtn {
-      width: 100%;
-      border-radius: 10px 10px 0 0;
-    }
-
-
 
     /* 追加実装：タブを画面下に隙間なく固定するレイアウト */
     .top { order: 1; }
@@ -5276,31 +5182,6 @@
   </div>
 </div>
 
-
-<div id="debugPanel" class="collapsed">
-  <button id="debugPanelMiniBtn" type="button">DBG <span id="debugStatus">OFF</span></button>
-  <div id="debugPanelBody">
-    <b>デバッグ</b>
-    <div class="debugGrid">
-      <button id="debugToggleBtn" type="button">ON/OFF</button>
-      <button id="debugCookiesBtn" type="button">+100万</button>
-      <button id="debugAllUpgradesBtn" type="button">強化+10</button>
-      <button id="debugAllResearchBtn" type="button">研究全解放</button>
-      <button id="debugAllSkillsBtn" type="button">スキル全解放</button>
-      <button id="debugGoldenBtn" type="button">金クキ出す</button>
-      <button id="debugMonsterBtn" type="button">クキモン出す</button>
-      <button id="debugQuotaBtn" type="button">ノルマ復帰</button>
-      <button id="debugQuotaFailBtn" type="button">ノルマ即失敗</button>
-      <button id="debugMaterialsBtn" type="button">素材+100</button>
-      <button id="debugStageBtn" type="button">次ステージ解放</button>
-      <button id="debugLayerBtn" type="button">深層の層+1</button>
-      <button id="debugBossBtn" type="button">ボス即出現</button>
-      <button id="debugDishesBtn" type="button">料理バフ全付与</button>
-      <button id="debugKillsBtn" type="button">討伐数+100(全種)</button>
-    </div>
-  </div>
-</div>
-
 <section id="skillChoiceScreen">
   <div class="skillScreenInner">
     <div class="skillScreenTop">
@@ -6176,7 +6057,7 @@ let activeGoldenBoosts = [];
 let activeGoldenAfterheats = [];
 let goldenAfterheatTimers = [];
 let activeTab = "shopTab";
-let debugMode = false;
+const debugMode = false; // 本番版ではデバッグ機能を無効化(トグル・パネルなし)
 let selectedSkillId = null;
 let skillViewMode = false;
 let skillMapZoom = 0.92;
@@ -14216,231 +14097,6 @@ window.addEventListener("resize", () => {
 });
 
 
-function updateDebugPanel() {
-  const status = $("debugStatus");
-  if (status) status.textContent = debugMode ? "ON" : "OFF";
-}
-
-function installDebugPanel() {
-  const panel = $("debugPanel");
-  const mini = $("debugPanelMiniBtn");
-
-  if (mini && panel) {
-    const saved = (() => {
-      try { return JSON.parse(localStorage.getItem("cookie_game_debug_panel_pos_exist") || "null"); } catch (_) { return null; }
-    })();
-
-    function clampPanelPosition(left, top) {
-      const rect = panel.getBoundingClientRect();
-      const w = rect.width || 88;
-      const h = rect.height || 38;
-      const maxLeft = Math.max(0, window.innerWidth - w);
-      const maxTop = Math.max(0, window.innerHeight - h);
-      return {
-        left: Math.min(Math.max(0, left), maxLeft),
-        top: Math.min(Math.max(0, top), maxTop)
-      };
-    }
-
-    function setDebugPanelPosition(left, top, persist = true) {
-      const pos = clampPanelPosition(left, top);
-      panel.style.setProperty("--debug-left", pos.left + "px");
-      panel.style.setProperty("--debug-top", pos.top + "px");
-      panel.style.setProperty("--debug-right", "auto");
-      panel.style.setProperty("--debug-bottom", "auto");
-      if (persist) {
-        try { localStorage.setItem("cookie_game_debug_panel_pos_exist", JSON.stringify(pos)); } catch (_) {}
-      }
-    }
-
-    let hasCustomPosition = false;
-
-    if (saved && Number.isFinite(saved.left) && Number.isFinite(saved.top)) {
-      hasCustomPosition = true;
-      requestAnimationFrame(() => setDebugPanelPosition(saved.left, saved.top, false));
-    }
-
-    let drag = null;
-
-    mini.addEventListener("pointerdown", e => {
-      if (e.button != null && e.button !== 0) return;
-      const rect = panel.getBoundingClientRect();
-      drag = {
-        pointerId: e.pointerId,
-        startX: e.clientX,
-        startY: e.clientY,
-        left: rect.left,
-        top: rect.top,
-        moved: false
-      };
-      panel.classList.add("dragging");
-      try { mini.setPointerCapture(e.pointerId); } catch (_) {}
-      e.preventDefault();
-    });
-
-    mini.addEventListener("pointermove", e => {
-      if (!drag || drag.pointerId !== e.pointerId) return;
-      const dx = e.clientX - drag.startX;
-      const dy = e.clientY - drag.startY;
-      if (Math.abs(dx) + Math.abs(dy) > 6) drag.moved = true;
-      setDebugPanelPosition(drag.left + dx, drag.top + dy, false);
-      e.preventDefault();
-    });
-
-    function finishDrag(e) {
-      if (!drag || drag.pointerId !== e.pointerId) return;
-      const wasMoved = drag.moved;
-      if (wasMoved) {
-        const rect = panel.getBoundingClientRect();
-        setDebugPanelPosition(rect.left, rect.top, true);
-        hasCustomPosition = true;
-      }
-      panel.classList.remove("dragging");
-      try { mini.releasePointerCapture(e.pointerId); } catch (_) {}
-      drag = null;
-      if (!wasMoved) panel.classList.toggle("open");
-      e.preventDefault();
-    }
-
-    mini.addEventListener("pointerup", finishDrag);
-    mini.addEventListener("pointercancel", e => {
-      if (!drag || drag.pointerId !== e.pointerId) return;
-      panel.classList.remove("dragging");
-      drag = null;
-    });
-
-    window.addEventListener("resize", () => {
-      if (!hasCustomPosition) return;
-      const rect = panel.getBoundingClientRect();
-      setDebugPanelPosition(rect.left, rect.top, true);
-    });
-  }
-
-  const toggle = $("debugToggleBtn");
-  if (!toggle) return;
-
-  addTap(toggle, () => {
-    debugMode = !debugMode;
-    updateDebugPanel();
-    renderAllTabs();
-    updateTopOnly();
-    showMessage(debugMode ? "デバッグON" : "デバッグOFF");
-  });
-
-  addTap($("debugCookiesBtn"), () => {
-    earn(1000000);
-    updateTopOnly();
-    renderActiveTab();
-  });
-
-  addTap($("debugAllUpgradesBtn"), () => {
-    UPGRADES.forEach(u => {
-      if (upgradeUnlocked(u)) state.upgrades[u.id] = (state.upgrades[u.id] || 0) + 10;
-    });
-    updateTopOnly();
-    renderAllTabs();
-  });
-
-  addTap($("debugAllResearchBtn"), () => {
-    RESEARCH.forEach(r => { state.research[r.id] = true; });
-    updateTopOnly();
-    renderAllTabs();
-  });
-
-  addTap($("debugAllSkillsBtn"), () => {
-    SKILL_NODES.forEach(n => state.skills[n.id] = true);
-    updateTopOnly();
-    renderAllTabs();
-    renderSkillChoiceScreen();
-  });
-
-  addTap($("debugGoldenBtn"), () => {
-    hideGoldenCookie(false);
-    showGoldenCookie();
-  });
-
-  addTap($("debugMonsterBtn"), () => {
-    showMonster();
-  });
-
-  addTap($("debugQuotaBtn"), () => {
-    state.quotaFailed = false;
-    state.runStart = Date.now();
-    state.quotaPausedMs = 0;
-    state.quotaPauseStartedAt = 0;
-    state.runCookies = Decimal.max(state.runCookies, D(monsterQuotaRequiredAtElapsed(60)));
-    updateTopOnly();
-    renderAllTabs();
-  });
-
-  addTap($("debugQuotaFailBtn"), () => {
-    failQuota("デバッグ：ノルマ強制失敗");
-    updateTopOnly();
-    renderAllTabs();
-  });
-
-  addTap($("debugMaterialsBtn"), () => {
-    // デバッグ: workshop_1/workshop_2 未取得なら取得済みにする(素材が使える状態を作る)
-    let granted = false;
-    ["workshop_1", "workshop_2"].forEach(id => {
-      if (!hasSkill(id)) {
-        state.skills[id] = true;
-        granted = true;
-      }
-    });
-    MATERIALS.forEach(m => gainMaterial(m.id, 100));
-    updateWorkshopTabVisibility();
-    showMessage(granted ? "全素材 +100(工房スキルも取得済みにした)" : "全素材 +100");
-    saveGame();
-    updateTopOnly();
-    renderAllTabs();
-  });
-
-  addTap($("debugStageBtn"), () => {
-    // v3: ステージは有限6個(S6=深層領域)まで
-    state.stageUnlocked = Math.min(MAX_STAGE_NO, Math.max(1, Math.floor(Number(state.stageUnlocked) || 1)) + 1);
-    showMessage(`第${state.stageUnlocked}ステージ「${stageInfo(state.stageUnlocked).name}」まで解放`);
-    saveGame();
-    updateTopOnly();
-    renderAllTabs();
-  });
-
-  addTap($("debugLayerBtn"), () => {
-    state.deepLayer = deepLayerNo() + 1;
-    applyStageTheme();
-    showMessage(`深層領域 第${deepLayerNo()}層に設定`);
-    saveGame();
-    updateTopOnly();
-    renderAllTabs();
-  });
-
-  addTap($("debugBossBtn"), () => {
-    forceBossNext = true;
-    forceMonster();
-  });
-
-  addTap($("debugDishesBtn"), () => {
-    const until = Date.now() + dishDurationMs();
-    state.activeDishes = DISHES.map(d => ({ id: d.id, until }));
-    showMessage("料理バフを全付与");
-    saveGame();
-    updateTopOnly();
-    renderAllTabs();
-  });
-
-  addTap($("debugKillsBtn"), () => {
-    state.killRecords = state.killRecords && typeof state.killRecords === "object" ? state.killRecords : {};
-    Object.keys(MONSTER_TYPES).forEach(t => {
-      state.killRecords[t] = killRecordCount(t) + 100;
-    });
-    showMessage("全種の討伐記録 +100");
-    saveGame();
-    updateTopOnly();
-    renderAllTabs();
-  });
-
-  updateDebugPanel();
-}
 
 
 loadGame();
@@ -14459,7 +14115,6 @@ $("quotaBox").addEventListener("animationend", e => {
 installBrowserZoomBlockers();
 installSkillTreePinchZoom();
 liftFloatingActors();
-installDebugPanel();
 
 updateWorkshopTabVisibility();
 applyStageTheme();
