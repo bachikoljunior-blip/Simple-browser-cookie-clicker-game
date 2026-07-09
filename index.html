@@ -11097,6 +11097,12 @@ addTap($("settingsBtn"), () => {
   syncCloudSettingsUi();
   $("settingsOverlay").classList.add("active");
   playSound("tab");
+  // 設定を開いた時点でFirebaseを先読みしておく。
+  // これをしないと初回ログインで signInWithPopup を呼ぶ前に3つのスクリプトを
+  // ネットワークから読み込むことになり、ユーザー操作(タップ)の有効時間が切れて
+  // ポップアップがブロックされ「必ず失敗」してしまう。開いている間に読み込んでおけば、
+  // ログインをタップした時には ensureFirebaseReady() が即座に解決しポップアップが開く。
+  if (cloudSaveConfigured()) ensureFirebaseReady().catch(() => {});
 });
 
 // 「次の周回へ」ポップアップ:広告を見て次の周回へ進む
@@ -13030,8 +13036,16 @@ async function onCloudAuthStateChanged(user) {
 }
 
 function restoreCloudSessionIfNeeded() {
-  if (cloudSaveConfigured() && localStorage.getItem(CLOUD_SAVE_USED_KEY)) {
+  if (!cloudSaveConfigured()) return;
+  if (localStorage.getItem(CLOUD_SAVE_USED_KEY)) {
+    // 以前クラウドを使ったことがある → 復元判定を早く行うため即読み込み
     ensureFirebaseReady().catch(e => console.error(e));
+  } else {
+    // 初回ユーザーでも、ログインのタップで詰まらないよう空き時間にFirebaseを先読みしておく。
+    // これをしておくと signInWithPopup をタップ操作の有効時間内に呼べてポップアップが開く。
+    const preload = () => ensureFirebaseReady().catch(() => {});
+    if (typeof requestIdleCallback === "function") requestIdleCallback(preload, { timeout: 3000 });
+    else setTimeout(preload, 1500);
   }
 }
 
@@ -13085,6 +13099,25 @@ function resolveCloudState(payload) {
   return null;
 }
 
+// クラウドから取り出した生の state を、復元時と同じ正規化(ensureState)に通す。
+// これにより旧フィールド名(例: prestige→prestigeTotal)や欠損フィールドが復元後の値に揃い、
+// 選択ダイアログに出す進行状況の表示・スコアが、実際に復元されるデータと一致する。
+// ensureState はグローバル state を書き換えるため、一時的に差し替えて実行し必ず元に戻す。
+function normalizeCloudState(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const prev = state;
+  try {
+    state = raw;
+    ensureState();
+    return state;
+  } catch (e) {
+    console.error(e);
+    return raw;
+  } finally {
+    state = prev;
+  }
+}
+
 function saveProgressScore(s) {
   if (!s || typeof s !== "object") return -1;
   const runs = Math.max(0, Number(s.prestigeRuns) || 0);
@@ -13114,8 +13147,9 @@ async function pullCloudSaveIfNewer() {
     }
 
     const cloudPayload = doc.data();
-    // 新形式(stateJson=JSON文字列)・旧形式(stateオブジェクト)の両方に対応してstateを取り出す。
-    const cloudState = resolveCloudState(cloudPayload);
+    // 新形式(stateJson=JSON文字列)・旧形式(stateオブジェクト)の両方に対応してstateを取り出し、
+    // 復元時と同じ正規化を通す(旧フィールド名や欠損値を補完し、表示と復元結果を一致させる)。
+    const cloudState = normalizeCloudState(resolveCloudState(cloudPayload));
     if (!cloudState) {
       // 読み取れるクラウドデータが無い → 今の端末のデータを保存する
       pushCloudSave(true);
