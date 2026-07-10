@@ -12690,6 +12690,11 @@ function switchTab(tabId) {
   if (normalPlayScreenActive()) {
     scheduleGoldenCookie();
     scheduleMonster();
+  } else if (document.body.classList.contains("sectionFullscreen")) {
+    // タブ全画面中は出現物を消さない。表示だけCSSで隠し、滞在時間は凍結して残す。
+    // (全画面から戻ると同じモンスター/金クッキーが再表示される)
+    clearGoldenSpawnTimer();
+    clearMonsterSpawnTimer();
   } else {
     clearGoldenSpawnTimer();
     clearMonsterSpawnTimer();
