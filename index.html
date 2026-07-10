@@ -5824,7 +5824,7 @@ const RESEARCH = [
   // 段階2/3は「対応スキル取得後、研究タブに購入カードが出現し、クッキーで購入して有効化」する。
   { id: "fingerTechnique", name: "指先の型", cost: 2500, detail: "式：会心率=1-e^-score、倍率=2+score×10(score=0.01+√強い指×0.045+0.002×最高到達層。開始1%から育つ)。段階2(スキル「連打の呼吸」で購入可):会心コンボ=会心ごとに+1(上限なし、30秒途切れでリセット)、会心倍率×(1+0.03×コンボ)。段階3(スキル「神経直結」で購入可):会心の余熱=会心のたびに毎秒生産×0.025%×最高到達層を追加獲得。", desc: "タップ会心を解放する。段階購入でコンボと会心の余熱が追加" },
   { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 12000, detail: "式：支援=1.002〜1.003^おばあちゃん(強い指・オーブン・工場)。段階2(スキル「炉の列」で購入可):支援先に銀行・香料棚を追加(×1.008^おばあちゃん)。段階3(スキル「無人ライン」で購入可):全支援×(1+0.001×最高到達層)。", desc: "おばあちゃんが下位設備を支援する。段階購入で支援先と層効果が追加" },
-  { id: "ovenBatch", name: "オーブン大量焼成", cost: 30000, detail: "式：9×1.008^オーブン×1.004^(最高到達層-1)。段階2(スキル「同期炉」で購入可):オーブン強化倍率×1.35。段階3(スキル「研究改造室」で購入可):オーブン個別強化Lv×(1+0.05×Lv)。", desc: "最高到達層とオーブン数でオーブンを強化する。段階購入で強化倍率と個別強化連動が追加" },
+  { id: "ovenBatch", name: "オーブン大量焼成", cost: 30000, detail: "式：9×1.008^オーブン×1.004^(最高到達層-1)。段階2(スキル「同期炉」で購入可):オーブン強化倍率×1.35。段階3(スキル「焼き加減調整」で購入可):オーブン個別強化Lv×(1+0.05×Lv)。", desc: "最高到達層とオーブン数でオーブンを強化する。段階購入で強化倍率と個別強化連動が追加" },
   { id: "factoryNetwork", name: "工場ネットワーク", cost: 7700000000, detail: "式：9×1.002^(指+婆+炉)×1.008^工場。段階2(スキル「無人ライン」で購入可):銀行以上の所持設備種類×(1+0.15×種類数)。段階3(スキル「まとめ買い」で購入可):×(1+0.0012×最高到達層)。", desc: "下位設備と工場数で工場を強化する。段階購入で上位設備種類と層効果が追加" },
   { id: "spiceBlend", name: "香料調合", cost: 4550000000000, detail: "式：金取得後30秒 香料棚×8×1.006^棚。段階2(スキル「金色の匂い」で購入可):風味の熟成=金取得から12秒間、全生産×(1+0.6%×前回の金からの経過秒)。段階3(スキル「輝き増幅」で購入可):熟成×(1+0.0015×最高到達層)。", desc: "金クッキー取得後に香料棚を強化する。段階購入で熟成バーストが追加" },
   { id: "portalNetwork", name: "異世界接続網", cost: 1950000000000000, detail: "式：金取得後の狩り窓=20秒×1.0042^異世界炉、窓中の出現間隔×0.990^異世界炉。段階2(スキル「砕ける皮」で購入可):窓中の討伐1体ごとに窓+2秒。段階3(スキル「群れ読み」で購入可):窓中の出現×e^(-0.0008×最高到達層)。", desc: "金クッキー取得後にモンスターの狩り窓を開く。段階購入で窓延長と層効果が追加" },
@@ -5933,7 +5933,7 @@ const SKILL_NODES = [
   { id: "mastery_high", name: "工程の極み", branchId: "economy", cost: 12000000, x: 1560, y: 140, icon: "⚒", prereqs: ["mastery_low", "upgrade_galaxy"], desc: "上位設備(月面ベーカリー〜反物質オーブン)にも熟練が付く：同じ設備を買うほど1台あたりの生産が+0.5%ずつ複利で伸びる。", effects: [{ type: "unlockSystem", target: "masteryHigh" }] },
   { id: "order_board", name: "注文ボード", branchId: "economy", cost: 180, x: 440, y: 340, icon: "⬡", prereqs: ["economy_analysis"], desc: "一覧タブに注文ボードを追加する。ノルマ進行度に応じて要求量と報酬倍率が上がる短期目標を表示する。", effects: [{ type: "unlockSystem", target: "orderBoard" }] },
 
-    { id: "bake_temperature", name: "焼き加減調整", branchId: "auto", cost: 3200, x: 1740, y: 460, icon: "◇", prereqs: ["auto_3"], desc: "焼き加減(弱火/中火/強火/香ばしい)の切り替えを解放する。オーブン大量焼成の段階3の解放条件にもなる。", effects: [{ type: "unlockSystem", target: "bakeTemperature" }] },
+    { id: "bake_temperature", name: "焼き加減調整", branchId: "auto", cost: 3200, x: 1740, y: 460, icon: "◇", prereqs: ["auto_3"], desc: "焼き加減(生焼け/ちょうどいい/香ばしい/焦げ気味)が自動で切り替わるようになる。オーブン大量焼成の段階3の解放条件にもなる。", effects: [{ type: "unlockSystem", target: "bakeTemperature" }] },
 
 { id: "upgrade_moon", name: "月面許可", branchId: "upgrade", cost: 5900, x: 1180, y: 420, icon: "◌", prereqs: ["economy_2"], desc: "月面ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "moonBakery" }] },
   { id: "upgrade_time", name: "時空免許", branchId: "upgrade", cost: 55500, x: 1000, y: 260, icon: "◌", prereqs: ["upgrade_moon", "research_remodel"], desc: "時空オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "timeOven" }] },
@@ -5976,7 +5976,7 @@ const SKILL_NODES = [
   { id: "upgrade_quantum", name: "量子厨房", branchId: "upgrade", cost: 79000000000, x: 880, y: 2400, icon: "✺", prereqs: ["upgrade_singularity"], desc: "量子ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "quantumBakery" }] },
   { id: "upgrade_antimatter", name: "反物質炉", branchId: "upgrade", cost: 475000000000, x: 1180, y: 2540, icon: "✹", prereqs: ["upgrade_quantum"], desc: "反物質オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "antimatterOven" }] },
 
-  { id: "master_final", name: "超越体", branchId: "master", cost: 4500000000000, x: 1000, y: 2920, icon: "✹", prereqs: ["upgrade_antimatter", "unlock_reward_goldenBeastMutation"], desc: "全生産 x10001、タップ +20%、毎秒 +20%、報酬選択肢数の期待値 +80%。", effects: [{ type: "all", value: 10000 }, { type: "click", value: 0.2 }, { type: "cps", value: 0.2 }, { type: "rewardBonus", value: 0.8 }] }
+  { id: "master_final", name: "超越体", branchId: "master", cost: 4500000000000, x: 1000, y: 2920, icon: "✹", prereqs: ["upgrade_antimatter", "unlock_reward_goldenBeastMutation"], desc: "全生産 x10001、タップ +20%、毎秒 +20%、モンスター報酬の獲得量(報酬Lv)の期待値 +80%。", effects: [{ type: "all", value: 10000 }, { type: "click", value: 0.2 }, { type: "cps", value: 0.2 }, { type: "rewardBonus", value: 0.8 }] }
 ];
 
 const SKILLS = SKILL_NODES.map(skill => ({
@@ -6032,7 +6032,7 @@ const DISHES = [
   { id: "chocoFondant", name: "濃厚ショコラ", cost: { cacao: 6, butter: 4 }, desc: "クリックの生産連動係数 ×2(0.4%→0.8%)" },
   { id: "mintIce", name: "ミントアイスサンド", cost: { mint: 6, frostSugar: 3 }, desc: "金クッキー出現間隔 ×0.75" },
   { id: "hunterStew", name: "狩人のシチュー", cost: { ironShard: 2, spice: 4 }, desc: "モンスター出現間隔 ×0.75、モンスターダメージ ×1.5" },
-  { id: "frostCake", name: "霜降りケーキ", cost: { frostSugar: 5, silentCore: 1 }, desc: "ノルマゲージの増加速度 ×0.85" },
+  { id: "frostCake", name: "霜降りケーキ", cost: { frostSugar: 5, silentCore: 1 }, desc: "ノルマの進行を15%遅らせ、モンスター生成ノルマを達成しやすくする" },
   { id: "stardustParfait", name: "星屑パフェ", cost: { stardust: 8, cometShard: 1 }, desc: "効果中に購入した設備はその周回中、生産 ×1.25" },
   // v2: エンドコンテンツ料理。レシピはS6(深層領域)到達で開示
   { id: "voidTart", name: "虚空タルト", cost: { voidSugar: 10, cometShard: 2 }, desc: "素材ドロップ ×2、モンスター出現間隔 ×0.7" }
@@ -11895,8 +11895,8 @@ function researchFormulaText(r) {
 
   if (r.id === "ovenBatch") {
     const oven = state.upgrades.oven || 0;
-    const stage = currentQuotaStageNumber();
-    return `式：オーブン研究倍率 = 9 × 1.008^オーブン数 × 1.004^(ノルマ層 - 1) × 方針補正 / 現在：オーブン ${fmt(oven)}個、第${fmt(stage)}層、倍率 x${(9 * ovenStageMultiplier()).toFixed(3)}`;
+    const stage = maxQuotaStage();
+    return `式：オーブン研究倍率 = 9 × 1.008^オーブン数 × 1.004^(最高到達層 - 1) × 方針補正 / 現在：オーブン ${fmt(oven)}個、最高到達 第${fmt(stage)}層、倍率 x${(9 * ovenStageMultiplier()).toFixed(3)}`;
   }
 
   if (r.id === "factoryNetwork") {
@@ -11924,8 +11924,8 @@ function researchFormulaText(r) {
 
   if (r.id === "moonGlobalYeast") {
     const moon = state.upgrades.moonBakery || 0;
-    const stage = currentQuotaStageNumber();
-    return `式：全体倍率 = 9 × 1.003^(最高到達層 - 2) × 1.001^月面ベーカリー数 ※第3層以上 / 現在：第${fmt(stage)}層、月面 ${fmt(moon)}個、月面層倍率 x${moonLayerGlobalMultiplier().toFixed(3)}`;
+    const stage = maxQuotaStage();
+    return `式：全体倍率 = 9 × 1.003^(最高到達層 - 2) × 1.001^月面ベーカリー数 ※第3層以上 / 現在：最高到達 第${fmt(stage)}層、月面 ${fmt(moon)}個、月面層倍率 x${moonLayerGlobalMultiplier().toFixed(3)}`;
   }
 
   if (r.id === "portalGlobalFold") {
