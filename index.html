@@ -10353,57 +10353,49 @@ function playSound(kind) {
     }
 
     if (kind === "crit") {
-      // 会心タップ：アタックの効いたノイズの「バチバチ」音(電撃/スパーク系)
+      // 会心タップ：力強さは残しつつ、抜けが良く爽快感のある一撃音(パンチ + 明るいシャキン)
       const now = audioCtx.currentTime;
 
-      // フィルタ付きノイズバースト(短いスパーク1発ぶん)。ハイパスで鋭く、急減衰。
-      const spark = (t, dur, hp, gain, q) => {
-        const len = Math.max(1, Math.floor(audioCtx.sampleRate * dur));
-        const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
-        const d = buf.getChannelData(0);
-        for (let n = 0; n < len; n++) d[n] = Math.random() * 2 - 1;
-        const src = audioCtx.createBufferSource();
-        src.buffer = buf;
-        const filt = audioCtx.createBiquadFilter();
-        filt.type = "highpass";
-        filt.frequency.value = hp;
-        filt.Q.value = q || 0.7;
-        const g = audioCtx.createGain();
-        g.gain.setValueAtTime(gain, t);
-        g.gain.exponentialRampToValueAtTime(0.0004, t + dur);
-        src.connect(filt); filt.connect(g); g.connect(seBus());
-        src.start(t); src.stop(t + dur);
-      };
-
-      // 太いアタック(バチッ) + 細かいスパークを数発ずらして重ねてバチバチ感を出す
-      spark(now,          0.07, 900,  0.20);
-      spark(now + 0.006,  0.035, 3200, 0.15);
-      spark(now + 0.018,  0.045, 2200, 0.13);
-      spark(now + 0.032,  0.030, 4200, 0.12);
-      spark(now + 0.046,  0.040, 1700, 0.10);
-      spark(now + 0.060,  0.028, 3600, 0.09);
-
-      // 電撃の"ジッ"(高域sawを急降下)で刺すようなアタックを足す
-      const zap = audioCtx.createOscillator();
-      const zg = audioCtx.createGain();
-      zap.type = "sawtooth";
-      zap.frequency.setValueAtTime(3400, now);
-      zap.frequency.exponentialRampToValueAtTime(700, now + 0.06);
-      zg.gain.setValueAtTime(0.06, now);
-      zg.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
-      zap.connect(zg); zg.connect(seBus());
-      zap.start(now); zap.stop(now + 0.07);
-
-      // 芯の軽い低音インパクト(パンチだけ足す)
+      // 芯の低音インパクト(力強さ): sineを急降下でズンと当てる
       const punch = audioCtx.createOscillator();
       const pg = audioCtx.createGain();
-      punch.type = "sawtooth";
-      punch.frequency.setValueAtTime(260, now);
-      punch.frequency.exponentialRampToValueAtTime(70, now + 0.09);
-      pg.gain.setValueAtTime(0.09, now);
-      pg.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+      punch.type = "sine";
+      punch.frequency.setValueAtTime(300, now);
+      punch.frequency.exponentialRampToValueAtTime(85, now + 0.12);
+      pg.gain.setValueAtTime(0.17, now);
+      pg.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
       punch.connect(pg); pg.connect(seBus());
-      punch.start(now); punch.stop(now + 0.11);
+      punch.start(now); punch.stop(now + 0.16);
+
+      // 明るく抜けるきらめき(爽快感): 澄んだ三角波を数音、少し上へ滑らせて「シャキーン」
+      [1320, 1980, 2640].forEach((f, i) => {
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(f, now + i * 0.018);
+        osc.frequency.exponentialRampToValueAtTime(f * 1.18, now + i * 0.018 + 0.14);
+        g.gain.setValueAtTime(0.075, now + i * 0.018);
+        g.gain.exponentialRampToValueAtTime(0.0008, now + i * 0.018 + 0.24);
+        osc.connect(g); g.connect(seBus());
+        osc.start(now + i * 0.018);
+        osc.stop(now + i * 0.018 + 0.24);
+      });
+
+      // 立ち上がりの抜け(短くハイパスした一瞬のノイズ)。ムワッとさせず、鋭く一発だけ。
+      const len = Math.max(1, Math.floor(audioCtx.sampleRate * 0.03));
+      const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let n = 0; n < len; n++) d[n] = Math.random() * 2 - 1;
+      const src = audioCtx.createBufferSource();
+      src.buffer = buf;
+      const hp = audioCtx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 3800;
+      const ng = audioCtx.createGain();
+      ng.gain.setValueAtTime(0.11, now);
+      ng.gain.exponentialRampToValueAtTime(0.0005, now + 0.035);
+      src.connect(hp); hp.connect(ng); ng.connect(seBus());
+      src.start(now); src.stop(now + 0.035);
       return;
     }
 
