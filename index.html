@@ -12691,8 +12691,8 @@ function switchTab(tabId) {
     scheduleGoldenCookie();
     scheduleMonster();
   } else if (document.body.classList.contains("sectionFullscreen")) {
-    // タブ全画面中は出現物を消さない。表示だけCSSで隠し、滞在時間は凍結して残す。
-    // (全画面から戻ると同じモンスター/金クッキーが再表示される)
+    // タブ全画面中は出現物を表示だけCSSで隠す(消しはしない)。滞在時間は凍結せず通常どおり進み、
+    // 滞在時間内に全画面から戻れば同じ出現物が再表示され、切れていれば通常どおり消える。
     clearGoldenSpawnTimer();
     clearMonsterSpawnTimer();
   } else {
@@ -13613,9 +13613,8 @@ function updateSpawnTimerPauseState() {
 function updateGameClockFreeze() {
   const now = Date.now();
   const buffFrozen = rewardModalOpen() || overlayFreezesGame();
-  // 出現物(金クッキー/モンスター)の滞在時間は、プレイ画面が見えていない間
-  // (タブ全画面など)も止める。全画面から戻った時にモンスターが消えないようにする。
-  const spawnFrozen = buffFrozen || !normalPlayScreenActive();
+  // 出現物(金クッキー/モンスター)の滞在時間は凍結しない。タブ全画面中も通常どおり進む。
+  const spawnFrozen = buffFrozen;
 
   // (A) バフ・ブースト等の残り時間: 停止が続く間は毎フレーム前方へずらして凍結する
   if (buffFrozen && lastGameFreezeAt) {
