@@ -5933,7 +5933,7 @@ const SKILL_NODES = [
   { id: "mastery_high", name: "工程の極み", branchId: "economy", cost: 12000000, x: 1560, y: 140, icon: "⚒", prereqs: ["mastery_low", "upgrade_galaxy"], desc: "上位設備(月面ベーカリー〜反物質オーブン)にも熟練が付く：同じ設備を買うほど1台あたりの生産が+0.5%ずつ複利で伸びる。", effects: [{ type: "unlockSystem", target: "masteryHigh" }] },
   { id: "order_board", name: "注文ボード", branchId: "economy", cost: 180, x: 440, y: 340, icon: "⬡", prereqs: ["economy_analysis"], desc: "一覧タブに注文ボードを追加する。ノルマ進行度に応じて要求量と報酬倍率が上がる短期目標を表示する。", effects: [{ type: "unlockSystem", target: "orderBoard" }] },
 
-    { id: "bake_temperature", name: "焼き加減調整", branchId: "auto", cost: 3200, x: 1740, y: 460, icon: "◇", prereqs: ["auto_3"], desc: "焼き加減(生焼け/ちょうどいい/香ばしい/焦げ気味)が自動で切り替わるようになる。オーブン大量焼成の段階3の解放条件にもなる。", effects: [{ type: "unlockSystem", target: "bakeTemperature" }] },
+    { id: "bake_temperature", name: "焼き加減調整", branchId: "auto", cost: 3200, x: 1740, y: 460, icon: "◇", prereqs: ["auto_3"], desc: "焼き加減(生焼け/ちょうどいい/香ばしい/焦げ気味)を解放する。オーブン大量焼成の段階3の解放条件にもなる。", effects: [{ type: "unlockSystem", target: "bakeTemperature" }] },
 
 { id: "upgrade_moon", name: "月面許可", branchId: "upgrade", cost: 5900, x: 1180, y: 420, icon: "◌", prereqs: ["economy_2"], desc: "月面ベーカリーを解放。", effects: [{ type: "unlockUpgrade", target: "moonBakery" }] },
   { id: "upgrade_time", name: "時空免許", branchId: "upgrade", cost: 55500, x: 1000, y: 260, icon: "◌", prereqs: ["upgrade_moon", "research_remodel"], desc: "時空オーブンを解放。", effects: [{ type: "unlockUpgrade", target: "timeOven" }] },
@@ -13417,7 +13417,10 @@ function clearMonsterSpawnTimer() {
 function updateSpawnTimerPauseState() {
   const shouldPause = rewardModalOpen() || overlayFreezesGame();
 
-  if (shouldPause && !rewardSpawnPauseActive) {
+  // 停止条件が続く間は毎フレーム、動いているタイマーを止め続ける(遷移時だけでなく継続)。
+  // 報酬選択中に金クッキーが消える/次モンスターが組まれると新しいタイマーが立つため、
+  // 遷移時の1回だけ止める方式では取りこぼして出現時間が消費されてしまう。
+  if (shouldPause) {
     rewardSpawnPauseActive = true;
 
     if (goldenSpawnTimer && goldenSpawnDeadline != null) {
@@ -13431,7 +13434,7 @@ function updateSpawnTimerPauseState() {
       clearTimeout(monsterSpawnTimer);
       monsterSpawnTimer = null;
     }
-  } else if (!shouldPause && rewardSpawnPauseActive) {
+  } else if (rewardSpawnPauseActive) {
     rewardSpawnPauseActive = false;
 
     if (goldenSpawnPausedRemaining != null && goldenSpawnCallback) {
