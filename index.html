@@ -10333,24 +10333,55 @@ function playSound(kind) {
     }
 
     if (kind === "crit") {
-      // 会心タップ：高めの弾ける音
+      // 会心タップ：攻撃的で力強い一撃音(低音の重み + 鋭い倍音 + 打撃ノイズ)
       const now = audioCtx.currentTime;
-      [1500, 2100].forEach((freq, i) => {
+
+      // 低音の一撃(パワー・重み): sawtoothを急降下させてズシッと当てる
+      const punch = audioCtx.createOscillator();
+      const punchGain = audioCtx.createGain();
+      punch.type = "sawtooth";
+      punch.frequency.setValueAtTime(340, now);
+      punch.frequency.exponentialRampToValueAtTime(72, now + 0.14);
+      punchGain.gain.setValueAtTime(0.15, now);
+      punchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
+      punch.connect(punchGain);
+      punchGain.connect(seBus());
+      punch.start(now);
+      punch.stop(now + 0.19);
+
+      // 鋭い金属的な倍音(攻撃感): squareを2音、素早く駆け上げる
+      [820, 1240].forEach((freq, i) => {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-
-        osc.type = "triangle";
-        osc.frequency.setValueAtTime(freq, now + i * 0.03);
-        osc.frequency.exponentialRampToValueAtTime(freq * 1.4, now + i * 0.03 + 0.09);
-
-        gain.gain.setValueAtTime(0.06, now + i * 0.03);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.03 + 0.11);
-
+        osc.type = "square";
+        osc.frequency.setValueAtTime(freq, now + i * 0.012);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.7, now + i * 0.012 + 0.08);
+        gain.gain.setValueAtTime(0.045, now + i * 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.012 + 0.10);
         osc.connect(gain);
         gain.connect(seBus());
-        osc.start(now + i * 0.03);
-        osc.stop(now + i * 0.03 + 0.11);
+        osc.start(now + i * 0.012);
+        osc.stop(now + i * 0.012 + 0.10);
       });
+
+      // 立ち上がりの打撃ノイズ(鋭いアタック感)
+      const noiseBuf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.05), audioCtx.sampleRate);
+      const nd = noiseBuf.getChannelData(0);
+      for (let n = 0; n < nd.length; n++) nd[n] = Math.random() * 2 - 1;
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = noiseBuf;
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = "bandpass";
+      noiseFilter.frequency.value = 2000;
+      noiseFilter.Q.value = 0.8;
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.12, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(seBus());
+      noise.start(now);
+      noise.stop(now + 0.06);
       return;
     }
 
@@ -11828,7 +11859,7 @@ function renderShop() {
       <div class="desc">${eff.addText}</div>
       <div class="desc">${eff.totalText}</div>
       <div class="desc">所持 ${fmt(state.upgrades[u.id])}</div>
-      ${surgeNow > 1.05 ? `<div class="desc">時間が経つと割引（表示時点の ×${(1 / surgeNow).toFixed(2)} まで下がる）</div>` : ""}
+      ${surgeNow > 1.05 ? `<div class="desc">表示時点から ×${(1 / surgeNow).toFixed(2)}</div>` : ""}
       ${efficiency ? `<div class="desc">${efficiency}</div>` : ""}
     `;
   });
