@@ -1613,7 +1613,9 @@
 
     #cookie.boost-all {
       background: radial-gradient(circle at 50% 50%, rgba(255,246,160,0.44), transparent 64%), var(--golden-cookie-art);
-      background-size: 126% 126%;
+      /* 金クッキー画像は通常クッキー画像より余白が広く、126%では小さく縮んで“ずれ”て見える。
+         金クッキー(浮遊)の表示と同じ150%にして、通常時と同じくクッキーが枠いっぱいに収まるようにする。 */
+      background-size: 150% 150%;
       background-position: center;
     }
 
@@ -5862,7 +5864,7 @@ const RESEARCH = [
   // 序盤は体感しやすい研究。研究改造室以降は、設備ごとの特殊効果を一つずつ広げる。
   // 段階2/3は「対応スキル取得後、研究タブに購入カードが出現し、クッキーで購入して有効化」する。
   { id: "fingerTechnique", name: "指先の型", cost: 2500, detail: "式：会心率=1-e^-score、倍率=2+score×10(score=0.01+√強い指×0.045+0.002×最高到達層。開始1%から育つ)。段階2(スキル「連打の呼吸」で購入可):会心コンボ=会心ごとに+1(上限なし、30秒途切れでリセット)、会心倍率×(1+0.03×コンボ)。段階3(スキル「神経直結」で購入可):会心の余熱=会心のたびに毎秒生産×0.025%×最高到達層を追加獲得。", desc: "タップ会心を解放する。段階購入でコンボと会心の余熱が追加" },
-  { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 12000, detail: "式：支援=1.002〜1.003^おばあちゃん(強い指・オーブン・工場)。段階2(スキル「炉の列」で購入可):支援先に銀行・香料棚を追加(×1.008^おばあちゃん)。段階3(スキル「無人ライン」で購入可):全支援×(1+0.001×最高到達層)。", desc: "おばあちゃんが下位設備を支援する。段階購入で支援先と層効果が追加" },
+  { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 12000, detail: "式：支援=1.002〜1.003^おばあちゃん(強い指・オーブン・工場)。段階2(スキル「炉の列」で購入可):支援先に銀行・香料棚を追加(×1.008^おばあちゃん)。段階3(スキル「無人ライン」で購入可):全支援×(1+0.001×最高到達層)。", desc: "おばあちゃんが強い指・オーブン・工場を支援する。段階購入で銀行・香料棚も支援＋層効果が追加" },
   { id: "ovenBatch", name: "オーブン大量焼成", cost: 30000, detail: "式：9×1.008^オーブン×1.004^(最高到達層-1)。段階2(スキル「同期炉」で購入可):オーブン強化倍率×1.35。段階3(スキル「焼き加減調整」で購入可):オーブン個別強化Lv×(1+0.05×Lv)。", desc: "最高到達層とオーブン数でオーブンを強化する。段階購入で強化倍率と個別強化連動が追加" },
   { id: "factoryNetwork", name: "工場ネットワーク", cost: 7700000000, detail: "式：9×1.002^(指+婆+炉)×1.008^工場。段階2(スキル「無人ライン」で購入可):銀行以上の所持設備種類×(1+0.15×種類数)。段階3(スキル「まとめ買い」で購入可):×(1+0.0012×最高到達層)。", desc: "下位設備と工場数で工場を強化する。段階購入で上位設備種類と層効果が追加" },
   { id: "spiceBlend", name: "香料調合", cost: 4550000000000, detail: "式：金取得後30秒 香料棚×8×1.006^棚。段階2(スキル「金色の匂い」で購入可):風味の熟成=金取得から12秒間、全生産×(1+0.6%×前回の金からの経過秒)。段階3(スキル「輝き増幅」で購入可):熟成×(1+0.0015×最高到達層)。", desc: "金クッキー取得後に香料棚を強化する。段階購入で熟成バーストが追加" },
@@ -11620,8 +11622,11 @@ function codexPolicyHtml() {
   }
 
   const currentId = state.runPolicy || "balanced";
+  // 現在採用中の方針は「発動済み」として記録する(他の図鑑タブと同じく、発動したものだけ内容を出す)
+  markFeatureUnlocked("policy", currentId);
+
   const intro = `<div class="codexGroupLabel">周回方針</div>`
-    + `<div class="codexSub">方針は転生直後にだけ選べ、その周回のあいだ固定されます。方針ごとに生産・会心・金クッキー・狩猟などへ小さな常時補正がかかり、討伐で手に入りやすい素材も変わります。</div>`;
+    + `<div class="codexSub">方針は転生直後にだけ選べ、その周回のあいだ固定されます。方針ごとに生産・会心・金クッキー・狩猟などへ小さな常時補正がかかり、討伐で手に入りやすい素材も変わります。実際に選んで周回した方針だけ内容が表示されます。</div>`;
 
   // 選択中の方針を先頭にして並べる
   const ordered = [
@@ -11631,6 +11636,8 @@ function codexPolicyHtml() {
 
   const items = ordered.map(p => {
     const selected = p.id === currentId;
+    // 発動(＝選んで周回)した方針だけ内容を表示。未発動は他タブと同じく「？？？」で伏せる。
+    if (!selected && !everUnlocked("policy", p.id)) return codexHiddenItem();
     const title = `${p.name}${selected ? "（現在選択中）" : ""}`;
     const body = `<div>${p.desc}</div>`
       + `<div class="codexGroupLabel">効果と式</div>`
@@ -11811,6 +11818,8 @@ function beginRunAfterSkills() {
   state.awaitingSkillChoice = false;
   state.skillChoiceStartCount = boughtSkillCount();
   state.runStart = Date.now();
+  // この周回で採用した方針を「発動済み」として記録(図鑑の周回方針タブで発動したものだけ表示)
+  if (runPolicyUnlocked()) markFeatureUnlocked("policy", state.runPolicy || "balanced");
   // ステージ選択画面で選んだステージを resetRunLimitedEffects(stage=1に戻す)から保護する
   const chosenStage = currentStageNo();
   resetRunLimitedEffects();
