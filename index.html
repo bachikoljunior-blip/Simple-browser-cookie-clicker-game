@@ -3822,6 +3822,27 @@
       100% { margin-left: 0; }
     }
 
+    /* 「強化」見出しの横に出す全画面の小さな案内。全画面中は隠す。 */
+    .shopHeadTitle {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      min-width: 0;
+      flex: 0 1 auto;
+    }
+    .shopHeadTitle h2 { flex: 0 0 auto; }
+    .fullscreenHint {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--sub);
+      opacity: 0.85;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+    body.sectionFullscreen .fullscreenHint { display: none; }
+
     /* ===== 強化の複数購入バー ===== */
     .buyModeBar {
       flex: 0 0 auto;
@@ -5212,7 +5233,10 @@
   <div class="tabPages">
     <section id="shopTab" class="tabPage active">
       <div class="tabPageHead" data-full-target="shopTab">
-        <h2>強化</h2>
+        <div class="shopHeadTitle">
+          <h2>強化</h2>
+          <span class="fullscreenHint">下のタブをタップして全画面</span>
+        </div>
         <div id="buyModeBar" class="buyModeBar">
           <span class="buyModeLabel">購入数</span>
           <button type="button" class="buyModeBtn active" data-buymode="1">×1</button>
@@ -10353,7 +10377,7 @@ function playSound(kind) {
     }
 
     if (kind === "crit") {
-      // 会心タップ：力強さは残しつつ、抜けが良く爽快感のある一撃音(パンチ + 明るいシャキン)
+      // 会心タップ：力強さ + 爽快な抜け + ノイズのバチバチ感 を両立させた一撃音
       const now = audioCtx.currentTime;
 
       // 芯の低音インパクト(力強さ): sineを急降下でズンと当てる
@@ -10362,7 +10386,7 @@ function playSound(kind) {
       punch.type = "sine";
       punch.frequency.setValueAtTime(300, now);
       punch.frequency.exponentialRampToValueAtTime(85, now + 0.12);
-      pg.gain.setValueAtTime(0.17, now);
+      pg.gain.setValueAtTime(0.16, now);
       pg.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
       punch.connect(pg); pg.connect(seBus());
       punch.start(now); punch.stop(now + 0.16);
@@ -10374,28 +10398,34 @@ function playSound(kind) {
         osc.type = "triangle";
         osc.frequency.setValueAtTime(f, now + i * 0.018);
         osc.frequency.exponentialRampToValueAtTime(f * 1.18, now + i * 0.018 + 0.14);
-        g.gain.setValueAtTime(0.075, now + i * 0.018);
+        g.gain.setValueAtTime(0.07, now + i * 0.018);
         g.gain.exponentialRampToValueAtTime(0.0008, now + i * 0.018 + 0.24);
         osc.connect(g); g.connect(seBus());
         osc.start(now + i * 0.018);
         osc.stop(now + i * 0.018 + 0.24);
       });
 
-      // 立ち上がりの抜け(短くハイパスした一瞬のノイズ)。ムワッとさせず、鋭く一発だけ。
-      const len = Math.max(1, Math.floor(audioCtx.sampleRate * 0.03));
-      const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let n = 0; n < len; n++) d[n] = Math.random() * 2 - 1;
-      const src = audioCtx.createBufferSource();
-      src.buffer = buf;
-      const hp = audioCtx.createBiquadFilter();
-      hp.type = "highpass";
-      hp.frequency.value = 3800;
-      const ng = audioCtx.createGain();
-      ng.gain.setValueAtTime(0.11, now);
-      ng.gain.exponentialRampToValueAtTime(0.0005, now + 0.035);
-      src.connect(hp); hp.connect(ng); ng.connect(seBus());
-      src.start(now); src.stop(now + 0.035);
+      // バチバチ感: 高域ハイパスのノイズ・スパークを数発ずらして重ねる(爽快感を消さないよう軽め・短め)
+      const spark = (t, dur, hp, gain) => {
+        const len = Math.max(1, Math.floor(audioCtx.sampleRate * dur));
+        const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let n = 0; n < len; n++) d[n] = Math.random() * 2 - 1;
+        const src = audioCtx.createBufferSource();
+        src.buffer = buf;
+        const filt = audioCtx.createBiquadFilter();
+        filt.type = "highpass";
+        filt.frequency.value = hp;
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(gain, t);
+        g.gain.exponentialRampToValueAtTime(0.0005, t + dur);
+        src.connect(filt); filt.connect(g); g.connect(seBus());
+        src.start(t); src.stop(t + dur);
+      };
+      spark(now,         0.035, 3500, 0.13);
+      spark(now + 0.020, 0.030, 2600, 0.10);
+      spark(now + 0.040, 0.030, 4200, 0.09);
+      spark(now + 0.062, 0.026, 3000, 0.08);
       return;
     }
 
