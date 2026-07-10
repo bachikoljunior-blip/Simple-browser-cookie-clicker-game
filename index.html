@@ -11828,7 +11828,7 @@ function renderShop() {
       <div class="desc">${eff.addText}</div>
       <div class="desc">${eff.totalText}</div>
       <div class="desc">所持 ${fmt(state.upgrades[u.id])}</div>
-      ${surgeNow > 1.05 ? `<div class="desc">まとめ買い割増 ×${surgeNow.toFixed(2)}(時間で元の値段に戻る)</div>` : ""}
+      ${surgeNow > 1.05 ? `<div class="desc">時間が経つと割引（あと -${Math.round((1 - 1 / surgeNow) * 100)}%、待つと元の値段に戻る）</div>` : ""}
       ${efficiency ? `<div class="desc">${efficiency}</div>` : ""}
     `;
   });
