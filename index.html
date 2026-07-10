@@ -2589,10 +2589,15 @@
       z-index: 30 !important;
     }
 
-    #goldenCookie,
-    .monsterInstance {
+    #goldenCookie {
       position: absolute !important;
       z-index: 4 !important;
+    }
+
+    /* モンスター(とHP表示)はノルマUI(z-index:30)より前面に置き、HPが隠れないようにする */
+    .monsterInstance {
+      position: absolute !important;
+      z-index: 40 !important;
     }
 
     #goldenCookie {
@@ -3399,10 +3404,15 @@
       z-index: 30 !important;
     }
 
-    #goldenCookie,
-    .monsterInstance {
+    #goldenCookie {
       position: absolute !important;
       z-index: 4 !important;
+    }
+
+    /* モンスター(とHP表示)はノルマUI(z-index:30)より前面に置き、HPが隠れないようにする */
+    .monsterInstance {
+      position: absolute !important;
+      z-index: 40 !important;
     }
 
     #goldenCookie {
@@ -6234,7 +6244,7 @@ function freshState() {
     awaitingSkillChoice: false,
     skillChoiceStartCount: 0,
     seenPrestigeUnlockNotice: false,
-    prestigeUnlockedEver: false, // 所持クッキーが初めて100万を超えたら立つ、転生解放のラッチ
+    prestigeUnlockedEver: false, // 所持クッキーが初めて500万を超えたら立つ、転生解放のラッチ
     adsRemoved: false, // 広告非表示の購入フラグ。クラウド保存経由で端末間に引き継ぐための状態
 
     upgrades,
@@ -9302,6 +9312,8 @@ function bumpSurge(id) {
   const sg = state.upSurge[id] || (state.upSurge[id] = { h: 0, t: Date.now() });
   sg.h = sg.h * Math.pow(0.5, ((Date.now() - sg.t) / 1000) / SURGE_HALF_SEC) + 1;
   sg.t = Date.now();
+  // 購入直後の割増倍率(=購入後に表示されるコストの基準)。以後この値を1として下がり幅を表示する。
+  sg.peak = Math.pow(1 + SURGE_PER_BUY, sg.h);
 }
 
 function costOf(u, ownedOverride, extraHeat) {
@@ -10341,55 +10353,57 @@ function playSound(kind) {
     }
 
     if (kind === "crit") {
-      // 会心タップ：攻撃的で力強い一撃音(低音の重み + 鋭い倍音 + 打撃ノイズ)
+      // 会心タップ：アタックの効いたノイズの「バチバチ」音(電撃/スパーク系)
       const now = audioCtx.currentTime;
 
-      // 低音の一撃(パワー・重み): sawtoothを急降下させてズシッと当てる
+      // フィルタ付きノイズバースト(短いスパーク1発ぶん)。ハイパスで鋭く、急減衰。
+      const spark = (t, dur, hp, gain, q) => {
+        const len = Math.max(1, Math.floor(audioCtx.sampleRate * dur));
+        const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let n = 0; n < len; n++) d[n] = Math.random() * 2 - 1;
+        const src = audioCtx.createBufferSource();
+        src.buffer = buf;
+        const filt = audioCtx.createBiquadFilter();
+        filt.type = "highpass";
+        filt.frequency.value = hp;
+        filt.Q.value = q || 0.7;
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(gain, t);
+        g.gain.exponentialRampToValueAtTime(0.0004, t + dur);
+        src.connect(filt); filt.connect(g); g.connect(seBus());
+        src.start(t); src.stop(t + dur);
+      };
+
+      // 太いアタック(バチッ) + 細かいスパークを数発ずらして重ねてバチバチ感を出す
+      spark(now,          0.07, 900,  0.20);
+      spark(now + 0.006,  0.035, 3200, 0.15);
+      spark(now + 0.018,  0.045, 2200, 0.13);
+      spark(now + 0.032,  0.030, 4200, 0.12);
+      spark(now + 0.046,  0.040, 1700, 0.10);
+      spark(now + 0.060,  0.028, 3600, 0.09);
+
+      // 電撃の"ジッ"(高域sawを急降下)で刺すようなアタックを足す
+      const zap = audioCtx.createOscillator();
+      const zg = audioCtx.createGain();
+      zap.type = "sawtooth";
+      zap.frequency.setValueAtTime(3400, now);
+      zap.frequency.exponentialRampToValueAtTime(700, now + 0.06);
+      zg.gain.setValueAtTime(0.06, now);
+      zg.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+      zap.connect(zg); zg.connect(seBus());
+      zap.start(now); zap.stop(now + 0.07);
+
+      // 芯の軽い低音インパクト(パンチだけ足す)
       const punch = audioCtx.createOscillator();
-      const punchGain = audioCtx.createGain();
+      const pg = audioCtx.createGain();
       punch.type = "sawtooth";
-      punch.frequency.setValueAtTime(340, now);
-      punch.frequency.exponentialRampToValueAtTime(72, now + 0.14);
-      punchGain.gain.setValueAtTime(0.15, now);
-      punchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
-      punch.connect(punchGain);
-      punchGain.connect(seBus());
-      punch.start(now);
-      punch.stop(now + 0.19);
-
-      // 鋭い金属的な倍音(攻撃感): squareを2音、素早く駆け上げる
-      [820, 1240].forEach((freq, i) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = "square";
-        osc.frequency.setValueAtTime(freq, now + i * 0.012);
-        osc.frequency.exponentialRampToValueAtTime(freq * 1.7, now + i * 0.012 + 0.08);
-        gain.gain.setValueAtTime(0.045, now + i * 0.012);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.012 + 0.10);
-        osc.connect(gain);
-        gain.connect(seBus());
-        osc.start(now + i * 0.012);
-        osc.stop(now + i * 0.012 + 0.10);
-      });
-
-      // 立ち上がりの打撃ノイズ(鋭いアタック感)
-      const noiseBuf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * 0.05), audioCtx.sampleRate);
-      const nd = noiseBuf.getChannelData(0);
-      for (let n = 0; n < nd.length; n++) nd[n] = Math.random() * 2 - 1;
-      const noise = audioCtx.createBufferSource();
-      noise.buffer = noiseBuf;
-      const noiseFilter = audioCtx.createBiquadFilter();
-      noiseFilter.type = "bandpass";
-      noiseFilter.frequency.value = 2000;
-      noiseFilter.Q.value = 0.8;
-      const noiseGain = audioCtx.createGain();
-      noiseGain.gain.setValueAtTime(0.12, now);
-      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-      noise.connect(noiseFilter);
-      noiseFilter.connect(noiseGain);
-      noiseGain.connect(seBus());
-      noise.start(now);
-      noise.stop(now + 0.06);
+      punch.frequency.setValueAtTime(260, now);
+      punch.frequency.exponentialRampToValueAtTime(70, now + 0.09);
+      pg.gain.setValueAtTime(0.09, now);
+      pg.gain.exponentialRampToValueAtTime(0.001, now + 0.11);
+      punch.connect(pg); pg.connect(seBus());
+      punch.start(now); punch.stop(now + 0.11);
       return;
     }
 
@@ -11045,28 +11059,34 @@ function proceedToStageChoice() {
 function stageChoiceSummary(no) {
   const s = stageInfo(no);
   const roster = s.roster.map(t => (MONSTER_TYPES[t] || {}).name || t).join("・");
+  // 工房(素材の嗅覚)未解放時は素材が落ちないので、素材・ドロップに関する表記は出さない
+  const showMats = workshopTabUnlocked();
 
   const mods = [];
   if (s.deep) mods.push(`HP×${fmt(s.hpMul)}(層が深いほど増加)`);
   else if (s.hpMul > 1) mods.push(`HP×${fmt(s.hpMul)}`);
-  if ((s.dropMul || 1) > 1) mods.push(`ドロップ×${fmt(s.dropMul)}`);
-  if ((s.dropAdd || 0) > 0) mods.push(`ドロップ+${fmt(s.dropAdd)}`);
+  if (showMats && (s.dropMul || 1) > 1) mods.push(`ドロップ×${fmt(s.dropMul)}`);
+  if (showMats && (s.dropAdd || 0) > 0) mods.push(`ドロップ+${fmt(s.dropAdd)}`);
   if ((s.goldenGainMul || 1) > 1) mods.push("金クッキー獲得アップ");
   if ((s.goldenSpawnMul || 1) < 1) mods.push("金クッキー出現アップ");
   if ((s.rewardLvAdd || 0) > 0) mods.push(`報酬Lv+${fmt(s.rewardLvAdd)}層扱い`);
   if ((s.bossCycleAdj || 0) < 0) mods.push("ボス周期短縮");
   if ((s.stayMul || 1) < 1) mods.push("滞在短め");
 
-  let mats;
-  if (s.deep) {
-    mats = "虚空糖・深層核";
-  } else {
-    const table = STAGE_MATERIALS[no] || {};
-    const ids = [...new Set(Object.values(table).concat(no === 1 ? ["flour"] : []))];
-    mats = ids.map(id => (getMaterial(id) || { name: id }).name).join("・") + `・${(getMaterial("bossCore" + no) || {}).name || ""}`;
+  let matsPart = "";
+  if (showMats) {
+    let mats;
+    if (s.deep) {
+      mats = "虚空糖・深層核";
+    } else {
+      const table = STAGE_MATERIALS[no] || {};
+      const ids = [...new Set(Object.values(table).concat(no === 1 ? ["flour"] : []))];
+      mats = ids.map(id => (getMaterial(id) || { name: id }).name).join("・") + `・${(getMaterial("bossCore" + no) || {}).name || ""}`;
+    }
+    matsPart = ` / 素材: ${mats}`;
   }
 
-  return `出現: ${roster}${mods.length ? ` / 補正: ${mods.join("、")}` : ""} / 素材: ${mats}`;
+  return `出現: ${roster}${mods.length ? ` / 補正: ${mods.join("、")}` : ""}${matsPart}`;
 }
 
 function renderStageChoiceScreen() {
@@ -11859,6 +11879,9 @@ function renderShop() {
 
     btn.classList.toggle("canBuy", (debugMode || plan.affordable) && !pausedForSkillChoice());
     const surgeNow = surgeMultiplier(u.id, 0);
+    // 購入直後のコストを1として、時間経過で下がった現在の割合(現在割増 ÷ 購入直後割増)を表示する
+    const surgePeak = (state.upSurge && state.upSurge[u.id] && state.upSurge[u.id].peak) || surgeNow;
+    const surgeRatio = surgePeak > 0 ? surgeNow / surgePeak : 1;
     // その回でまだ購入していない設備は絵をシルエットで伏せる
     btn.classList.toggle("artSilhouette", (state.upgrades[u.id] || 0) === 0);
     btn.innerHTML = `
@@ -11867,7 +11890,7 @@ function renderShop() {
       <div class="desc">${eff.addText}</div>
       <div class="desc">${eff.totalText}</div>
       <div class="desc">所持 ${fmt(state.upgrades[u.id])}</div>
-      ${surgeNow > 1.05 ? `<div class="desc">待つと割引 ×${(1 / surgeNow).toFixed(2)}</div>` : ""}
+      ${surgeNow > 1.05 ? `<div class="desc">待つと割引 ×${surgeRatio.toFixed(2)}</div>` : ""}
       ${efficiency ? `<div class="desc">${efficiency}</div>` : ""}
     `;
   });
@@ -12276,7 +12299,7 @@ function prestigeGain() {
 }
 
 function prestigeUnlocked() {
-  // 所持クッキーが初めて100万を超えた時点で解放し、以後は消費して下回っても解放のまま(ラッチ)
+  // 所持クッキーが初めて500万を超えた時点で解放し、以後は消費して下回っても解放のまま(ラッチ)
   return Boolean(state.prestigeUnlockedEver) || state.prestigeTotal > 0 || state.prestigeRuns > 0;
 }
 
@@ -12288,8 +12311,8 @@ function updatePrestigeTabLabel() {
 }
 
 function checkPrestigeUnlockNotice() {
-  // 所持クッキーが初めて100万を超えたら転生を解放する
-  if (!state.prestigeUnlockedEver && state.cookies.gte(1000000)) {
+  // 所持クッキーが初めて500万を超えたら転生を解放する
+  if (!state.prestigeUnlockedEver && state.cookies.gte(5000000)) {
     state.prestigeUnlockedEver = true;
     state.seenPrestigeUnlockNotice = true;
     showMessage("新たな機能が解放されます");
@@ -12308,7 +12331,7 @@ function renderPrestige() {
     box.innerHTML = `
       <div class="infoBox">
         <h3>？？？</h3>
-        <div class="desc">100万クッキーで新たな機能が解放されます。</div>
+        <div class="desc">500万クッキーで新たな機能が解放されます。</div>
         <button id="resetBtn" class="item danger">完全リセット</button>
       </div>
     `;
@@ -12319,7 +12342,7 @@ function renderPrestige() {
   }
 
   const gain = prestigeGain();
-  const canPrestige = gain > 0 && !pausedForSkillChoice() && state.cookies.gte(1000000);
+  const canPrestige = gain > 0 && !pausedForSkillChoice() && state.cookies.gte(5000000);
   const policyBox = runPolicyUnlocked() ? `
     <div class="infoBox">
       <h3>周回方針</h3>
@@ -12344,8 +12367,8 @@ function renderPrestige() {
       <div class="infoRow">今回のノルマ維持記録：${fmtTime(state.quotaHoldSeconds || 0)} / ノルマ中討伐 ${fmt(state.quotaMonsterKills || 0)}体</div>
       <div class="infoRow">獲得済み総PT：${fmt(state.prestigeTotal)}</div>
       <div class="infoRow">今回獲得できるPT：+${fmt(gain)}</div>
-      <div class="infoRow">転生には所持クッキー 1,000,000 を消費します(現在:${fmt(state.cookies)})</div>
-      <button id="prestigeBtn" class="item ${canPrestige ? "canBuy" : "locked"}">${canPrestige ? "転生する(100万クッキー消費)" : (gain <= 0 ? "未獲得PTなし" : "クッキー100万が必要")}</button>
+      <div class="infoRow">転生には所持クッキー 5,000,000 を消費します(現在:${fmt(state.cookies)})</div>
+      <button id="prestigeBtn" class="item ${canPrestige ? "canBuy" : "locked"}">${canPrestige ? "転生する(500万クッキー消費)" : (gain <= 0 ? "未獲得PTなし" : "クッキー500万が必要")}</button>
       <button id="resetBtn" class="item danger">完全リセット</button>
     </div>
   `;
@@ -12559,7 +12582,7 @@ function renderInfo() {
 function maskSkillWordIfPreFirstPrestige(root) {
   if (typeof state === "undefined" || !state) return;
   // 「スキル」は初回転生を終えるまで伏せる(スキルは初回転生で初めて触れる要素)。
-  // 「転生」は転生が解放される(所持100万到達)まで伏せる(それまで発展性を明かさない)。
+  // 「転生」は転生が解放される(所持500万到達)まで伏せる(それまで発展性を明かさない)。
   const maskSkill = (state.prestigeRuns || 0) === 0;
   const maskRebirth = !prestigeUnlocked();
   if (!maskSkill && !maskRebirth) return;
@@ -12917,12 +12940,12 @@ function cancelRebirth() {
 function prestigeReset() {
   const gain = prestigeGain();
   if (gain <= 0 || pausedForSkillChoice()) return;
-  if (state.cookies.lt(1000000)) return;
+  if (state.cookies.lt(5000000)) return;
 
   // 転生前の状態を保存(スキル画面から取り消せるように)。周回開始で破棄する。
   try { localStorage.setItem(PREREBIRTH_KEY, JSON.stringify(state)); } catch (e) {}
 
-  state.cookies = state.cookies.sub(1000000);
+  state.cookies = state.cookies.sub(5000000);
 
   const keepTotal = state.totalCookies;
   const keepClicks = state.totalClicks;
