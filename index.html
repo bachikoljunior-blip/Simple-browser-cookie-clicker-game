@@ -14452,9 +14452,13 @@ setInterval(() => {
   if (titleScreenActive()) return;
 
   updateSpawnTimerPauseState();
-  if (!pausedForSkillChoice() && !overlayFreezesGame()) {
+  if (!pausedForSkillChoice()) {
+    // クッキーの自動生産は、図鑑・設定を開いている間も止めない(見えている生産は続く)。
+    // ノルマ・注文・出現・各種ボーナスなど、その他の進行は従来どおりオーバーレイ中は止める。
+    const overlayOpen = overlayFreezesGame();
     state.totalPlaySec = (state.totalPlaySec || 0) + 0.05; // v4: 総プレイ秒(転生持ち越し)
     earn(currentCps() / 20);
+    if (!overlayOpen) {
     // 最高到達ノルマ層を記録(段階式研究の変数)
     state.maxQuotaStage = Math.max(state.maxQuotaStage || 1, currentQuotaStageNumber());
     // 霜降りケーキ: ノルマ時計を15%遅らせる(ゲージ増加速度×0.85)
@@ -14484,6 +14488,7 @@ setInterval(() => {
     }
     checkQuotaState();
     if (!rewardModalOpen()) { tickOrderProgress(1 / 20); checkOrderExpiry(); }
+    }
   }
 
   updateTopOnly();
