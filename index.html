@@ -11573,9 +11573,82 @@ function codexMonsterRewardHtml() {
   return parts.join("");
 }
 
+// 周回方針ごとの「効果と式」。選択中の方針を先頭に開いて強調表示する。
+function codexPolicyEffectRows(id) {
+  if (id === "balanced") {
+    return `<div>常時の数値補正はありません。素直に伸ばす基本の周回です。</div>`;
+  }
+  if (id === "click") {
+    return `<div>・タップ生産倍率 <b>+0.12</b>（タップ倍率 = 1 + スキル + 全体スキル + <b>0.12</b>）</div>`
+      + `<div>・会心の育ちに <b>+0.010</b>（score = 0.01 + √強い指×0.045 + 0.002×最高到達層 + <b>0.010</b>。会心率 = 1 − e^−score、会心倍率 = 2 + score×10）</div>`
+      + `<div>・銀行クリック配当倍率 <b>×1.08</b></div>`;
+  }
+  if (id === "bake") {
+    return `<div>・毎秒生産倍率 <b>+0.12</b>（毎秒倍率 = 1 + スキル + 全体スキル + <b>0.12</b>）</div>`
+      + `<div>・オーブン研究倍率 <b>×1.10</b></div>`
+      + `<div>・焼き加減が「ちょうどいい（毎秒生産寄り）」に寄りやすい（抽選重み +0.85）</div>`;
+  }
+  if (id === "hunt") {
+    return `<div>・モンスター最終ダメージ <b>+0.14</b>（ダメージ倍率へ加算）</div>`
+      + `<div>・モンスター滞在時間 <b>+0.10</b> 相当（滞在 = 基準 ×(1 + スキル + <b>0.10</b> + 報酬)）</div>`
+      + `<div>・モンスター出現間隔 <b>−0.10</b>（出現が速くなる）</div>`
+      + `<div>・焼き加減が「香ばしい（狩猟寄り）」に寄りやすい（抽選重み +0.85）</div>`;
+  }
+  if (id === "golden") {
+    return `<div>・金ブースト倍率 <b>+0.18</b>（全生産×の追加分に加算）</div>`
+      + `<div>・金ブースト持続の伸び幅 <b>+900</b>（基準9秒〜最大約35秒への育ちが速くなる）</div>`
+      + `<div>・金クッキー獲得量倍率 <b>+0.10</b></div>`
+      + `<div>・金クッキー出現間隔 <b>−0.12</b>（出現が速くなる）</div>`
+      + `<div>・スパイス（金ブースト中）倍率 <b>×1.08</b></div>`
+      + `<div>・焼き加減が「生焼け（金クッキー寄り）」に寄りやすい（抽選重み +0.85）</div>`;
+  }
+  return "";
+}
+
+// 選択中の方針で、関連する現在値を表示する
+function codexPolicyCurrentRow(id) {
+  if (id === "click") return `<div class="codexSub">現在：タップ倍率 x${clickSkillMultiplier().toFixed(3)} / 会心率 ${(fingerCritChance() * 100).toFixed(2)}% / 会心倍率 x${fingerCritMultiplier().toFixed(2)}</div>`;
+  if (id === "bake") return `<div class="codexSub">現在：毎秒倍率 x${cpsSkillMultiplier().toFixed(3)}</div>`;
+  if (id === "hunt") return `<div class="codexSub">現在：モンスター最終ダメージ ${fmt(monsterBaseDamage() * monsterDamageMultiplier())}</div>`;
+  if (id === "golden") return `<div class="codexSub">現在：金ブースト倍率 x${goldenMultiplier().toFixed(2)} / 持続 ${(goldenBoostDuration() / 1000).toFixed(1)}秒 / 獲得量倍率 x${goldenAmountMultiplier().toFixed(2)}</div>`;
+  return "";
+}
+
+function codexPolicyHtml() {
+  if (!runPolicyUnlocked()) {
+    return `<div class="codexEmpty">スキル「分岐炉心」を解放すると、周回方針が選べるようになります。</div>`;
+  }
+
+  const currentId = state.runPolicy || "balanced";
+  const intro = `<div class="codexGroupLabel">周回方針</div>`
+    + `<div class="codexSub">方針は転生直後にだけ選べ、その周回のあいだ固定されます。方針ごとに生産・会心・金クッキー・狩猟などへ小さな常時補正がかかり、討伐で手に入りやすい素材も変わります。</div>`;
+
+  // 選択中の方針を先頭にして並べる
+  const ordered = [
+    RUN_POLICIES.find(p => p.id === currentId),
+    ...RUN_POLICIES.filter(p => p.id !== currentId)
+  ].filter(Boolean);
+
+  const items = ordered.map(p => {
+    const selected = p.id === currentId;
+    const title = `${p.name}${selected ? "（現在選択中）" : ""}`;
+    const body = `<div>${p.desc}</div>`
+      + `<div class="codexGroupLabel">効果と式</div>`
+      + codexPolicyEffectRows(p.id)
+      + (selected ? codexPolicyCurrentRow(p.id) : "")
+      + `<div class="codexGroupLabel">素材の相性</div>`
+      + `<div>${policyBiasText(p)}</div>`;
+    const icon = ASSETS.screens && ASSETS.screens.prestige;
+    return `<details class="codexItem"${selected ? " open" : ""}><summary>${icon ? `<img class="codexIcon" src="${assetUrl(icon)}" alt="" aria-hidden="true" loading="lazy">` : ""}<span class="codexItemName">${title}</span></summary><div class="codexItemBody">${body}</div></details>`;
+  });
+
+  return intro + items.join("");
+}
+
 function codexTabDefs() {
   return [
     { id: "golden", name: "金クッキー", icon: ASSETS.objects && ASSETS.objects.goldenCookie, show: () => true },
+    { id: "policy", name: "周回方針", icon: ASSETS.screens && ASSETS.screens.prestige, show: () => runPolicyUnlocked() },
     { id: "monster", name: "モンスター報酬", icon: ASSETS.objects && ASSETS.objects.cookieMonster, show: () => true },
     { id: "research", name: "研究", icon: ASSETS.screens && ASSETS.screens.research, show: () => true },
     { id: "order", name: "注文ボード", icon: ASSETS.screens && ASSETS.screens.order, show: () => orderBoardUnlocked() },
@@ -11600,6 +11673,7 @@ function renderCodex() {
 
   let html = "";
   if (codexTabId === "golden") html = codexGoldenHtml();
+  else if (codexTabId === "policy") html = codexPolicyHtml();
   else if (codexTabId === "monster") html = codexMonsterRewardHtml();
   else if (codexTabId === "research") html = codexResearchHtml();
   else if (codexTabId === "order") html = codexOrderHtml();
