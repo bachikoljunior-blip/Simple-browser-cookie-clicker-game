@@ -5868,9 +5868,9 @@ const RESEARCH = [
   { id: "grandmaCrowd", name: "おばあちゃん連携", cost: 12000, detail: "式：支援=1.002〜1.003^おばあちゃん(強い指・オーブン・工場)。段階2(スキル「炉の列」で購入可):支援先に銀行・香料棚を追加(×1.008^おばあちゃん)。段階3(スキル「無人ライン」で購入可):全支援×(1+0.001×最高到達層)。", desc: "おばあちゃんが強い指・オーブン・工場を支援する。段階購入で銀行・香料棚も支援＋層効果が追加" },
   { id: "ovenBatch", name: "オーブン大量焼成", cost: 30000, detail: "式：9×1.008^オーブン×1.004^(最高到達層-1)。段階2(スキル「同期炉」で購入可):オーブン強化倍率×1.35。段階3(スキル「焼き加減調整」で購入可):オーブン個別強化Lv×(1+0.05×Lv)。", desc: "最高到達層とオーブン数でオーブンを強化する。段階購入で強化倍率と個別強化連動が追加" },
   { id: "factoryNetwork", name: "工場ネットワーク", cost: 7700000000, detail: "式：9×1.002^(指+婆+炉)×1.008^工場。段階2(スキル「無人ライン」で購入可):銀行以上の所持設備種類×(1+0.15×種類数)。段階3(スキル「まとめ買い」で購入可):×(1+0.0012×最高到達層)。", desc: "下位設備と工場数で工場を強化する。段階購入で上位設備種類と層効果が追加" },
-  { id: "spiceBlend", name: "香料調合", cost: 4550000000000, detail: "式：金取得後30秒 香料棚×8×1.006^棚。段階2(スキル「金色の匂い」で購入可):風味の熟成=金取得から12秒間、全生産×(1+0.6%×前回の金からの経過秒)。段階3(スキル「輝き増幅」で購入可):熟成×(1+0.0015×最高到達層)。", desc: "金クッキー取得後に香料棚を強化する。段階購入で熟成バーストが追加" },
-  { id: "portalNetwork", name: "異世界接続網", cost: 1950000000000000, detail: "式：金取得後の狩り窓=20秒×1.0042^異世界炉、窓中の出現間隔×0.990^異世界炉。段階2(スキル「砕ける皮」で購入可):窓中の討伐1体ごとに窓+2秒。段階3(スキル「群れ読み」で購入可):窓中の出現×e^(-0.0008×最高到達層)。", desc: "金クッキー取得後にモンスターの狩り窓を開く。段階購入で窓延長と層効果が追加" },
-  { id: "bankClickDividend", name: "銀行クリック配当", cost: 815000000000000000, detail: "式：クリック×1.008^銀行×(1+log(貯蓄)×8)。段階2(スキル「まとめ買い」で購入可):複利利息=所持×0.12%×log10(1+銀行)を毎秒獲得(毎秒生産×2付近から逓減、打ち止めなし)。段階3(スキル「経済分析」で購入可):逓減基準×(1+0.004×最高到達層)。", desc: "銀行と貯蓄でクリックを強化する。段階購入で複利利息が追加" },
+  { id: "spiceBlend", name: "香料調合", cost: 1950000000000000, detail: "式：金取得後30秒 香料棚×8×1.006^棚。段階2(スキル「金色の匂い」で購入可):風味の熟成=金取得から12秒間、全生産×(1+0.6%×前回の金からの経過秒)。段階3(スキル「輝き増幅」で購入可):熟成×(1+0.0015×最高到達層)。", desc: "金クッキー取得後に香料棚を強化する。段階購入で熟成バーストが追加" },
+  { id: "portalNetwork", name: "異世界接続網", cost: 815000000000000000, detail: "式：金取得後の狩り窓=20秒×1.0042^異世界炉、窓中の出現間隔×0.990^異世界炉。段階2(スキル「砕ける皮」で購入可):窓中の討伐1体ごとに窓+2秒。段階3(スキル「群れ読み」で購入可):窓中の出現×e^(-0.0008×最高到達層)。", desc: "金クッキー取得後にモンスターの狩り窓を開く。段階購入で窓延長と層効果が追加" },
+  { id: "bankClickDividend", name: "銀行クリック配当", cost: 4550000000000, detail: "式：クリック×1.008^銀行×(1+log(貯蓄)×8)。段階2(スキル「まとめ買い」で購入可):複利利息=所持×0.12%×log10(1+銀行)を毎秒獲得(毎秒生産×2付近から逓減、打ち止めなし)。段階3(スキル「経済分析」で購入可):逓減基準×(1+0.004×最高到達層)。", desc: "銀行と貯蓄でクリックを強化する。段階購入で複利利息が追加" },
   { id: "moonGlobalYeast", name: "月面発酵", cost: 2.9000000000000003e+41, detail: "式：9×1.003^(最高到達層-2)×1.001^月面 ※第3層以降。段階2(スキル「時空免許」で購入可):log10(1+ノルマ余裕率)/10で発酵が進む。段階3(スキル「研究解析」で購入可):×(1+5%×取得研究数)。", desc: "最高到達層で全体生産を強化する。段階購入で余裕率連動と研究数連動が追加" },
   { id: "portalGlobalFold", name: "異世界増幅", cost: 360000000000000000000, detail: "式：1.002^異世界炉×3.5^出現中モンスター×金ブースト中×5。段階2(スキル「特異点管理」で購入可):折込連鎖=全生産×1.058^ノルマ中討伐数。討伐するほど成長率が上がる。段階3(スキル「超越体」で購入可):×(1+0.001×最高到達層)。", desc: "異世界炉・金・モンスターの連動。段階購入で折込連鎖(討伐数が指数)が追加" },
   { id: "galaxyAssembly", name: "銀河分業", cost: 7.550000000000001e+99, detail: "式：銀河工場×1.5^種類数×1.006^銀河工場。段階2(スキル「宇宙炉心」で購入可):編成ボーナス=全生産×(1+0.027×バランス係数)^銀河工場数。バランス係数=所持数の幾何平均/算術平均(まんべんなく揃えるほど1に近い)。段階3(スキル「特異点管理」で購入可):レート×(1+0.0008×最高到達層)。", desc: "設備種類で銀河工場を強化する。段階購入で編成ボーナス(銀河工場数が指数×バランス)が追加" },
@@ -6183,6 +6183,12 @@ const STAGE_MATERIALS = {
   5: { normal: "stardust", swarm: "stardust", speedy: "stardust", tank: "stardust", goldenBeast: "stardust" }
 };
 
+// 初台ボーナス(条件㉑対策・第12次R2): 中位設備の生涯で初めての1台に、購入直前の基礎CPS×0.25の
+// 生産を持たせる(静的加算・転生持ち越し)。上位設備は系列ボーナスが既に「初購入の瞬間に生産の一部を担う」ため対象外。
+// 購入時CPS基準の固定値なので、経済成長とともに自然に無意味化する。
+const PRESENCE_FIRST_UNIT_COEF = 0.25;
+const PRESENCE_UPGRADE_IDS = ["oven", "factory", "bank", "spiceRack", "portal"];
+
 let state = freshState();
 let buyMode = "1";
 let audioCtx = null;
@@ -6321,6 +6327,7 @@ function freshState() {
     // 工房・素材・ステージ(materials/equipment/解放系は転生持ち越し)
     materials: {},
     materialsSeen: {},
+    presenceBonus: {},
     equipment: {},
     equipmentAscend: {},
     killRecords: {},
@@ -6422,6 +6429,7 @@ function ensureState() {
 
   state.materials = state.materials && typeof state.materials === "object" ? state.materials : {};
   state.materialsSeen = state.materialsSeen && typeof state.materialsSeen === "object" ? state.materialsSeen : {};
+  state.presenceBonus = state.presenceBonus && typeof state.presenceBonus === "object" ? state.presenceBonus : {};
   MATERIALS.forEach(m => {
     state.materials[m.id] = Math.max(0, Math.floor(Number(state.materials[m.id]) || 0));
     state.materialsSeen[m.id] = Boolean(state.materialsSeen[m.id]) || state.materials[m.id] > 0;
@@ -7203,7 +7211,7 @@ function stageExpGrowth(count, rate) {
 
 // 段階購入コスト: 段階2=基礎cost×1,500、段階3=基礎cost×2,250,000(研究割引を適用)
 // 段階コストの研究別倍率(値段割りD'・sim weave_costs.json と同期)
-const RESEARCH_STAGE_MULT = {"fingerTechnique":{"s2":2.7246254890759383e+22,"s3":8.107627583593448e+89},"grandmaCrowd":{"s2":8.079046947665262e+26,"s3":2.435714206456719e+77},"ovenBatch":{"s2":3.1449794210122134e+39,"s3":1.3067845401032068e+42},"factoryNetwork":{"s2":3.737761719493871e+64,"s3":3.685840688735155e+77},"spiceBlend":{"s2":32864886373.03448,"s3":1.5402996398025727e+39},"portalNetwork":{"s2":1.4350239637972937e+51,"s3":2.5893088628879627e+89},"bankClickDividend":{"s2":4801234679112196,"s3":2131656605317812500},"moonGlobalYeast":{"s2":9632376796711.844,"s3":507500726739115460},"portalGlobalFold":{"s2":4.615625223921502e+105,"s3":1.1014120316713646e+137},"galaxyAssembly":{"s2":6710364251932.217,"s3":7.862468403941106e+28},"blackHoleCompression":{"s2":8.948015329433568e+23,"s3":1.2383921841693686e+29},"quantumProofing":{"s2":179361086719107.7,"s3":3427471552409547300},"antimatterRecipe":{"s2":5656.174615200675,"s3":2669578.911903615}};
+const RESEARCH_STAGE_MULT = {"fingerTechnique":{"s2":2.7246254890759383e+22,"s3":8.107627583593448e+89},"grandmaCrowd":{"s2":8.079046947665262e+26,"s3":2.435714206456719e+77},"ovenBatch":{"s2":1000,"s3":1.3067845401032068e+42},"factoryNetwork":{"s2":3.737761719493871e+64,"s3":3.685840688735155e+77},"spiceBlend":{"s2":76382442.80540746,"s3":3.579864777410052e+36},"portalNetwork":{"s2":3.475953051049799e+48,"s3":6.271892504324097e+86},"bankClickDividend":{"s2":852858098014487000000,"s3":3.786527257125321e+23},"moonGlobalYeast":{"s2":9632376796711.844,"s3":507500726739115460},"portalGlobalFold":{"s2":4.615625223921502e+105,"s3":1.1014120316713646e+137},"galaxyAssembly":{"s2":6710364251932.217,"s3":7.862468403941106e+28},"blackHoleCompression":{"s2":8.948015329433568e+23,"s3":1.2383921841693686e+29},"quantumProofing":{"s2":179361086719107.7,"s3":3427471552409547300},"antimatterRecipe":{"s2":5656.174615200675,"s3":2669578.911903615}};
 
 function researchStageCost(r, stageNo) {
   const t = RESEARCH_STAGE_MULT[r.id] || { s2: 1500, s3: 2250000 };
@@ -8122,15 +8130,41 @@ function equipProductionMultiplier() {
   return 1 + 0.06 * equipLv("masterTray");
 }
 
+// 初台ボーナス(㉑対策): 記録済みの初台生産のうち、その設備を所持中の分だけ合算する
+function presenceBonusCps() {
+  const pb = state.presenceBonus;
+  if (!pb || typeof pb !== "object") return 0;
+  let sum = 0;
+  PRESENCE_UPGRADE_IDS.forEach(id => {
+    if ((state.upgrades[id] || 0) > 0) sum += Math.max(0, Number(pb[id]) || 0);
+  });
+  return sum;
+}
+
 // 星屑パフェ: 効果中に購入した設備はその周回中、生産×1.25(所持数のうち購入分だけ+25%)
 function parfaitBoostedUnits(id) {
   return Math.max(0, Math.min(state.upgrades[id] || 0, Math.floor(Number((state.parfaitUnits || {})[id]) || 0)));
 }
 
+// レシピの開示ステージ = 構成素材の入手先ステージの最大(黄金粉・ボス核・万能粉は全ステージ入手可=1)。
+// 第12次(T2対策): 開示を「その素材の入手先ステージが拓けた瞬間」に変更=ステージ解放と同一タイミングに
+// 統合する(素材の初入手基準だと開示が周回中盤に単独で散らばる。開示が先・調理は素材が揃ってから、が自然)。
+const MATERIAL_SOURCE_STAGE = {
+  butter: 1, flour: 1,
+  cacao: 2, lavaSugar: 2, ironShard: 2,
+  mint: 3, frostSugar: 3, silentCore: 3,
+  spice: 4,
+  stardust: 5, cometShard: 5,
+  voidSugar: 6, deepCore: 6
+};
+
 function dishRecipeRevealed(dish) {
-  // 虚空タルトはS6(深層領域)到達で開示
-  if (dish.id === "voidTart") return maxUnlockedStageNo() > STAGES.length;
-  return Object.keys(dish.cost).every(id => id === "bossCoreAny" ? anyBossCoreCount() > 0 : materialSeen(id));
+  let s = 1;
+  for (const id of Object.keys(dish.cost)) {
+    if (id === "goldDust" || id === "bossCoreAny" || id === "omniFlour") continue;
+    s = Math.max(s, MATERIAL_SOURCE_STAGE[id] || 1);
+  }
+  return s <= maxUnlockedStageNo();
 }
 
 // ==== 素材の獲得・消費 ====
@@ -8671,7 +8705,7 @@ function renderWorkshop() {
   box.innerHTML = `
     <div class="infoBox">
       <h3>料理(時限バフ・最大${MAX_ACTIVE_DISHES}品)</h3>
-      ${dishCards || `<div class="desc">素材を集めるとレシピが並ぶ</div>`}
+      ${dishCards || `<div class="desc">ステージを拓くとレシピが並ぶ</div>`}
     </div>
     ${craftSection}
     <div class="infoBox">
@@ -9469,6 +9503,9 @@ function baseCps() {
   v *= orderTempCpsMultiplier();
   v *= dishProductionMultiplier(); // 料理: バタークッキー生地
   v *= equipProductionMultiplier(); // 装備: 名匠の天板
+
+  // 初台ボーナス(㉑対策): 所持中だけ効く静的加算(購入時CPS基準の固定値のため成長とともに自然消滅)
+  v += presenceBonusCps();
 
   return v;
 }
@@ -10711,6 +10748,12 @@ function buyUpgrade(id) {
   while (bought < target) {
     const cost = costOf(u);
     if (!debugMode && !spend(cost)) break;
+
+    // 初台ボーナス(㉑対策): 生涯で初めて買う1台に、購入直前の基礎CPS×0.25を静的な生産として記録
+    if (PRESENCE_UPGRADE_IDS.includes(id) && (state.upgrades[id] || 0) === 0) {
+      state.presenceBonus = state.presenceBonus && typeof state.presenceBonus === "object" ? state.presenceBonus : {};
+      if (state.presenceBonus[id] === undefined) state.presenceBonus[id] = PRESENCE_FIRST_UNIT_COEF * Math.max(0, baseCps());
+    }
 
     state.upgrades[id] += 1;
     bumpSurge(id); // まとめ買い割増: 買うほど熱量+1(時間で半減)
@@ -13201,6 +13244,7 @@ function prestigeReset() {
   // (料理バフ・現在ステージ・段階購入(researchStages)は持ち越さない=freshStateの初期値に戻る)
   const keepMaterials = { ...(state.materials || {}) };
   const keepMaterialsSeen = { ...(state.materialsSeen || {}) };
+  const keepPresenceBonus = { ...(state.presenceBonus || {}) };
   const keepEquipment = { ...(state.equipment || {}) };
   const keepEquipmentAscend = { ...(state.equipmentAscend || {}) };
   const keepKillRecords = { ...(state.killRecords || {}) };
@@ -13235,6 +13279,7 @@ function prestigeReset() {
   state.skills = keepSkills;
   state.materials = keepMaterials;
   state.materialsSeen = keepMaterialsSeen;
+  state.presenceBonus = keepPresenceBonus;
   state.equipment = keepEquipment;
   state.equipmentAscend = keepEquipmentAscend;
   state.killRecords = keepKillRecords;
