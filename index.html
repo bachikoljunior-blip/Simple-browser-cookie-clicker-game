@@ -13606,11 +13606,14 @@ function updateSpawnTimerPauseState() {
 // 報酬選択中・図鑑/設定中は「クッキー生産とプレイ時間以外の時間」を止める。
 // バフ/ブーストの残り時間・金クッキー/モンスターの滞在時間を凍結し、閉じたら残り時間から再開する。
 function updateGameClockFreeze() {
-  const frozen = rewardModalOpen() || overlayFreezesGame();
   const now = Date.now();
+  const buffFrozen = rewardModalOpen() || overlayFreezesGame();
+  // 出現物(金クッキー/モンスター)の滞在時間は、プレイ画面が見えていない間
+  // (タブ全画面など)も止める。全画面から戻った時にモンスターが消えないようにする。
+  const spawnFrozen = buffFrozen || !normalPlayScreenActive();
 
   // (A) バフ・ブースト等の残り時間: 停止が続く間は毎フレーム前方へずらして凍結する
-  if (frozen && lastGameFreezeAt) {
+  if (buffFrozen && lastGameFreezeAt) {
     const delta = now - lastGameFreezeAt;
     if (delta > 0) {
       // 終了時刻(未来)系: まだ有効なものだけ前へずらす(期限切れを復活させない)
@@ -13636,10 +13639,10 @@ function updateGameClockFreeze() {
       if (Array.isArray(state.activeDishes)) state.activeDishes.forEach(d => { if (d && d.until > now) d.until += delta; });
     }
   }
-  lastGameFreezeAt = frozen ? now : 0;
+  lastGameFreezeAt = buffFrozen ? now : 0;
 
   // (B) 表示中の金クッキー・モンスターの滞在タイマー: 停止の開始で一時停止、終了で残り時間から再開
-  if (frozen && !gameClockFreezeActive) {
+  if (spawnFrozen && !gameClockFreezeActive) {
     gameClockFreezeActive = true;
     if (goldenVisible && goldenHideTimer && goldenHideDeadline > now) {
       goldenHideRemaining = Math.max(0, goldenHideDeadline - now);
@@ -13653,7 +13656,7 @@ function updateGameClockFreeze() {
         mon.hideTimer = null;
       }
     });
-  } else if (!frozen && gameClockFreezeActive) {
+  } else if (!spawnFrozen && gameClockFreezeActive) {
     gameClockFreezeActive = false;
     if (goldenVisible && goldenHideRemaining != null) {
       goldenHideDeadline = Date.now() + goldenHideRemaining;
@@ -14075,6 +14078,22 @@ function showMonster() {
   const typeId = pickMonsterTypeId();
   const type = MONSTER_TYPES[typeId] || MONSTER_TYPES.normal;
   const stage = currentStageInfo();
+
+  // ボスは基本1体まで。ただし討伐数が次のボス分まで達している(未撃破のボスが複数溜まっている)
+  // 場合は、その溜まっている数まで同時出現を許可する。
+  if (typeId === "boss") {
+    const sno = currentStageNo();
+    const cycle = bossCycleFor(sno);
+    const kills = Math.max(0, Math.floor(Number((state.stageKills || {})[sno]) || 0));
+    const defeated = Math.max(0, Math.floor(Number((state.bossKills || {})[sno]) || 0));
+    const pendingBosses = Math.max(0, Math.floor(kills / cycle) - defeated);
+    const bossesPresent = (monsters || []).filter(m => m && m.typeId === "boss").length;
+    if (bossesPresent >= Math.max(1, pendingBosses)) {
+      // これ以上のボスは出さず、次の抽選に回す
+      scheduleMonster();
+      return;
+    }
+  }
   if (typeId === "boss") forceBossNext = false;
 
   const level = monsterLevel();
@@ -14167,6 +14186,17 @@ function hideMonster(idOrShouldReschedule, shouldRescheduleMaybe) {
       state.huntFocusRewardPenalty = Math.max(state.huntFocusRewardPenalty || 0, 1);
       state.huntFocusLv = 0;
       showMessage("狩猟集中失敗：次HP低下・報酬Lv-1");
+    }
+
+    // ボスを倒しきれず時間切れ(shouldReschedule=時間切れ、撃破時は false)なら、
+    // そのステージのボスまでの討伐数を前回ボス到達時点に戻す(ボスまで再度貯め直し)。
+    if (shouldReschedule && mon.typeId === "boss") {
+      const sno = currentStageNo();
+      const cycle = bossCycleFor(sno);
+      const defeated = Math.max(0, Math.floor(Number((state.bossKills || {})[sno]) || 0));
+      state.stageKills = state.stageKills && typeof state.stageKills === "object" ? state.stageKills : {};
+      state.stageKills[sno] = cycle * defeated;
+      showMessage("ボスを逃した：討伐数がリセットされました");
     }
 
     clearTimeout(mon.hideTimer);
