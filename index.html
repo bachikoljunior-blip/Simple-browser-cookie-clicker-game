@@ -12488,11 +12488,6 @@ function renderPrestige() {
   ` : "";
 
   box.innerHTML = `
-    <div class="skillSummary">
-      <div>所持PT<br><b>${fmt(state.prestige)}</b></div>
-      <div>累計PT<br><b>${fmt(state.prestigeTotal)}</b></div>
-    </div>
-
     ${state.prestigeRuns >= 1 ? `<button id="skillViewBtn" class="item skillViewBtn">スキルツリーを確認する</button>` : ""}
 
     ${(state.prestigeRuns >= 1 && runStartSnapshotAvailable() && !pausedForSkillChoice()) ? `<button id="redoRunBtn" class="item">この周回を最初からやり直す</button>` : ""}
@@ -12503,7 +12498,6 @@ function renderPrestige() {
       <h3>転生</h3>
       <div class="infoRow">今回の総クッキー：${fmt(state.runCookies)}</div>
       <div class="infoRow">今回のノルマ維持記録：${fmtTime(state.quotaHoldSeconds || 0)} / ノルマ中討伐 ${fmt(state.quotaMonsterKills || 0)}体</div>
-      <div class="infoRow">獲得済み総PT：${fmt(state.prestigeTotal)}</div>
       <div class="infoRow">今回獲得できるPT：+${fmt(gain)}</div>
       <div class="infoRow">転生には所持クッキー 5,000,000 を消費します(現在:${fmt(state.cookies)})</div>
       <button id="prestigeBtn" class="item ${canPrestige ? "canBuy" : "locked"}">${canPrestige ? "転生する(500万クッキー消費)" : (gain <= 0 ? "未獲得PTなし" : "クッキー500万が必要")}</button>
