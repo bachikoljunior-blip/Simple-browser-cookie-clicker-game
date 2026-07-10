@@ -11038,6 +11038,9 @@ function renderPolicyChoiceScreen() {
 // ==== v3: ステージ選択画面(スキル選択→方針選択→ステージ選択→周回開始) ====
 function openStageChoiceScreen() {
   renderStageChoiceScreen();
+  // 直前の画面に合わせて戻るボタンの文言を変える(方針選択を経由した場合は方針選択へ戻す)
+  const back = $("stageChoiceBackBtn");
+  if (back) back.textContent = runPolicyUnlocked() ? "← 周回方針選択に戻る" : "← スキル選択に戻る";
   $("stageChoiceScreen").classList.add("active");
 }
 
@@ -11620,6 +11623,11 @@ addTap($("policyChoiceBackBtn"), () => {
 addTap($("stageChoiceBackBtn"), () => {
   playSound("tab");
   closeStageChoiceScreen();
+  // 方針選択を経由していた場合は方針選択へ戻す(選び直せるように)。無効ならスキル画面のまま。
+  if (runPolicyUnlocked()) {
+    state.runPolicyChosen = false;
+    openPolicyChoiceScreen();
+  }
 });
 
 $("settingsOverlay").addEventListener("pointerdown", e => {
