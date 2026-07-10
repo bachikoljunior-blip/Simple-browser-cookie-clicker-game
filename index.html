@@ -2282,6 +2282,11 @@
       justify-content: space-between;
       gap: 8px;
       margin-bottom: 8px;
+      /* 見出し・案内・購入数の文字が背景画像に埋もれないよう、うっすら暗い下地を敷く */
+      background: rgba(16, 10, 5, 0.46);
+      border: 1px solid rgba(255, 213, 138, 0.12);
+      border-radius: 10px;
+      padding: 5px 10px;
       cursor: pointer;
       touch-action: manipulation;
     }
@@ -9798,6 +9803,7 @@ function bgmSceneState() {
   else if (document.body.classList.contains("skillChoiceMode")) screen = "skill";
 
   let event = "none";
+  let golden = false; // 金ブーストは他イベント(モンスター等)と独立して重ねる
   let quota = "met";
   let stageNo = 1;
   let deep = false;
@@ -9806,6 +9812,8 @@ function bgmSceneState() {
     if (Array.isArray(monsters) && monsters.some(m => m && m.typeId === "boss")) event = "boss";
     else if (Array.isArray(monsters) && monsters.length > 0) event = "monster";
     else if (typeof goldenBoostActive === "function" && goldenBoostActive()) event = "golden";
+    // 金ブーストの音レイヤーは、モンスター/ボスと同時でも重ねて鳴らす(排他にしない)
+    golden = (typeof goldenBoostActive === "function" && goldenBoostActive());
     // ノルマ未達後は復帰が無いので、失敗フラグが立ったら以降ずっと未達トーンにする
     quota = state.quotaFailed ? "failed" : "met";
     // ステージ(草原/火山/氷河/砂丘/銀河/深層領域)ごとにBGMの調・音色を変える
@@ -9818,7 +9826,7 @@ function bgmSceneState() {
       } catch (e) {}
     }
   }
-  return { screen, event, quota, stageNo, deep, deepK };
+  return { screen, event, quota, stageNo, deep, deepK, golden };
 }
 
 function startBgm() {
@@ -10086,7 +10094,8 @@ function startBgm() {
         const failed = scene.quota === "failed";
         const isBoss = scene.event === "boss";
         const isMonster = scene.event === "monster";
-        const isGolden = scene.event === "golden";
+        // 金ブーストのレイヤーはモンスター/ボスと同時でも重ねて鳴らす(排他イベントに依存しない)
+        const isGolden = scene.golden === true;
         const isCrisis = isBoss || failed; // 危機的な状態はどのステージでも共通の緊張感/沈鬱さに統一する
         const deepK = scene.deepK || 0;
 
@@ -11492,26 +11501,26 @@ function codexOrderHtml() {
 
 // 各報酬の「式(Lvごとの伸び方)」をゲーム内の言葉で説明する
 const PERK_FORMULA = {
-  goldenRate: "取得Lvが上がるほど金クッキーの出現間隔が短くなる（1Lvの効果は徐々に緩やか）。",
-  goldenPower: "金ブースト倍率 +0.25×Lv が基準。Lvが高いほど1Lvの伸びは緩やかになる。",
-  goldenAmount: "即時獲得量 +45%×Lv が基準。Lvが高いほど1Lvの伸びは緩やかになる。",
-  monsterDamage: "モンスターへのダメージが Lv1ごとに +550%（Lvに比例）。",
-  monsterRate: "取得Lvが上がるほどモンスターの出現間隔が短くなる（1Lvの効果は徐々に緩やか）。",
-  monsterStay: "モンスターが画面に留まる時間が Lvごとに伸びる。",
-  goldenChain: "金クッキー取得後、次に出るモンスターへのダメージが +200%×Lv。",
-  crackedFang: "モンスターへのダメージが Lv1ごとに +650%。",
-  chainPrep: "撃破すると次のモンスターがすぐ出る。代わりに次のモンスターのHPも Lvごとに増える。",
-  huntFocus: "次のモンスターへのダメージが大きく上がる。倒せば報酬Lv+1、倒しきれなければ次のHP低下・報酬Lv-1。",
-  goldenTarget: "金ブースト中だけ、モンスターへのダメージが +220%×Lv。",
-  goldenFirstHit: "金クッキー取得後、次のモンスターへの最初の一撃だけ +250%×Lv。",
-  beastScent: "モンスターを倒すと、次の金クッキーが出るまでが Lvごとに早くなる。",
-  beastHeatFerment: "その周回の撃破数に応じて全生産が上がる。撃破1体ごとに +15%×Lv。",
-  biteRecovery: "モンスターにダメージを与えるたび、少量のクッキーを獲得する。",
-  crushedMill: "設備の個別強化（1種を集中して買ったときの伸び）が +150%×Lv。",
-  huntingCore: "その周回の撃破数に応じて毎秒生産が上がる。撃破1体ごとに +18%×Lv。",
-  brandHunt: "所持しているタップ系設備が多いほど、モンスターへのダメージが上がる。",
+  goldenRate: "金クッキー出現間隔 ×e^(−0.075 × Lv/(1+Lv/80))。Lvが上がるほど間隔が短くなり、1Lvの効果は徐々に緩やか。",
+  goldenPower: "金ブースト倍率 = 基準2.1 + 0.25 × Lv/(1+Lv/60)。Lvが高いほど1Lvの伸びは緩やか。",
+  goldenAmount: "金クッキー即時獲得量 ×(1 + 0.45 × Lv/(1+Lv/45))。Lvが高いほど1Lvの伸びは緩やか。",
+  monsterDamage: "モンスターダメージ倍率に +5.5×Lv を加算（他のダメージ報酬と合算。Lvに比例、＝+550%×Lv相当）。",
+  monsterRate: "モンスター出現間隔 ×e^(−0.15 × Lv/(1+Lv/80))。Lvが上がるほど間隔が短くなり、徐々に緩やか。",
+  monsterStay: "モンスターの画面滞在時間 ×e^(0.04×Lv)。Lvごとに滞在が延びる。",
+  goldenChain: "金クッキー取得後、次に出るモンスターへのダメージ ×(1 + 2.0×Lv)（＝+200%×Lv）。",
+  crackedFang: "モンスターダメージ倍率に +6.5×Lv を加算（他のダメージ報酬と合算。＝+650%×Lv相当）。",
+  chainPrep: "撃破後、次モンスター出現までの待ち ×e^(−0.3×Lv)（早くなる）／代わりに次モンスターHP ×1.032^Lv（増える）。",
+  huntFocus: "次のモンスターへのダメージが大きく上がる。倒せば報酬Lv+1、倒しきれなければ次のHP低下・報酬Lv−1。",
+  goldenTarget: "金ブースト中のみ、モンスターダメージ倍率に +2.2×Lv を加算（＝+220%×Lv相当）。",
+  goldenFirstHit: "金クッキー取得後、次のモンスターへの最初の一撃のみ ×(1 + 2.5×Lv)（＝+250%×Lv）。",
+  beastScent: "撃破後、次の金クッキーが出るまでの時間 ×e^(−0.5×Lv)（早くなる）。",
+  beastHeatFerment: "全生産 ×(1 + その周回の撃破数 × 0.15×Lv)（撃破1体ごとに +15%×Lv）。",
+  biteRecovery: "モンスターにダメージを与えるたび、少量のクッキーを獲得する（火力とCPSに応じて逓減しながら増える）。",
+  crushedMill: "設備の個別強化の効果 +1.5×Lv（＝+150%×Lv）。",
+  huntingCore: "毎秒生産 ×(1 + その周回の撃破数 × 0.18×Lv)（撃破1体ごとに +18%×Lv）。",
+  brandHunt: "所持しているタップ系設備の数が多いほど、モンスターへのダメージが上がる。",
   deepPursuit: "モンスターの出現が速くHPも上がるが、報酬Lvも増えやすくなる（Lvごとに強まる）。",
-  goldenBeastMutation: "金ブースト中に撃破すると、一定確率で報酬Lvが+1される（Lvが高いほど確率の上がり方は緩やか）。"
+  goldenBeastMutation: "金ブースト中に撃破すると、確率 1 − e^(−(0.5 + 0.1×Lv)) で報酬Lv+1（Lvが高いほど確率の上がりは緩やか）。"
 };
 
 function codexMonsterRewardHtml() {
