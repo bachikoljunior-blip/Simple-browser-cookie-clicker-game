@@ -2613,6 +2613,7 @@
     .monsterInstance .cookieMonsterButton {
       width: 200px;
       height: 200px;
+      margin-top: 4px;
       border: none;
       border-radius: 28px;
       background: var(--monster-art);
@@ -3422,6 +3423,7 @@
     .monsterInstance .cookieMonsterButton {
       width: 200px;
       height: 200px;
+      margin-top: 4px;
       border: none;
       border-radius: 28px;
       background: var(--monster-art);
@@ -6164,7 +6166,13 @@ let goldenSpawnDeadline = null;
 let goldenSpawnCallback = null;
 let goldenSpawnPausedRemaining = null;
 let goldenHideTimer = null;
+let goldenHideDeadline = 0;
+let goldenHideRemaining = null;
 let goldenVisible = false;
+
+// 報酬選択中・図鑑/設定中の「ゲーム時間凍結」用(クッキー生産・プレイ時間以外を止める)
+let lastGameFreezeAt = 0;
+let gameClockFreezeActive = false;
 
 let monsterSpawnTimer = null;
 let monsterSpawnDeadline = null;
@@ -13480,6 +13488,74 @@ function updateSpawnTimerPauseState() {
   }
 }
 
+// 報酬選択中・図鑑/設定中は「クッキー生産とプレイ時間以外の時間」を止める。
+// バフ/ブーストの残り時間・金クッキー/モンスターの滞在時間を凍結し、閉じたら残り時間から再開する。
+function updateGameClockFreeze() {
+  const frozen = rewardModalOpen() || overlayFreezesGame();
+  const now = Date.now();
+
+  // (A) バフ・ブースト等の残り時間: 停止が続く間は毎フレーム前方へずらして凍結する
+  if (frozen && lastGameFreezeAt) {
+    const delta = now - lastGameFreezeAt;
+    if (delta > 0) {
+      // 終了時刻(未来)系: まだ有効なものだけ前へずらす(期限切れを復活させない)
+      const shiftUntil = (v) => (v && v > now) ? v + delta : v;
+      state.spiceBoostUntil = shiftUntil(state.spiceBoostUntil);
+      state.spiceAromaUntil = shiftUntil(state.spiceAromaUntil);
+      state.bhBoostUntil = shiftUntil(state.bhBoostUntil);
+      state.portalHuntUntil = shiftUntil(state.portalHuntUntil);
+      state.bakeStateUntil = shiftUntil(state.bakeStateUntil);
+      state.orderTempCpsUntil = shiftUntil(state.orderTempCpsUntil);
+      state.orderTempResearchUntil = shiftUntil(state.orderTempResearchUntil);
+      state.orderTempSpiceUntil = shiftUntil(state.orderTempSpiceUntil);
+      state.nextOrderAt = shiftUntil(state.nextOrderAt);
+      // 基準時刻(過去)系: 経過を止めるため常に前へずらす
+      if (state.bhFullSince) state.bhFullSince += delta;
+      if (state.lastCritAt) state.lastCritAt += delta;
+      if (state.lastGoldenAt) state.lastGoldenAt += delta;
+      // 金ブースト・余熱(配列)
+      if (Array.isArray(activeGoldenBoosts)) activeGoldenBoosts.forEach(b => { if (b && b.until > now) b.until += delta; });
+      if (Array.isArray(activeGoldenAfterheats)) activeGoldenAfterheats.forEach(b => { if (b && b.until > now) b.until += delta; });
+      if (Array.isArray(activeGoldenBoosts)) boostUntil = activeGoldenBoosts.reduce((m, b) => Math.max(m, (b && b.until) || 0), 0);
+      // 料理バフ
+      if (Array.isArray(state.activeDishes)) state.activeDishes.forEach(d => { if (d && d.until > now) d.until += delta; });
+    }
+  }
+  lastGameFreezeAt = frozen ? now : 0;
+
+  // (B) 表示中の金クッキー・モンスターの滞在タイマー: 停止の開始で一時停止、終了で残り時間から再開
+  if (frozen && !gameClockFreezeActive) {
+    gameClockFreezeActive = true;
+    if (goldenVisible && goldenHideTimer && goldenHideDeadline > now) {
+      goldenHideRemaining = Math.max(0, goldenHideDeadline - now);
+      clearTimeout(goldenHideTimer);
+      goldenHideTimer = null;
+    }
+    (monsters || []).forEach(mon => {
+      if (mon && mon.hideTimer && mon.hideDeadline > now) {
+        mon.hideRemaining = Math.max(0, mon.hideDeadline - now);
+        clearTimeout(mon.hideTimer);
+        mon.hideTimer = null;
+      }
+    });
+  } else if (!frozen && gameClockFreezeActive) {
+    gameClockFreezeActive = false;
+    if (goldenVisible && goldenHideRemaining != null) {
+      goldenHideDeadline = Date.now() + goldenHideRemaining;
+      goldenHideTimer = setTimeout(() => hideGoldenCookie(true), goldenHideRemaining);
+    }
+    goldenHideRemaining = null;
+    (monsters || []).forEach(mon => {
+      if (mon && mon.hideRemaining != null) {
+        mon.hideDeadline = Date.now() + mon.hideRemaining;
+        const mid = mon.id;
+        mon.hideTimer = setTimeout(() => hideMonster(mid, true), mon.hideRemaining);
+        mon.hideRemaining = null;
+      }
+    });
+  }
+}
+
 function scheduleGoldenCookie() {
   clearGoldenSpawnTimer();
 
@@ -13689,6 +13765,7 @@ function showGoldenCookie() {
 
   btn.style.display = "block";
 
+  goldenHideDeadline = Date.now() + 10000;
   goldenHideTimer = setTimeout(() => {
     hideGoldenCookie();
     scheduleGoldenCookie();
@@ -13713,6 +13790,7 @@ function forceGoldenCookie() {
 
   btn.style.display = "block";
 
+  goldenHideDeadline = Date.now() + 7000;
   goldenHideTimer = setTimeout(() => {
     hideGoldenCookie(true);
   }, 7000);
@@ -13725,6 +13803,8 @@ function hideGoldenCookie(shouldReschedule) {
 
   clearTimeout(goldenHideTimer);
   goldenHideTimer = null;
+  goldenHideDeadline = 0;
+  goldenHideRemaining = null;
 
   $("goldenCookie").style.display = "none";
 
@@ -13842,13 +13922,15 @@ function createMonsterElement(mon) {
     monArt = ASSETS.swarmVariants[(mon.variant || 0) % ASSETS.swarmVariants.length];
   }
   wrap.style.setProperty("--monster-art", `url("${assetUrl(monArt)}")`);
+  // HPバー・HP数値は絵の「上」に置く。ボスは絵が大きく、下に置くと画面外(overflow:hidden)に
+  // はみ出て見えなくなるため、常に見える位置(上)に固定する。
   wrap.innerHTML = `
     <div class="monsterTypeLabel">${type.name}</div>
-    <button class="cookieMonsterButton" aria-label="${type.name}"></button>
     <div class="monsterHp">
       <div class="monsterHpFill"></div>
     </div>
     <div class="monsterHpText">HP</div>
+    <button class="cookieMonsterButton" aria-label="${type.name}"></button>
   `;
 
   const top = document.querySelector(".top") || document.body;
@@ -13922,6 +14004,7 @@ function showMonster() {
     }
     renderMonsterHp(mon.id);
 
+    mon.hideDeadline = Date.now() + stayMs;
     mon.hideTimer = setTimeout(() => {
       hideMonster(mon.id, true);
     }, stayMs);
@@ -14578,6 +14661,7 @@ setInterval(() => {
   if (titleScreenActive()) return;
 
   updateSpawnTimerPauseState();
+  updateGameClockFreeze(); // 報酬選択中・図鑑/設定中はバフ/出現物の時間を凍結
   if (!pausedForSkillChoice()) {
     // クッキーの自動生産は、図鑑・設定を開いている間も止めない(見えている生産は続く)。
     // ノルマ・注文・出現・各種ボーナスなど、その他の進行は従来どおりオーバーレイ中は止める。
