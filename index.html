@@ -2630,10 +2630,9 @@
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      box-shadow:
-        0 0 20px rgba(255,107,63,0.42),
-        0 11px 24px rgba(0,0,0,0.40),
-        inset 0 0 14px rgba(255,214,141,0.08);
+      /* 四角い枠(box-shadowの矩形グロー)は出さない。グローはラッパーの
+         drop-shadowフィルタが絵の形に沿って付けるため、ここでは影を付けない。 */
+      box-shadow: none;
       touch-action: manipulation;
     }
 
@@ -3445,10 +3444,9 @@
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      box-shadow:
-        0 0 20px rgba(255,107,63,0.42),
-        0 11px 24px rgba(0,0,0,0.40),
-        inset 0 0 14px rgba(255,214,141,0.08);
+      /* 四角い枠(box-shadowの矩形グロー)は出さない。グローはラッパーの
+         drop-shadowフィルタが絵の形に沿って付けるため、ここでは影を付けない。 */
+      box-shadow: none;
       touch-action: manipulation;
     }
 
