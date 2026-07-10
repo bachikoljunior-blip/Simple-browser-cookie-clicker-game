@@ -6408,6 +6408,7 @@ function ensureState() {
 
   // ==== 第7次 新要素の正規化(旧セーブはデフォルト補完) ====
   state.maxQuotaStage = Math.max(1, Math.floor(Number(state.maxQuotaStage) || 1));
+  state.maxQuotaStageEver = Math.max(1, Math.floor(Number(state.maxQuotaStageEver) || 1), state.maxQuotaStage);
   state.researchStages = state.researchStages && typeof state.researchStages === "object" ? state.researchStages : {};
   RESEARCH.forEach(r => {
     const v = Math.floor(Number(state.researchStages[r.id]) || 0);
@@ -7187,6 +7188,8 @@ function researchStageOf(id) { return 1 + (resStage2(id) ? 1 : 0) + (resStage3(i
 function capv(v, cap) { return Math.min(Math.max(0, v), cap); }
 // その回の最高到達ノルマ層
 function maxQuotaStage() { return Math.max(1, state.maxQuotaStage || 1); }
+// 全回(転生をまたいだ通算)の最高到達ノルマ層
+function maxQuotaStageEver() { return Math.max(1, Math.floor(Number(state.maxQuotaStageEver) || 1), maxQuotaStage()); }
 
 // 段階効果用の指数成長。周回内変数(討伐数など)が成長率に入る段階2効果で使う
 function stageExpGrowth(count, rate) {
@@ -12574,6 +12577,7 @@ function renderInfo() {
       <div class="infoRow">今回 総クッキー：${fmt(state.runCookies)}</div>
       <div class="infoRow">今回 プレイ時間：${fmtTime(Math.max(0, (state.totalPlaySec || 0) - (state.runStartPlaySec || 0)))}</div>
       ` : ""}
+      <div class="infoRow">ノルマ層 最高到達：今回 第${fmt(maxQuotaStage())}層 / 全回 第${fmt(maxQuotaStageEver())}層</div>
     </div>
 
     ${stageWorkshopBox}
@@ -13032,6 +13036,7 @@ function buildRunStartFromCurrent() {
   s.stageKills = { ...(cur.stageKills || {}) };
   s.bossKills = { ...(cur.bossKills || {}) };
   s.totalPlaySec = Math.max(0, Number(cur.totalPlaySec) || 0);
+  s.maxQuotaStageEver = Math.max(1, Math.floor(Number(cur.maxQuotaStageEver) || 1));
   s.awaitingSkillChoice = true;
   return s;
 }
@@ -13118,6 +13123,7 @@ function prestigeReset() {
   const keepStageKills = { ...(state.stageKills || {}) };
   const keepBossKills = { ...(state.bossKills || {}) };
   const keepTotalPlaySec = Math.max(0, Number(state.totalPlaySec) || 0);
+  const keepMaxQuotaStageEver = Math.max(1, Math.floor(Number(state.maxQuotaStageEver) || 1));
   const keepAdsRemoved = Boolean(state.adsRemoved) || localAdsRemovedFlag();
 
   state = freshState();
@@ -13151,6 +13157,7 @@ function prestigeReset() {
   state.stageKills = keepStageKills;
   state.bossKills = keepBossKills;
   state.totalPlaySec = keepTotalPlaySec;
+  state.maxQuotaStageEver = keepMaxQuotaStageEver;
   state.runStart = Date.now();
   resetRunLimitedEffects();
   applyStageTheme();
@@ -14869,8 +14876,9 @@ setInterval(() => {
     state.totalPlaySec = (state.totalPlaySec || 0) + 0.05; // v4: 総プレイ秒(転生持ち越し)
     earn(currentCps() / 20);
     if (!overlayOpen) {
-    // 最高到達ノルマ層を記録(段階式研究の変数)
+    // 最高到達ノルマ層を記録(段階式研究の変数)。今回分と、転生をまたいだ通算(全回)の両方を更新。
     state.maxQuotaStage = Math.max(state.maxQuotaStage || 1, currentQuotaStageNumber());
+    state.maxQuotaStageEver = Math.max(state.maxQuotaStageEver || 1, state.maxQuotaStage);
     // 霜降りケーキ: ノルマ時計を15%遅らせる(ゲージ増加速度×0.85)
     if (dishActive("frostCake")) state.quotaPausedMs = (state.quotaPausedMs || 0) + 50 * 0.15;
     // 銀行クリック配当 段階2: 複利利息(所持クッキーに毎秒、毎秒生産比から逓減)
