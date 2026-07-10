@@ -12389,6 +12389,8 @@ function renderPrestige() {
 
     ${state.prestigeRuns >= 1 ? `<button id="skillViewBtn" class="item skillViewBtn">スキルツリーを確認する</button>` : ""}
 
+    ${(state.prestigeRuns >= 1 && runStartSnapshotAvailable() && !pausedForSkillChoice()) ? `<button id="redoRunBtn" class="item">この周回を最初からやり直す</button>` : ""}
+
     ${policyBox}
 
     <div class="infoBox">
@@ -12405,6 +12407,9 @@ function renderPrestige() {
 
   const skillViewBtn = $("skillViewBtn");
   if (skillViewBtn) addTap(skillViewBtn, openSkillTreeView);
+
+  const redoRunBtn = $("redoRunBtn");
+  if (redoRunBtn) addTap(redoRunBtn, redoCurrentRun);
 
   const prestigeBtn = $("prestigeBtn");
   if (prestigeBtn) addTap(prestigeBtn, prestigeReset);
@@ -12967,6 +12972,52 @@ function cancelRebirth() {
   showMessage("転生前に戻しました");
 }
 
+// 「この周回を最初からやり直す」用に、周回開始(転生直後)時点の状態を保存する。
+// これを復元すると、この周回で集めた素材・装備・クッキー・進行がすべて周回開始時点に戻り、
+// スキル・方針・ステージを選び直して同じ周回をやり直せる(累計転生PT・スキル解放は保持)。
+const RUN_START_KEY = saveKey + "_runstart";
+
+function runStartSnapshotAvailable() {
+  try { return !!localStorage.getItem(RUN_START_KEY); } catch (e) { return false; }
+}
+
+function redoCurrentRun() {
+  if (pausedForSkillChoice()) return; // すでにスキル選択中(周回開始前)なら不要
+  let snap;
+  try { snap = localStorage.getItem(RUN_START_KEY); } catch (e) { snap = null; }
+  if (!snap) return;
+  if (!confirm("この周回を最初からやり直しますか？\n\nこの周回で集めた素材・装備・クッキー・進行はすべて周回開始時点に戻ります。\n(累計転生PTやスキルの解放状況は保持され、スキル・方針・ステージを選び直せます)")) return;
+
+  try { state = JSON.parse(snap); } catch (e) { return; }
+  ensureState();
+
+  // 実行中の一時オブジェクト・タイマーを片付ける(prestigeReset と同様)
+  clearGoldenBoosts();
+  selectedSkillId = null;
+  skillViewMode = false;
+  clearGoldenSpawnTimer();
+  clearTimeout(goldenHideTimer); goldenHideTimer = null; goldenHideDeadline = 0; goldenHideRemaining = null;
+  clearMonsterSpawnTimer();
+  clearTimeout(monsterHideTimer);
+  clearTimeout(rewardOpenTimer); rewardOpenTimer = null;
+  rewardPending = false;
+  monsters.forEach(m => { clearTimeout(m.hideTimer); if (m.el && m.el.parentElement) m.el.remove(); });
+  monsters = [];
+  goldenVisible = false;
+  monsterVisible = false;
+  $("goldenCookie").style.display = "none";
+  $("rewardModal").style.display = "none";
+
+  state.awaitingSkillChoice = true;
+  applyStageTheme();
+  updateWorkshopTabVisibility();
+  saveGame();
+  updateTopOnly();
+  renderAllTabs();
+  openSkillChoiceScreen();
+  showMessage("この周回を最初からやり直します");
+}
+
 function prestigeReset() {
   const gain = prestigeGain();
   if (gain <= 0 || pausedForSkillChoice()) return;
@@ -13069,6 +13120,8 @@ function prestigeReset() {
   playSound("upgrade");
   showMessage(`転生ポイント +${fmt(gain)}`);
   saveGame();
+  // 「この周回をやり直す」用に、周回開始(転生直後)時点のスナップショットを保存
+  try { localStorage.setItem(RUN_START_KEY, JSON.stringify(state)); } catch (e) {}
   updateTopOnly();
   renderAllTabs();
   openSkillChoiceScreen();
