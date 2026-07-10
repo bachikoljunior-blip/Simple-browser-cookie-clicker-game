@@ -5718,7 +5718,8 @@ const ASSETS = {
     pressExtractor: "images/tool_pressExtractor.webp",
     monsterAlmanac: "images/tool_monsterAlmanac.webp",
     stillFlask: "images/tool_stillFlask.webp",
-    dimensionCompass: "images/tool_dimensionCompass.webp"
+    dimensionCompass: "images/tool_dimensionCompass.webp",
+    masterTray: "images/bake_good.webp"
   },
   orders: {
     ovenOrder: "images/order_ovenOrder.webp",
@@ -6088,7 +6089,8 @@ const EQUIPMENT = [
   { id: "pressExtractor", name: "香料圧搾機", cost: { spice: 14, goldDust: 2 }, effect: lv => `金ブースト倍率 ×${(1 + 0.04 * lv).toFixed(2)}` },
   { id: "monsterAlmanac", name: "モンスター図鑑", cost: { ironShard: 4, silentCore: 2 }, effect: lv => `素材ドロップ +${Math.floor(lv / 2)}個、モンスターダメージ ×${(1 + 0.06 * lv).toFixed(2)}` },
   { id: "stillFlask", name: "蒸留フラスコ", cost: { mint: 10, lavaSugar: 6 }, effect: lv => `料理の効果時間 ×${(1 + 0.10 * lv).toFixed(2)}` },
-  { id: "dimensionCompass", name: "次元コンパス", cost: { bossCoreAny: 1, stardust: 12 }, effect: lv => `ボス化に必要な討伐数 -${lv}、選択中ステージの素材ドロップ ×${(1 + 0.05 * lv).toFixed(2)}` }
+  { id: "dimensionCompass", name: "次元コンパス", cost: { bossCoreAny: 1, stardust: 12 }, effect: lv => `ボス化に必要な討伐数 -${lv}、選択中ステージの素材ドロップ ×${(1 + 0.05 * lv).toFixed(2)}` },
+  { id: "masterTray", name: "名匠の天板", cost: { flour: 10, cacao: 8 }, effect: lv => `全生産 ×${(1 + 0.06 * lv).toFixed(2)}` }
 ];
 const EQUIPMENT_MAX_LV = 10;
 
@@ -8115,6 +8117,11 @@ function dishProductionMultiplier() {
   return dishActive("butterCookie") ? 1 + 0.02 * maxQuotaStage() : 1;
 }
 
+// 名匠の天板: 全生産×(1+0.06×Lv)(永続装備・転生持ち越し)
+function equipProductionMultiplier() {
+  return 1 + 0.06 * equipLv("masterTray");
+}
+
 // 星屑パフェ: 効果中に購入した設備はその周回中、生産×1.25(所持数のうち購入分だけ+25%)
 function parfaitBoostedUnits(id) {
   return Math.max(0, Math.min(state.upgrades[id] || 0, Math.floor(Number((state.parfaitUnits || {})[id]) || 0)));
@@ -9425,6 +9432,7 @@ function baseClickPower() {
   v *= globalResearchMultiplier();
   v *= runRewardAllMultiplier();
   v *= dishProductionMultiplier();
+  v *= equipProductionMultiplier(); // 名匠の天板
 
   // 案A: 従来項+生産連動項
   v += productionLinkClickPower();
@@ -9460,6 +9468,7 @@ function baseCps() {
   v *= bakeCpsMultiplier();
   v *= orderTempCpsMultiplier();
   v *= dishProductionMultiplier(); // 料理: バタークッキー生地
+  v *= equipProductionMultiplier(); // 装備: 名匠の天板
 
   return v;
 }
@@ -11459,7 +11468,8 @@ const EQUIP_FORMULA = {
   pressExtractor: "金ブースト倍率が ×(1 + 0.04×Lv)。",
   monsterAlmanac: "素材ドロップ +（Lv÷2の切り捨て）個、モンスターダメージ ×(1 + 0.06×Lv)。",
   stillFlask: "料理の効果時間が ×(1 + 0.10×Lv)。",
-  dimensionCompass: "ボス化に必要な討伐数 −Lv、選択中ステージの素材ドロップ ×(1 + 0.05×Lv)。"
+  dimensionCompass: "ボス化に必要な討伐数 −Lv、選択中ステージの素材ドロップ ×(1 + 0.05×Lv)。",
+  masterTray: "全生産(設備・クリック)が ×(1 + 0.06×Lv)。"
 };
 
 function codexOrderHtml() {
