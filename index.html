@@ -5926,7 +5926,7 @@ const SKILL_NODES = [
   // 上：研究と設備解放。研究解放は1つずつ。
   { id: "economy_1", name: "仕入れ", branchId: "economy", cost: 160, x: 1000, y: 900, icon: "⬡", prereqs: ["auto_1"], desc: "アップグレード費用 -21%、研究費用 -21%。", effects: [{ type: "upgradeDiscount", value: 0.24 }, { type: "researchDiscount", value: 0.24 }] },
   { id: "research_1", name: "研究机", branchId: "research", cost: 14000, x: 1000, y: 740, icon: "⌬", prereqs: ["economy_2"], desc: "研究費用 -38%。", effects: [{ type: "researchDiscount", value: 0.48 }] },
-  { id: "research_remodel", name: "研究改造室", branchId: "research", cost: 22500, x: 1000, y: 580, icon: "⌬", prereqs: ["research_1"], desc: "研究費用 -30%。一部研究の段階3の解放条件にもなる。", effects: [{ type: "researchDiscount", value: 0.36 }, { type: "unlockSystem", target: "researchRemodel" }] },
+  { id: "research_remodel", name: "研究改造室", branchId: "research", cost: 22500, x: 1000, y: 580, icon: "⌬", prereqs: ["research_1"], desc: "研究費用 -30%。", effects: [{ type: "researchDiscount", value: 0.36 }, { type: "unlockSystem", target: "researchRemodel" }] },
   { id: "economy_2", name: "まとめ買い", branchId: "economy", cost: 1500, x: 800, y: 580, icon: "⬡", prereqs: ["economy_1"], desc: "アップグレード費用 -45%。", effects: [{ type: "upgradeDiscount", value: 0.6 }] },
   { id: "economy_analysis", name: "経済分析", branchId: "economy", cost: 525, x: 620, y: 460, icon: "⬡", prereqs: ["economy_2"], desc: "強化カードに、価格あたりの増加量を追加表示する。", effects: [{ type: "unlockSystem", target: "economyAnalysis" }] },
   { id: "mastery_low", name: "職人の手", branchId: "economy", cost: 2400, x: 620, y: 700, icon: "⚒", prereqs: ["economy_2"], desc: "下位設備(強い指〜異世界炉)に熟練が付く：同じ設備を買うほど、その設備1台あたりの生産が+0.3%ずつ複利で伸びる。", effects: [{ type: "unlockSystem", target: "masteryLow" }] },
@@ -11859,7 +11859,7 @@ function renderShop() {
       <div class="desc">${eff.addText}</div>
       <div class="desc">${eff.totalText}</div>
       <div class="desc">所持 ${fmt(state.upgrades[u.id])}</div>
-      ${surgeNow > 1.05 ? `<div class="desc">表示時点から ×${(1 / surgeNow).toFixed(2)}</div>` : ""}
+      ${surgeNow > 1.05 ? `<div class="desc">待つと割引 ×${(1 / surgeNow).toFixed(2)}</div>` : ""}
       ${efficiency ? `<div class="desc">${efficiency}</div>` : ""}
     `;
   });
