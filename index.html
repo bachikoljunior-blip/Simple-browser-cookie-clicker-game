@@ -12378,6 +12378,9 @@ function renderPrestige() {
     return;
   }
 
+  // この機能追加前に転生済みの周回でも「やり直す」を使えるよう、スナップショットが無ければ再構築する
+  ensureRunStartSnapshot();
+
   const gain = prestigeGain();
   const canPrestige = gain > 0 && !pausedForSkillChoice() && state.cookies.gte(5000000);
   const policyBox = runPolicyUnlocked() ? `
@@ -12991,6 +12994,56 @@ const RUN_START_KEY = saveKey + "_runstart";
 
 function runStartSnapshotAvailable() {
   try { return !!localStorage.getItem(RUN_START_KEY); } catch (e) { return false; }
+}
+
+// この機能を追加する前に転生済み(周回途中)のプレイヤーには周回開始スナップショットが無い。
+// その場合でも「この周回を最初からやり直す」を使えるよう、現在の永続進行(累計転生PT・スキル解放・
+// 素材・装備・ステージ解放など。prestigeReset の持ち越し項目と同じ)から周回開始相当の状態を作る。
+// ライブの state は変更せず、スナップショット(localStorage)へ保存するだけの非破壊処理。
+function buildRunStartFromCurrent() {
+  const cur = state;
+  const s = freshState();
+  s.adsRemoved = Boolean(cur.adsRemoved) || localAdsRemovedFlag();
+  s.totalCookies = cur.totalCookies;
+  s.totalClicks = cur.totalClicks;
+  // 周回方針は引き継がない(やり直し後のスキル画面で選び直す)
+  s.runPolicy = "balanced";
+  s.runPolicyChosen = false;
+  s.prestige = cur.prestige;
+  s.prestigeTotal = cur.prestigeTotal;
+  s.prestigeBaseTotal = cur.prestigeBaseTotal;
+  s.quotaBonusTotal = 0;
+  s.prestigeRuns = cur.prestigeRuns;
+  s.quotaActive = true;
+  s.quotaFailed = false;
+  s.quotaHoldSeconds = 0;
+  s.quotaMonsterKills = 0;
+  s.monstersDefeated = cur.monstersDefeated;
+  s.everFeatures = { ...(cur.everFeatures || {}) };
+  s.skills = cur.skills;
+  s.materials = { ...(cur.materials || {}) };
+  s.materialsSeen = { ...(cur.materialsSeen || {}) };
+  s.equipment = { ...(cur.equipment || {}) };
+  s.equipmentAscend = { ...(cur.equipmentAscend || {}) };
+  s.killRecords = { ...(cur.killRecords || {}) };
+  s.workshopUnlocked = Boolean(cur.workshopUnlocked);
+  s.stageUnlocked = Math.max(1, Math.min(MAX_STAGE_NO, Math.floor(Number(cur.stageUnlocked) || 1)));
+  s.deepLayer = Math.max(1, Math.floor(Number(cur.deepLayer) || 1));
+  s.stageKills = { ...(cur.stageKills || {}) };
+  s.bossKills = { ...(cur.bossKills || {}) };
+  s.totalPlaySec = Math.max(0, Number(cur.totalPlaySec) || 0);
+  s.awaitingSkillChoice = true;
+  return s;
+}
+
+// 周回開始スナップショットが無い既存プレイヤー向けに、一度だけ現在状態から再構築して保存する。
+function ensureRunStartSnapshot() {
+  try {
+    if (runStartSnapshotAvailable()) return;
+    if (!(Number(state.prestigeRuns) >= 1)) return; // 初転生前は対象外
+    if (pausedForSkillChoice()) return;             // スキル選択中は prestigeReset 側で保存済み
+    localStorage.setItem(RUN_START_KEY, JSON.stringify(buildRunStartFromCurrent()));
+  } catch (e) {}
 }
 
 function redoCurrentRun() {
