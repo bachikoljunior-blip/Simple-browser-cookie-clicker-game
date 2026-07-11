@@ -6958,13 +6958,21 @@ function generateHugeUnit(level) {
   return seededPick(HUGE_LONG_WORDS, n, 24) + seededPick(HUGE_SUFFIX, n, 25);
 }
 
+// 小数点の後ろに半角スペースを入れて、小数点があることを分かりやすくする(大きな数値=万/億/兆〜用)
+function spaceAfterDecimalPoint(s) {
+  return typeof s === "string" && s.indexOf(".") >= 0 ? s.replace(".", ". ") : s;
+}
+
 function fmtShortJapaneseUnitNumber(n) {
   n = Number(n) || 0;
 
-  if (n >= 1000) return n.toFixed(0);
-  if (n >= 100) return n.toFixed(1).replace(".0", "");
-  if (n >= 10) return n.toFixed(2).replace(/\.?0+$/, "");
-  return n.toFixed(3).replace(/\.?0+$/, "");
+  let s;
+  if (n >= 1000) s = n.toFixed(0);
+  else if (n >= 100) s = n.toFixed(1).replace(".0", "");
+  else if (n >= 10) s = n.toFixed(2).replace(/\.?0+$/, "");
+  else s = n.toFixed(3).replace(/\.?0+$/, "");
+  // 大きな数値(万/億/兆〜)の小数点は、あとに半角スペースを入れて分かりやすくする
+  return spaceAfterDecimalPoint(s);
 }
 
 function fmt(n) {
@@ -7015,7 +7023,8 @@ function fmtSixSigMantissa(scaled) {
   const decimals = abs >= 1000 ? 2 : abs >= 100 ? 3 : abs >= 10 ? 4 : 5; // 整数部桁数 + 小数桁 = 6桁
   let s = abs.toFixed(decimals);
   if (s.indexOf(".") >= 0) s = s.replace(/\.?0+$/, ""); // 末尾の0は落とす
-  return s;
+  // 大きな数値の小数点は、あとに半角スペースを入れて分かりやすくする
+  return spaceAfterDecimalPoint(s);
 }
 
 function fmtCookieCountNumber(n) {
