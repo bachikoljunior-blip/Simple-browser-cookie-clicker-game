@@ -2222,10 +2222,11 @@
       width: 90px !important;
       height: 90px !important;
       background: var(--golden-cookie-art) !important;
-      /* 縁がちゃんと見える大きさ(120%): グロー/キラキラはほぼ円外に出しつつ、本体の輪郭は円内に収める。枠は付けない */
+      /* 縁がちゃんと見える大きさ(120%): グロー/キラキラはほぼ円外に出しつつ、本体の輪郭は円内に収める。枠は付けない。
+         画像内で本体が中央よりやや下のため、縦位置80%で切り取り上の余白を消す(ブースト時と同じ) */
       background-size: 120% !important;
       background-repeat: no-repeat !important;
-      background-position: center !important;
+      background-position: center 80% !important;
       box-shadow: none !important;
       overflow: hidden !important;
       border-radius: 50% !important;
