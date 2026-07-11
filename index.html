@@ -6253,8 +6253,10 @@ let monsterVisible = false;
 let monster = { level: 1, hp: 1, maxHp: 1 };
 let monsters = [];
 // モンスター出現の待ち行列: 出現中のモンスターが残っている間に来た出現は消化せず溜め、
-// 場が空いてから1体ずつ順に出す(セーブ対象外のランタイム値)
-let pendingMonsterSpawns = 0;
+// 場が空いてから1体ずつ順に出す(セーブ対象外のランタイム値)。
+// 各エントリは {queuedAt, expireMs} を持ち、待機中に滞在時間ぶん経過したものは破棄する。
+// 出現できた場合の滞在時間は通常どおり(待った時間で短縮しない)。
+let pendingMonsterSpawns = [];
 let monsterIdSeq = 1;
 let forceBossNext = false; // デバッグ「ボス即出現」用(セーブしない)
 
@@ -14362,8 +14364,9 @@ function showMonster() {
 
   // 出現中のモンスターが残っている間は新たに出さず、出現待ちとして溜める。
   // 場が空いたら hideMonster 経由で flushPendingMonsterSpawn が1体ずつ順に消化する。
+  // 待機できる時間は「その時点の標準滞在時間」まで(=画面に居られたはずの時間だけ待てる)。
   if (monsters.length > 0) {
-    pendingMonsterSpawns++;
+    pendingMonsterSpawns.push({ queuedAt: Date.now(), expireMs: monsterStayEstimateMs() });
     return;
   }
 
@@ -14466,14 +14469,34 @@ function forceMonster() {
   showMessage("クッキーモンスターを出現させた");
 }
 
+// 標準滞在時間の見積り(待ち行列の期限用)。monsterStayDurationMs と同式だが、
+// 実出現時に消費されるべき一時倍率(nextMonsterStayMultiplier)には触れない。
+function monsterStayEstimateMs() {
+  const rewardLv = Math.max(0, state.perks.monsterStay || 0);
+  const skillRaw = Math.max(0, skillEffect("monsterStay"));
+  const policyRaw = runPolicyIs("hunt") ? 0.10 : 0;
+  const categoryRaw = rewardCategoryBonus("hunt");
+  const multiplier = Math.exp(rewardLv * 0.04 + skillRaw * 0.12 + policyRaw + categoryRaw) * bakeMonsterStayMultiplier();
+  return Math.max(4000, 16000 * multiplier);
+}
+
+// 待機中に滞在時間ぶん経過したエントリは「画面に居ても消えていたはず」なので破棄する
+function prunePendingMonsterSpawns() {
+  const now = Date.now();
+  pendingMonsterSpawns = pendingMonsterSpawns.filter(p => p && now - p.queuedAt < p.expireMs);
+}
+
 // 出現待ちの消化: 場からモンスターがいなくなったら、溜まった待ちを1体ずつ出す。
 // 消化した1体が消えると hideMonster から再びここへ来るので、待ちが尽きるまで順に連なる。
+// 出現できたモンスターの滞在時間は通常どおり(元の長さ)で、待った時間では短縮しない。
 function flushPendingMonsterSpawn() {
-  if (pendingMonsterSpawns <= 0 || monsters.length > 0) return;
+  prunePendingMonsterSpawns();
+  if (!pendingMonsterSpawns.length || monsters.length > 0) return;
   setTimeout(() => {
-    if (pendingMonsterSpawns <= 0 || monsters.length > 0) return; // 既に別の出現があれば待ちは保持
+    prunePendingMonsterSpawns();
+    if (!pendingMonsterSpawns.length || monsters.length > 0) return; // 既に別の出現があれば待ちは保持
     if (pausedForSkillChoice() || !normalPlayScreenActive() || !canMonsterAppear()) return; // 条件が戻れば次の消化機会に持ち越す
-    pendingMonsterSpawns--;
+    pendingMonsterSpawns.shift();
     showMonster();
   }, 450);
 }
@@ -14529,7 +14552,7 @@ function hideMonster(idOrShouldReschedule, shouldRescheduleMaybe) {
   });
 
   monsters = [];
-  pendingMonsterSpawns = 0; // 場を一括で流す時(転生・タイトル等)は出現待ちも流す
+  pendingMonsterSpawns = []; // 場を一括で流す時(転生・タイトル等)は出現待ちも流す
   syncMonsterVisible();
 
   const legacy = $("monsterWrap");
