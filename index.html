@@ -1614,10 +1614,10 @@
     }
 
     #cookie.boost-all {
-      /* 金クッキーはグロー(焼き込みの光の輪)はほぼ見せず、キラキラ(星のきらめき)が縁に少しだけ覗く倍率(145%)。
-         枠になるbox-shadowの輪・縁取り(::before/::after)は付けず、円クリップでクッキーを丸く収める。 */
+      /* 金クッキーは「クッキーの縁まで」を表示: 160%に拡大して外周のグロー/キラキラを円の外に出し、
+         クッキー本体が縁いっぱいに見えるようにする。枠になるbox-shadowの輪・縁取りは付けない。 */
       background: var(--golden-cookie-art);
-      background-size: 145%;
+      background-size: 160%;
       background-repeat: no-repeat;
       background-position: center;
       box-shadow: none;
@@ -2221,8 +2221,8 @@
       width: 90px !important;
       height: 90px !important;
       background: var(--golden-cookie-art) !important;
-      /* グローはほぼ見せず、キラキラが縁に少しだけ覗く倍率(145%)。枠(box-shadow輪)は付けず円クリップで丸く収める */
-      background-size: 145% !important;
+      /* 「クッキーの縁まで」を表示: 160%で外周のグロー/キラキラを円の外に出し、本体が縁いっぱいに見える。枠は付けない */
+      background-size: 160% !important;
       background-repeat: no-repeat !important;
       background-position: center !important;
       box-shadow: none !important;
@@ -10363,14 +10363,35 @@ function startBgm() {
   } catch (e) {}
 }
 
+// AudioContextが "closed"(長時間バックグラウンド等でOSに破棄された)になると、
+// resume() では二度と復帰できない。その場合は音の配線を全部捨てて作り直す。
+// (BGMタイマー・SEマスターゲイン・BGMゲインは古いContextに繋がったままなので必ずリセットする)
+function rebuildAudioIfDead() {
+  try {
+    if (!audioCtx || audioCtx.state !== "closed") return false;
+    try { if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; } } catch (e) {}
+    audioCtx = null;
+    seMasterGain = null;
+    bgmGainNode = null;
+    bgmFilter = null;
+    bgmStarted = false;
+    // ユーザー操作(タップ)中に呼ばれる前提で、新しいContextでBGMを再構築する
+    startBgm();
+    return true;
+  } catch (e) { return false; }
+}
+
 // suspend/interruptされたAudioContextを復帰させる(バックグラウンド復帰・画面転移・iOSの割り込み対策)
 // iOS/Safariは中断時に state を "interrupted" にするため、"suspended" だけ見ると復帰できず音が消えたままになる。
-// running 以外なら常に resume を試みる。resume 後は次のsetIntervalでBGMが鳴り直す。
+// running 以外なら常に resume を試みる。closed なら resume 不能なので作り直す。
 function resumeAudioIfNeeded() {
   try {
-    if (audioCtx && audioCtx.state !== "running") {
+    if (!audioCtx) return;
+    if (audioCtx.state === "closed") { rebuildAudioIfDead(); return; }
+    if (audioCtx.state !== "running") {
       const p = audioCtx.resume();
-      if (p && p.catch) p.catch(() => {});
+      // resumeが失敗し、その時点でclosedになっていたら作り直す
+      if (p && p.catch) p.catch(() => { rebuildAudioIfDead(); });
     }
   } catch (e) {}
 }
@@ -10400,6 +10421,8 @@ window.addEventListener("pageshow", resumeAudioIfNeeded);
 function playSound(kind) {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
+    // closed(OSに破棄済み)のContextはresume不能。配線ごと作り直してから鳴らす
+    if (audioCtx && audioCtx.state === "closed") rebuildAudioIfDead();
     if (!audioCtx) audioCtx = new AudioContext();
     // 再開後・画面転移・iOSの割り込みでContextがsuspended/interruptedになると音が出なくなるため必ず復帰させる
     if (audioCtx.state !== "running") audioCtx.resume();
