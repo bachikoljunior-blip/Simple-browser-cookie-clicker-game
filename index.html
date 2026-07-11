@@ -1612,13 +1612,17 @@
     }
 
     #cookie.boost-all {
-      background: radial-gradient(circle at 50% 50%, rgba(255,246,160,0.44), transparent 64%), var(--golden-cookie-art);
-      /* 通常クッキーが金クッキーに変わったとき、金クッキー画像を端(ふち)まで見せる。
-         2層目(金クッキー画像)はcontainで全体表示、1層目(グロー)は枠いっぱい。 */
-      background-size: 100% 100%, contain;
+      /* 金クッキー画像を枠いっぱいに表示し、画像に焼き込まれた金色グロー(外周)は円の外に出して隠す。
+         これで金クッキーの外側に枠(輪)が見えず、クッキーが端まで詰まって見える。 */
+      background: var(--golden-cookie-art);
+      background-size: 160%;
       background-repeat: no-repeat;
       background-position: center;
+      box-shadow: 0 0 22px rgba(255,205,95,0.70), 0 12px 22px rgba(0,0,0,0.40);
     }
+    /* 金クッキー時は、縁取り(::after)と縁の暗いふち(::before)を消して外枠を見せない */
+    #cookie.boost-all::before,
+    #cookie.boost-all::after { display: none; }
 
     #goldenCookie {
       background: radial-gradient(circle at 50% 50%, rgba(255,246,160,0.36), transparent 68%), var(--golden-cookie-art);
@@ -2213,17 +2217,19 @@
       width: 90px !important;
       height: 90px !important;
       background: var(--golden-cookie-art) !important;
-      background-size: 150% 150% !important;
+      /* 画像を枠いっぱいに。焼き込みの金色グロー(外周)は円の外に出して隠し、外枠(輪)を見せない */
+      background-size: 160% !important;
+      background-repeat: no-repeat !important;
       background-position: center !important;
+      box-shadow: none !important;
       filter:
-        drop-shadow(0 0 18px rgba(255, 232, 105, 1))
-        drop-shadow(0 0 34px rgba(255, 178, 44, 0.55))
-        drop-shadow(0 10px 18px rgba(0,0,0,0.42)) !important;
+        drop-shadow(0 0 10px rgba(255, 220, 110, 0.65))
+        drop-shadow(0 8px 14px rgba(0,0,0,0.42)) !important;
     }
 
     #goldenCookie::before {
-      inset: -18px !important;
-      background: radial-gradient(circle, rgba(255,230,120,0.50), transparent 70%) !important;
+      /* 外側の光の輪(枠)は出さない */
+      display: none !important;
     }
 
     #monsterWrap {
