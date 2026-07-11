@@ -397,10 +397,15 @@
       transform: translateX(-50%);
       font-size: 18px;
       font-weight: 900;
-      color: var(--accent);
+      /* 金ブースト中は明るい金色のクッキー画像に重なるため、
+         白文字+濃い縁取りでどの背景でも読めるようにする */
+      color: #fff7e6;
       pointer-events: none;
       animation: rise 0.55s ease-out forwards;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+      text-shadow:
+        0 2px 4px rgba(0,0,0,0.85),
+        0 0 6px rgba(0,0,0,0.7),
+        0 0 2px rgba(0,0,0,0.95);
     }
 
     @keyframes rise {
@@ -4042,7 +4047,11 @@
     .float.critFloat {
       font-size: 25px;
       color: #ffd76e;
-      text-shadow: 0 0 12px rgba(255,170,40,0.85), 0 2px 3px rgba(0,0,0,0.5);
+      /* 金ブースト中のクッキー画像上でも読めるよう、金グローに濃い縁取りを重ねる */
+      text-shadow:
+        0 0 12px rgba(255,170,40,0.85),
+        0 2px 4px rgba(0,0,0,0.9),
+        0 0 3px rgba(0,0,0,0.95);
       animation: critRise 0.85s cubic-bezier(0.16, 0.8, 0.3, 1) forwards;
     }
 
@@ -6243,6 +6252,9 @@ let monsterHideTimer = null;
 let monsterVisible = false;
 let monster = { level: 1, hp: 1, maxHp: 1 };
 let monsters = [];
+// モンスター出現の待ち行列: 出現中のモンスターが残っている間に来た出現は消化せず溜め、
+// 場が空いてから1体ずつ順に出す(セーブ対象外のランタイム値)
+let pendingMonsterSpawns = 0;
 let monsterIdSeq = 1;
 let forceBossNext = false; // デバッグ「ボス即出現」用(セーブしない)
 
@@ -14348,6 +14360,13 @@ function showMonster() {
 
   clearMonsterSpawnTimer();
 
+  // 出現中のモンスターが残っている間は新たに出さず、出現待ちとして溜める。
+  // 場が空いたら hideMonster 経由で flushPendingMonsterSpawn が1体ずつ順に消化する。
+  if (monsters.length > 0) {
+    pendingMonsterSpawns++;
+    return;
+  }
+
   // 種類はステージのロスターから抽選(ボス化・黄金獣置換を含む)
   const typeId = pickMonsterTypeId();
   const type = MONSTER_TYPES[typeId] || MONSTER_TYPES.normal;
@@ -14447,6 +14466,18 @@ function forceMonster() {
   showMessage("クッキーモンスターを出現させた");
 }
 
+// 出現待ちの消化: 場からモンスターがいなくなったら、溜まった待ちを1体ずつ出す。
+// 消化した1体が消えると hideMonster から再びここへ来るので、待ちが尽きるまで順に連なる。
+function flushPendingMonsterSpawn() {
+  if (pendingMonsterSpawns <= 0 || monsters.length > 0) return;
+  setTimeout(() => {
+    if (pendingMonsterSpawns <= 0 || monsters.length > 0) return; // 既に別の出現があれば待ちは保持
+    if (pausedForSkillChoice() || !normalPlayScreenActive() || !canMonsterAppear()) return; // 条件が戻れば次の消化機会に持ち越す
+    pendingMonsterSpawns--;
+    showMonster();
+  }, 450);
+}
+
 function hideMonster(idOrShouldReschedule, shouldRescheduleMaybe) {
   if (typeof idOrShouldReschedule === "number") {
     const id = idOrShouldReschedule;
@@ -14484,6 +14515,7 @@ function hideMonster(idOrShouldReschedule, shouldRescheduleMaybe) {
     // 体数が減ったので残りのモンスターを並べ直す(サイズを戻す・重なり回避)
     relayoutMonsters();
     syncMonsterVisible();
+    flushPendingMonsterSpawn();
 
     if (shouldReschedule) scheduleMonster();
     return;
@@ -14497,6 +14529,7 @@ function hideMonster(idOrShouldReschedule, shouldRescheduleMaybe) {
   });
 
   monsters = [];
+  pendingMonsterSpawns = 0; // 場を一括で流す時(転生・タイトル等)は出現待ちも流す
   syncMonsterVisible();
 
   const legacy = $("monsterWrap");
