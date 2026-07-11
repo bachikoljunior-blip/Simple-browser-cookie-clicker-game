@@ -1614,10 +1614,10 @@
     }
 
     #cookie.boost-all {
-      /* 金クッキーは「クッキーの縁まで」を表示: 160%に拡大して外周のグロー/キラキラを円の外に出し、
-         クッキー本体が縁いっぱいに見えるようにする。枠になるbox-shadowの輪・縁取りは付けない。 */
+      /* 金クッキーは縁がちゃんと見える大きさで表示(120%)。外周のグロー/キラキラは円の外に
+         ほぼ出しつつ、クッキー本体の輪郭は円内に収める。枠になるbox-shadowの輪・縁取りは付けない。 */
       background: var(--golden-cookie-art);
-      background-size: 160%;
+      background-size: 120%;
       background-repeat: no-repeat;
       background-position: center;
       box-shadow: none;
@@ -2221,8 +2221,8 @@
       width: 90px !important;
       height: 90px !important;
       background: var(--golden-cookie-art) !important;
-      /* 「クッキーの縁まで」を表示: 160%で外周のグロー/キラキラを円の外に出し、本体が縁いっぱいに見える。枠は付けない */
-      background-size: 160% !important;
+      /* 縁がちゃんと見える大きさ(120%): グロー/キラキラはほぼ円外に出しつつ、本体の輪郭は円内に収める。枠は付けない */
+      background-size: 120% !important;
       background-repeat: no-repeat !important;
       background-position: center !important;
       box-shadow: none !important;
