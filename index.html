@@ -12362,9 +12362,14 @@ function renderResearch() {
     return;
   }
 
-  const ids = list.map(r => r.id)
+  // 全ての研究をコスト順に(2026-07-11 ユーザー指示): 通常研究と段階2/3カードを
+  // 同じ列に混ぜて、コストの安い順に並べる
+  const purchasables = list.map(r => ({ id: r.id, r, sc: null, cost: researchCost(r) }))
+    .concat(stageCards.map(sc => ({ id: sc.key, r: null, sc, cost: researchStageCost(sc.r, sc.stageNo) })));
+  purchasables.sort((a, b) => a.cost - b.cost);
+
+  const ids = purchasables.map(p => p.id)
     .concat(lockedList.map(r => "lock:" + r.id))
-    .concat(stageCards.map(sc => sc.key))
     .concat(showBhGauge ? ["__bhGauge"] : [])
     .concat(ownedList.map(r => "own:" + r.id));
   let cards = [...box.querySelectorAll(".item.artCard")];
@@ -12374,16 +12379,22 @@ function renderResearch() {
   if (!sameList) {
     box.innerHTML = "";
 
-    list.forEach(r => {
+    purchasables.forEach(p => {
       const btn = document.createElement("button");
-
-      // 対応設備を購入済み(=解放済み)なので、絵はシルエットにせず通常表示する
       btn.className = "item artCard";
-      btn.dataset.id = r.id;
-      btn.dataset.art = researchArt(r);
-      setArtImage(btn, ASSETS.research[r.id]);
+      btn.dataset.id = p.id;
 
-      addTap(btn, () => buyResearch(r.id));
+      if (p.r) {
+        // 通常研究(対応設備を購入済み=解放済み)。絵はシルエットにせず通常表示する
+        btn.dataset.art = researchArt(p.r);
+        setArtImage(btn, ASSETS.research[p.r.id]);
+        addTap(btn, () => buyResearch(p.r.id));
+      } else {
+        // 段階2/3カード
+        btn.dataset.art = researchArt(p.sc.r);
+        setArtImage(btn, ASSETS.research[p.sc.r.id]);
+        addTap(btn, () => buyResearchStage(p.sc.r.id, p.sc.stageNo));
+      }
       box.appendChild(btn);
     });
 
@@ -12396,18 +12407,6 @@ function renderResearch() {
       btn.dataset.art = researchArt(r);
       setArtImage(btn, ASSETS.research[r.id]);
       btn.disabled = true;
-      box.appendChild(btn);
-    });
-
-    stageCards.forEach(sc => {
-      const btn = document.createElement("button");
-
-      btn.className = "item artCard";
-      btn.dataset.id = sc.key;
-      btn.dataset.art = researchArt(sc.r);
-      setArtImage(btn, ASSETS.research[sc.r.id]);
-
-      addTap(btn, () => buyResearchStage(sc.r.id, sc.stageNo));
       box.appendChild(btn);
     });
 
