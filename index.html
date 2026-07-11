@@ -5951,20 +5951,25 @@ const SKILL_NODES = [
   { id: "click_4", name: "神経直結", branchId: "click", cost: 1050000, x: 260, y: 620, icon: "◆", prereqs: ["click_3", "auto_4"], desc: "タップ生産 +24%、全生産 x641。銀行配当の増幅先。", effects: [{ type: "click", value: 0.24 }, { type: "all", value: 640 }] },
 
   // 左下：金クッキー型
-  { id: "golden_1", name: "金色の匂い", branchId: "golden", cost: 40, x: 800, y: 1260, icon: "✦", prereqs: ["click_1"], desc: "金クッキー出現間隔を短縮。", effects: [{ type: "goldenRate", value: 0.24 }] },
+  { id: "golden_1", name: "金色の匂い", branchId: "golden", cost: 40, x: 800, y: 1260, icon: "✦", prereqs: ["core"], desc: "金クッキー出現間隔を短縮。", effects: [{ type: "goldenRate", value: 0.24 }] },
+  // 方針入口の増幅スキル(2026-07-11): 分岐炉心の各方針入口を選んだ直後に、その方針の主役効果を安価に増幅する
+  { id: "click_amp", name: "速射の指", branchId: "click", cost: 8, x: 620, y: 1120, icon: "◆", prereqs: ["click_1"], desc: "タップ生産 +75%。", effects: [{ type: "click", value: 0.75 }] },
+  { id: "golden_amp", name: "金箔集め", branchId: "golden", cost: 10, x: 780, y: 1120, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +50%。", effects: [{ type: "goldenAmount", value: 0.5 }] },
+  { id: "monster_amp", name: "仕留めの一撃", branchId: "monster", cost: 20, x: 1220, y: 1120, icon: "◉", prereqs: ["monster_1"], desc: "モンスター最終ダメージ +60%。", effects: [{ type: "monsterDamageSkill", value: 0.6 }] },
+  { id: "auto_amp", name: "炉の熱気", branchId: "auto", cost: 35, x: 1380, y: 1120, icon: "◇", prereqs: ["auto_1"], desc: "毎秒生産 +75%。", effects: [{ type: "cps", value: 0.75 }] },
   { id: "golden_2", name: "金粉回収", branchId: "golden", cost: 395, x: 620, y: 1380, icon: "✦", prereqs: ["golden_1"], desc: "金クッキー即時獲得量 +75%。", effects: [{ type: "goldenAmount", value: 0.75 }] },
   { id: "golden_3", name: "輝き増幅", branchId: "golden", cost: 35500, x: 440, y: 1500, icon: "✦", prereqs: ["golden_2"], desc: "金ブースト倍率 +2.1。", effects: [{ type: "goldenPower", value: 2.1 }] },
   { id: "golden_analysis", name: "金色観測", branchId: "golden", cost: 12000, x: 260, y: 1620, icon: "✦", prereqs: ["golden_3"], desc: "一覧に金クッキー出現間隔とブースト時間の目安を追加する。", effects: [{ type: "unlockSystem", target: "goldenAnalysis" }] },
   { id: "golden_4", name: "太陽反応", branchId: "golden", cost: 33500000, x: 80, y: 1740, icon: "✦", prereqs: ["golden_3"], desc: "金出現間隔を大きく短縮、金獲得量 +125%。", effects: [{ type: "goldenRate", value: 0.48 }, { type: "goldenAmount", value: 1.25 }] },
 
   // 右上：自動焼成型
-  { id: "auto_1", name: "火種", branchId: "auto", cost: 100, x: 1200, y: 980, icon: "◇", prereqs: ["monster_1"], desc: "毎秒生産 +300%。", effects: [{ type: "cps", value: 3 }] },
+  { id: "auto_1", name: "火種", branchId: "auto", cost: 100, x: 1200, y: 980, icon: "◇", prereqs: ["core"], desc: "毎秒生産 +300%。", effects: [{ type: "cps", value: 3 }] },
   { id: "auto_2", name: "炉の列", branchId: "auto", cost: 980, x: 1380, y: 860, icon: "◇", prereqs: ["auto_1", "monster_2"], desc: "毎秒生産 x11。", effects: [{ type: "cps", value: 10 }] },
   { id: "auto_3", name: "同期炉", branchId: "auto", cost: 9250, x: 1560, y: 740, icon: "◇", prereqs: ["auto_2", "monster_2"], desc: "毎秒生産 x41、モンスターダメージ +60%。", effects: [{ type: "cps", value: 40 }, { type: "monsterDamageSkill", value: 0.6 }] },
   { id: "auto_4", name: "無人ライン", branchId: "auto", cost: 265000, x: 1740, y: 620, icon: "◇", prereqs: ["auto_3"], desc: "毎秒生産 +24%、全生産 x161。工場ネットワークの増幅先。", effects: [{ type: "cps", value: 0.24 }, { type: "all", value: 160 }] },
 
   // 右下：怪物狩り型
-  { id: "monster_1", name: "狩りの合図", branchId: "monster", cost: 65, x: 1200, y: 1260, icon: "◉", prereqs: ["golden_1"], desc: "モンスター出現間隔を短縮。", effects: [{ type: "monsterRate", value: 0.24 }] },
+  { id: "monster_1", name: "狩りの合図", branchId: "monster", cost: 65, x: 1200, y: 1260, icon: "◉", prereqs: ["core"], desc: "モンスター出現間隔を短縮。", effects: [{ type: "monsterRate", value: 0.24 }] },
   { id: "monster_2", name: "急所割り", branchId: "monster", cost: 625, x: 1380, y: 1380, icon: "◉", prereqs: ["monster_1", "golden_2"], desc: "モンスター最終ダメージ +160%。", effects: [{ type: "monsterDamageSkill", value: 1.6 }] },
   { id: "monster_3", name: "砕ける皮", branchId: "monster", cost: 87000, x: 1560, y: 1500, icon: "◉", prereqs: ["monster_2"], desc: "モンスターHP -50%。", effects: [{ type: "monsterHpDown", value: 0.7000000000000001 }] },
   // v2: 工房解放スキル(monster枝の序盤から分岐。x=1200列のy=1440/1600は空き)
@@ -6082,7 +6087,7 @@ const DISHES = [
   { id: "chocoFondant", name: "濃厚ショコラ", cost: { cacao: 6, butter: 4 }, desc: "クリックの生産連動係数 ×2(0.4%→0.8%)" },
   { id: "mintIce", name: "ミントアイスサンド", cost: { mint: 6, frostSugar: 3 }, desc: "金クッキー出現間隔 ×0.75" },
   { id: "hunterStew", name: "狩人のシチュー", cost: { ironShard: 2, spice: 4 }, desc: "モンスター出現間隔 ×0.75、モンスターダメージ ×1.5" },
-  { id: "frostCake", name: "霜降りケーキ", cost: { frostSugar: 5, silentCore: 1 }, desc: "ノルマの進行を15%遅らせ、モンスター生成ノルマを達成しやすくする" },
+  { id: "frostCake", name: "霜降りケーキ", cost: { frostSugar: 5, silentCore: 1 }, desc: "ノルマの進行を40%遅らせ、モンスター生成ノルマを達成しやすくする" },
   { id: "stardustParfait", name: "星屑パフェ", cost: { stardust: 8, cometShard: 1 }, desc: "効果中に購入した設備はその周回中、生産 ×1.25" },
   // v2: エンドコンテンツ料理。レシピはS6(深層領域)到達で開示
   { id: "voidTart", name: "虚空タルト", cost: { voidSugar: 10, cometShard: 2 }, desc: "素材ドロップ ×2、モンスター出現間隔 ×0.7" }
@@ -7637,7 +7642,7 @@ function createOrderSnapshot(id) {
     stage: currentQuotaStageNumber(),
     need: orderNeedFor(picked),
     limitMs,
-    rewardCookies: Math.floor(currentCps() * (limitMs / 1000) * 0.5), // 報酬は生成時点で相対確定
+    rewardCookies: Math.floor(currentCps() * (limitMs / 1000) * 15), // 報酬は生成時点で相対確定(第12次R4: 係数0.5→15)
     progress: 0,
     createdAt: Date.now(),
     expiresAt: Date.now() + limitMs,
@@ -8163,25 +8168,10 @@ function parfaitBoostedUnits(id) {
   return Math.max(0, Math.min(state.upgrades[id] || 0, Math.floor(Number((state.parfaitUnits || {})[id]) || 0)));
 }
 
-// レシピの開示ステージ = 構成素材の入手先ステージの最大(黄金粉・ボス核・万能粉は全ステージ入手可=1)。
-// 第12次(T2対策): 開示を「その素材の入手先ステージが拓けた瞬間」に変更=ステージ解放と同一タイミングに
-// 統合する(素材の初入手基準だと開示が周回中盤に単独で散らばる。開示が先・調理は素材が揃ってから、が自然)。
-const MATERIAL_SOURCE_STAGE = {
-  butter: 1, flour: 1,
-  cacao: 2, lavaSugar: 2, ironShard: 2,
-  mint: 3, frostSugar: 3, silentCore: 3,
-  spice: 4,
-  stardust: 5, cometShard: 5,
-  voidSugar: 6, deepCore: 6
-};
-
 function dishRecipeRevealed(dish) {
-  let s = 1;
-  for (const id of Object.keys(dish.cost)) {
-    if (id === "goldDust" || id === "bossCoreAny" || id === "omniFlour") continue;
-    s = Math.max(s, MATERIAL_SOURCE_STAGE[id] || 1);
-  }
-  return s <= maxUnlockedStageNo();
+  // 虚空タルトはS6(深層領域)到達で開示
+  if (dish.id === "voidTart") return maxUnlockedStageNo() > STAGES.length;
+  return Object.keys(dish.cost).every(id => id === "bossCoreAny" ? anyBossCoreCount() > 0 : materialSeen(id));
 }
 
 // ==== 素材の獲得・消費 ====
@@ -8722,7 +8712,7 @@ function renderWorkshop() {
   box.innerHTML = `
     <div class="infoBox">
       <h3>料理(時限バフ・最大${MAX_ACTIVE_DISHES}品)</h3>
-      ${dishCards || `<div class="desc">ステージを拓くとレシピが並ぶ</div>`}
+      ${dishCards || `<div class="desc">素材を集めるとレシピが並ぶ</div>`}
     </div>
     ${craftSection}
     <div class="infoBox">
@@ -14140,6 +14130,12 @@ function hideGoldenCookie(shouldReschedule) {
   if (shouldReschedule) scheduleGoldenCookie();
 }
 
+// 序盤ブースト(2026-07-11): 金クッキーの即時獲得は駆け出しほどおいしい。
+// ×(1+9×0.5^(転生回数/1.5)) = 初周回×10・第1回×6.7・第3回×3.3・第6回×1.6と減衰(sim同期)。
+function goldenEarlyMultiplier() {
+  const runs = Math.max(0, Math.floor(Number(state.prestigeRuns) || 0));
+  return 1 + 9 * Math.pow(0.5, runs / 1.5);
+}
 function collectGoldenCookie() {
   if (!goldenVisible) return;
 
@@ -14184,7 +14180,7 @@ function collectGoldenCookie() {
 
   if (r < 0.5) {
     const gained = earn(
-      Math.max(100, currentCps() * 2.5, currentClickPower() * 2.5) * goldenAmountMultiplier()
+      Math.max(100, currentCps() * 2.5, currentClickPower() * 2.5) * goldenAmountMultiplier() * goldenEarlyMultiplier()
     );
     state.codex.goldenInstant = true;
     showMessage(`金 +${fmt(gained)}${effectSuffix}`);
@@ -15030,8 +15026,8 @@ setInterval(() => {
     // 最高到達ノルマ層を記録(段階式研究の変数)。今回分と、転生をまたいだ通算(全回)の両方を更新。
     state.maxQuotaStage = Math.max(state.maxQuotaStage || 1, currentQuotaStageNumber());
     state.maxQuotaStageEver = Math.max(state.maxQuotaStageEver || 1, state.maxQuotaStage);
-    // 霜降りケーキ: ノルマ時計を15%遅らせる(ゲージ増加速度×0.85)
-    if (dishActive("frostCake")) state.quotaPausedMs = (state.quotaPausedMs || 0) + 50 * 0.15;
+    // 霜降りケーキ: ノルマ時計を40%遅らせる(ゲージ増加速度×0.6・第12次R4でfrostGauge0.85→0.6)
+    if (dishActive("frostCake")) state.quotaPausedMs = (state.quotaPausedMs || 0) + 50 * 0.4;
     // 銀行クリック配当 段階2: 複利利息(所持クッキーに毎秒、毎秒生産比から逓減)
     if (state.research.bankClickDividend && resStage2("bankClickDividend")) {
       const bank = state.upgrades.bank || 0;
