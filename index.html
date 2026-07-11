@@ -1615,11 +1615,12 @@
 
     #cookie.boost-all {
       /* 金クッキーは縁がちゃんと見える大きさで表示(120%)。外周のグロー/キラキラは円の外に
-         ほぼ出しつつ、クッキー本体の輪郭は円内に収める。枠になるbox-shadowの輪・縁取りは付けない。 */
+         ほぼ出しつつ、クッキー本体の輪郭は円内に収める。枠になるbox-shadowの輪・縁取りは付けない。
+         画像内でクッキー本体が中央よりやや下にあるため、縦位置80%で切り取って上の余白を消す。 */
       background: var(--golden-cookie-art);
       background-size: 120%;
       background-repeat: no-repeat;
-      background-position: center;
+      background-position: center 80%;
       box-shadow: none;
       overflow: hidden;
       border-radius: 50%;
