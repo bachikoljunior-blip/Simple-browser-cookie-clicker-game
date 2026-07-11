@@ -1613,17 +1613,16 @@
 
     #cookie.boost-all {
       background: radial-gradient(circle at 50% 50%, rgba(255,246,160,0.44), transparent 64%), var(--golden-cookie-art);
-      /* 金クッキー画像は通常クッキー画像より余白が広く、126%では小さく縮んで“ずれ”て見える。
-         金クッキー(浮遊)の表示と同じ150%にして、通常時と同じくクッキーが枠いっぱいに収まるようにする。 */
-      background-size: 150% 150%;
+      /* 通常クッキーが金クッキーに変わったとき、金クッキー画像を端(ふち)まで見せる。
+         2層目(金クッキー画像)はcontainで全体表示、1層目(グロー)は枠いっぱい。 */
+      background-size: 100% 100%, contain;
+      background-repeat: no-repeat;
       background-position: center;
     }
 
     #goldenCookie {
       background: radial-gradient(circle at 50% 50%, rgba(255,246,160,0.36), transparent 68%), var(--golden-cookie-art);
-      /* グロー(1層目)は枠いっぱい、金クッキー画像(2層目)は端まで見えるようcontainで全体表示 */
-      background-size: 100% 100%, contain;
-      background-repeat: no-repeat;
+      background-size: 134% 134%;
       background-position: center;
       box-shadow: 0 0 18px rgba(255,221,92,0.96), 0 0 44px rgba(255,176,44,0.36), 0 10px 22px rgba(0,0,0,0.34);
     }
@@ -1957,9 +1956,7 @@
       z-index: 3600 !important;
       width: 86px !important;
       height: 86px !important;
-      /* グロー(1層目)は枠いっぱい、金クッキー画像(2層目)は端まで見えるようcontainで全体表示 */
-      background-size: 100% 100%, contain !important;
-      background-repeat: no-repeat !important;
+      background-size: 144% 144% !important;
       background-position: center !important;
       filter: drop-shadow(0 0 14px rgba(255,221,90,0.86)) drop-shadow(0 10px 18px rgba(0,0,0,0.36));
     }
@@ -2216,9 +2213,7 @@
       width: 90px !important;
       height: 90px !important;
       background: var(--golden-cookie-art) !important;
-      /* 金クッキー画像を端(クッキーのふち)まで見せる。containで全体を収める(切り取らない)。 */
-      background-size: contain !important;
-      background-repeat: no-repeat !important;
+      background-size: 150% 150% !important;
       background-position: center !important;
       filter:
         drop-shadow(0 0 18px rgba(255, 232, 105, 1))
