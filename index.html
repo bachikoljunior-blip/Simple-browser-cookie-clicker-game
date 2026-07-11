@@ -7019,9 +7019,11 @@ function generateHugeUnit(level) {
   return seededPick(HUGE_LONG_WORDS, n, 24) + seededPick(HUGE_SUFFIX, n, 25);
 }
 
-// 小数点の後ろに半角スペースを入れて、小数点があることを分かりやすくする(大きな数値=万/億/兆〜用)
+// 小数のある大きな数値(万/億/兆〜)は、小数部の右側(数字と単位の間)に半角スペースを入れて
+// 見やすくする。スペースは小数点の直後ではなく小数部の後ろに置く(2026-07-11 ユーザー指示)。
+// 呼び出し元は必ずこの直後に単位(万/億/兆〜)を連結するため、末尾スペースが浮くことはない。
 function spaceAfterDecimalPoint(s) {
-  return typeof s === "string" && s.indexOf(".") >= 0 ? s.replace(".", ". ") : s;
+  return typeof s === "string" && s.indexOf(".") >= 0 ? s + " " : s;
 }
 
 function fmtShortJapaneseUnitNumber(n) {
