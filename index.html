@@ -10692,6 +10692,7 @@ function updateTopOnly() {
   updatePrestigeTabLabel();
   checkPrestigeUnlockNotice();
   renderQuota();
+  enforceMonstersBelowQuota(); // ノルマUIの高さ変化でモンスターHPがゲージに重ならないよう常時補正
   checkQuotaStageTransition();
   renderStageBar();
   updateWorkshopTabVisibility();
@@ -13962,6 +13963,26 @@ function overlapArea(a, b, margin) {
   const ox = Math.min(a.right, b.right + m) - Math.max(a.left, b.left - m);
   const oy = Math.min(a.bottom, b.bottom + m) - Math.max(a.top, b.top - m);
   return ox > 0 && oy > 0 ? ox * oy : 0;
+}
+
+// モンスター(HP表示を含むラッパー)がノルマUI(quotaBox)と重ならないよう押し下げる。
+// 出現時はノルマ下に配置されるが、ノルマUIは再描画で高さが変わるため、描画のたびに確認する。
+// 「ノルマ表示より下」は placeFixedElement と同じく絶対条件として扱う。
+function enforceMonstersBelowQuota() {
+  const quota = $("quotaBox");
+  if (!quota || !monsters || !monsters.length) return;
+  const qr = quota.getBoundingClientRect();
+  if (!(qr.height > 0)) return;
+  monsters.forEach(m => {
+    const el = m && m.el;
+    if (!el || !el.isConnected) return;
+    const r = el.getBoundingClientRect();
+    if (!(r.height > 0)) return;
+    if (r.top < qr.bottom + 4 && r.bottom > qr.top && r.right > qr.left && r.left < qr.right) {
+      const delta = (qr.bottom + 4) - r.top;
+      el.style.top = ((parseFloat(el.style.top) || 0) + delta) + "px";
+    }
+  });
 }
 
 function placeFixedElement(el, width, height, minY) {
