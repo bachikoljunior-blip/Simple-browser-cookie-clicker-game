@@ -10484,8 +10484,8 @@ function playSound(kind) {
     }
 
     if (kind === "crit") {
-      // 会心タップ：力強さ + 爽快な抜け + ノイズのバチバチ感 を両立させた一撃音
-      // 音量は通常タップ(0.055)と同程度に抑える(音色はそのまま、全レイヤーを一括で縮小)
+      // 会心タップ：力強さ(低音パンチ) + 爽快な抜け(きらめき)の一撃音
+      // 音量は通常タップ(0.055)と同程度に抑える(全レイヤーを一括で縮小)
       const CRIT_VOL = 0.22;
       const now = audioCtx.currentTime;
 
@@ -10514,27 +10514,8 @@ function playSound(kind) {
         osc.stop(now + i * 0.018 + 0.24);
       });
 
-      // バチバチ感: 高域ハイパスのノイズ・スパークを数発ずらして重ねる(爽快感を消さないよう軽め・短め)
-      const spark = (t, dur, hp, gain) => {
-        const len = Math.max(1, Math.floor(audioCtx.sampleRate * dur));
-        const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
-        const d = buf.getChannelData(0);
-        for (let n = 0; n < len; n++) d[n] = Math.random() * 2 - 1;
-        const src = audioCtx.createBufferSource();
-        src.buffer = buf;
-        const filt = audioCtx.createBiquadFilter();
-        filt.type = "highpass";
-        filt.frequency.value = hp;
-        const g = audioCtx.createGain();
-        g.gain.setValueAtTime(gain, t);
-        g.gain.exponentialRampToValueAtTime(0.0005, t + dur);
-        src.connect(filt); filt.connect(g); g.connect(seBus());
-        src.start(t); src.stop(t + dur);
-      };
-      spark(now,         0.035, 3500, 0.13 * CRIT_VOL);
-      spark(now + 0.020, 0.030, 2600, 0.10 * CRIT_VOL);
-      spark(now + 0.040, 0.030, 4200, 0.09 * CRIT_VOL);
-      spark(now + 0.062, 0.026, 3000, 0.08 * CRIT_VOL);
+      // ノイズのスパーク層は廃止(2026-07-11): 小音量だと破裂ノイズの「パチパチ」=
+      // 音声グリッチのように聞こえるため。会心音は低音パンチ+きらめきのみとする。
       return;
     }
 
