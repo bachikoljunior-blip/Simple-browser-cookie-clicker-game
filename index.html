@@ -1609,10 +1609,10 @@
     }
 
     #cookie.boost-all {
-      /* 金クッキーはグロー(焼き込みの光の輪)を見せない: 画像を160%に拡大して光を円の外へ出す。
+      /* 金クッキーはグロー(焼き込みの光の輪)はほぼ見せず、キラキラ(星のきらめき)が縁に少しだけ覗く倍率(145%)。
          枠になるbox-shadowの輪・縁取り(::before/::after)は付けず、円クリップでクッキーを丸く収める。 */
       background: var(--golden-cookie-art);
-      background-size: 160%;
+      background-size: 145%;
       background-repeat: no-repeat;
       background-position: center;
       box-shadow: none;
@@ -2216,8 +2216,8 @@
       width: 90px !important;
       height: 90px !important;
       background: var(--golden-cookie-art) !important;
-      /* グロー(焼き込みの光の輪)は見せない: 160%に拡大して光を円の外へ出す。枠(box-shadow輪)は付けず円クリップで丸く収める */
-      background-size: 160% !important;
+      /* グローはほぼ見せず、キラキラが縁に少しだけ覗く倍率(145%)。枠(box-shadow輪)は付けず円クリップで丸く収める */
+      background-size: 145% !important;
       background-repeat: no-repeat !important;
       background-position: center !important;
       box-shadow: none !important;
@@ -6671,15 +6671,50 @@ function applyScreenBackground() {
 // バランスよく再配置する(全画面化で広がり、戻すと元の範囲に収め直す)。
 let playFullscreenOn = false;
 
+// 出現物(モンスター・金クッキー)の重なり/はみ出しを解消する。
+// 全画面やそこから戻したときにも、モンスター同士・通常クッキー・金クッキーと重ならないよう置き直す。
+// 問題ない配置は動かさず、重なっている/枠外に出ているものだけを再配置する(不要なテレポートを避ける)。
 function repositionFloatingActors() {
   try {
-    if (typeof goldenVisible !== "undefined" && goldenVisible) {
-      const g = $("goldenCookie");
-      if (g && g.style.display !== "none") placeFixedElement(g, 90, 90, 90);
+    const host = document.querySelector(".top");
+    if (!host || !host.clientWidth) return; // 非表示中(タブ全画面で.topがdisplay:none等)は触らない
+
+    const actors = [];
+    const golden = $("goldenCookie");
+    if (typeof goldenVisible !== "undefined" && goldenVisible && golden && golden.style.display !== "none") {
+      actors.push({ el: golden, w: 90, h: 90 });
     }
     if (typeof monsters !== "undefined" && Array.isArray(monsters)) {
-      monsters.forEach(m => { if (m && m.el && m.el.isConnected) placeFixedElement(m.el, 236, 254, 90); });
+      monsters.forEach(m => {
+        if (m && m.el && m.el.isConnected) {
+          actors.push({ el: m.el, w: m.el.offsetWidth || 236, h: m.el.offsetHeight || 254 });
+        }
+      });
     }
+
+    const hostW = host.clientWidth, hostH = host.clientHeight;
+    actors.forEach(a => {
+      const rect = rectRelativeToHost(a.el, host);
+      const others = occupiedRects(host, a.el);
+      // 他のモンスター・金クッキー(weight>=0.5)と重なっている場合だけ置き直す(通常クッキーは対象外)
+      const overlaps = others.some(b => (b.weight || 1) >= 0.5 && overlapArea(rect, b.rect, 4) > 0);
+      const outOfBounds = rect.left < -1 || rect.top < -1 || rect.right > hostW + 1 || rect.bottom > hostH + 1;
+      if (overlaps || outOfBounds) placeFixedElement(a.el, a.w, a.h, 90);
+    });
+  } catch (e) { /* 再配置失敗は無視 */ }
+}
+
+// モンスターの体数が変わったら、全モンスター(群れは除く)を体数に応じたサイズで並べ直す。
+// これで新しく出た分も含め、できるだけ重ならず・既にいる分の下に並ぶ。
+function relayoutMonsters() {
+  try {
+    const host = document.querySelector(".top");
+    if (!host || !host.clientWidth) return;
+    (monsters || []).forEach(m => {
+      if (m && m.el && m.el.isConnected && !m.el.classList.contains("mtype-swarm")) {
+        placeFixedElement(m.el, m.el.offsetWidth || 236, m.el.offsetHeight || 254, 90);
+      }
+    });
   } catch (e) { /* 再配置失敗は無視 */ }
 }
 
@@ -9891,7 +9926,7 @@ function startBgm() {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!audioCtx) audioCtx = new AudioContext();
-    if (audioCtx.state === "suspended") audioCtx.resume();
+    if (audioCtx.state !== "running") audioCtx.resume();
 
     bgmGainNode = audioCtx.createGain();
     bgmGainNode.gain.value = Math.max(0, settings.bgmVolume / 100) * 0.14;
@@ -10305,9 +10340,16 @@ function startBgm() {
   } catch (e) {}
 }
 
-// suspendされたAudioContextを復帰させる(バックグラウンド復帰・画面転移対策)
+// suspend/interruptされたAudioContextを復帰させる(バックグラウンド復帰・画面転移・iOSの割り込み対策)
+// iOS/Safariは中断時に state を "interrupted" にするため、"suspended" だけ見ると復帰できず音が消えたままになる。
+// running 以外なら常に resume を試みる。resume 後は次のsetIntervalでBGMが鳴り直す。
 function resumeAudioIfNeeded() {
-  try { if (audioCtx && audioCtx.state === "suspended") audioCtx.resume(); } catch (e) {}
+  try {
+    if (audioCtx && audioCtx.state !== "running") {
+      const p = audioCtx.resume();
+      if (p && p.catch) p.catch(() => {});
+    }
+  } catch (e) {}
 }
 
 // 自動再生制限のため、最初の操作(タップ)でBGMを開始する
@@ -10336,8 +10378,8 @@ function playSound(kind) {
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!audioCtx) audioCtx = new AudioContext();
-    // 再開後・画面転移でContextがsuspendedになると音が出なくなるため必ず復帰させる
-    if (audioCtx.state === "suspended") audioCtx.resume();
+    // 再開後・画面転移・iOSの割り込みでContextがsuspended/interruptedになると音が出なくなるため必ず復帰させる
+    if (audioCtx.state !== "running") audioCtx.resume();
     if ((settings.seVolume || 0) <= 0) return;
 
     if (kind === "cookie" || kind === "monster") {
@@ -13047,6 +13089,8 @@ function closeTabPageFullscreen() {
     scheduleGoldenCookie();
     scheduleMonster();
   }
+  // 全画面から戻ったら、出現物が重なっていれば置き直す(レイアウト確定を待つ)
+  requestAnimationFrame(() => requestAnimationFrame(repositionFloatingActors));
 }
 
 function toggleTabPageFullscreen(targetId) {
@@ -13948,13 +13992,15 @@ function occupiedRects(host, excludeEl) {
   const rects = [];
   const cookie = $("cookie");
 
-  if (cookie) rects.push(rectRelativeToHost(cookie, host));
+  // 通常クッキーは画面いっぱいの大きさで避けきれず、出現物は元々クッキーの上に浮いてタップする設計。
+  // そのため回避優先度は低くする(weight小)=「できるだけ避けるが、他のモンスター・金クッキーを優先」。
+  if (cookie) rects.push({ rect: rectRelativeToHost(cookie, host), weight: 0.15 });
 
   const golden = $("goldenCookie");
-  if (goldenVisible && golden && golden !== excludeEl) rects.push(rectRelativeToHost(golden, host));
+  if (goldenVisible && golden && golden !== excludeEl) rects.push({ rect: rectRelativeToHost(golden, host), weight: 1 });
 
   monsters.forEach(m => {
-    if (m.el && m.el !== excludeEl) rects.push(rectRelativeToHost(m.el, host));
+    if (m.el && m.el !== excludeEl) rects.push({ rect: rectRelativeToHost(m.el, host), weight: 1 });
   });
 
   return rects;
@@ -14005,32 +14051,49 @@ function placeFixedElement(el, width, height, minY) {
   const blockers = occupiedRects(host, el);
   const margin = 6;
 
+  // 既にいるモンスターの最下端。新しく出現したモンスターは、できるだけこの「下」に置く。
+  const existingMonsterBottom = (monsters || [])
+    .filter(m => m && m.el && m.el !== el && m.el.isConnected)
+    .reduce((mx, m) => Math.max(mx, rectRelativeToHost(m.el, host).bottom), minYFixed);
+
   function tryPlace(w, h) {
     const maxX = Math.max(pad, hostW - w - pad);
     const maxY = Math.max(minYFixed, hostH - h - pad);
     let best = null;
 
-    for (let attempt = 0; attempt < 60; attempt++) {
+    for (let attempt = 0; attempt < 120; attempt++) {
       const x = pad + Math.random() * Math.max(1, maxX - pad);
       const y = minYFixed + Math.random() * Math.max(1, maxY - minYFixed);
       const candidate = { left: x, top: y, right: x + w, bottom: y + h };
-      const score = blockers.reduce((sum, b) => sum + overlapArea(candidate, b, margin), 0);
+      // 重なりを避ける(モンスター同士・金クッキーは重み1、通常クッキーは重み小)
+      const overlap = blockers.reduce((sum, b) => sum + overlapArea(candidate, b.rect, margin) * (b.weight || 1), 0);
+      // 次点で「既にいるモンスターより下に置く」ことを優先(上に置くほどペナルティ)
+      const above = Math.max(0, existingMonsterBottom - y);
+      const score = overlap * 1000 + above;
 
-      if (!best || score < best.score) best = { x, y, score };
-      if (score === 0) break;
+      if (!best || score < best.score) best = { x, y, score, overlap };
+      if (overlap === 0 && above <= 0) break;
     }
 
     return best;
   }
 
-  // 出現物は「.topの内側に収まる」ためだけに縮小し、クッキー本体との重なりを
-  // 避けるためには縮小しない(大きさを優先)。位置はできるだけ重ならない場所を選ぶ。
-  // これでモンスターは常に大きく表示され、狭い端末でも枠内には必ず収まる
+  // 出現物は「.topの内側に収まる」ためだけに縮小し、位置はできるだけ重ならない場所を選ぶ。
   const availW = Math.max(1, hostW - pad * 2);
   const availH = Math.max(1, hostH - minYFixed - pad);
   const fitScale = Math.min(1, availW / naturalW, availH / naturalH);
-  // 縮小しすぎるとモンスターが小さくなりタップしづらいので下限を引き上げる
-  const scale = Math.max(0.78, fitScale);
+
+  // モンスターが複数いるときは、縦に並べても重ならないよう体数に応じて縮小する。
+  // (1体なら従来どおり大きく表示。増えるほど小さくして「下に並べて」重なりを避ける)
+  const isMonster = !!(el.classList && el.classList.contains("monsterInstance"));
+  const monCount = isMonster
+    ? Math.max(1, (monsters || []).filter(m => m && m.el && m.el.isConnected && !m.el.classList.contains("mtype-swarm")).length)
+    : 1;
+  const stackCap = monCount <= 1
+    ? 1
+    : Math.min(1, (availH - pad * (monCount + 1)) / (monCount * naturalH));
+  const floor = monCount <= 1 ? 0.78 : 0.42; // 複数時はタップできる範囲で小さくしてよい
+  const scale = Math.max(floor, Math.min(fitScale, stackCap));
   const best = tryPlace(naturalW * scale, naturalH * scale);
 
   el.style.transform = scale < 0.999 ? `translateZ(0) scale(${scale.toFixed(3)})` : "translateZ(0)";
@@ -14374,6 +14437,9 @@ function showMonster() {
     }, stayMs);
   }
 
+  // 新しく出た分も含め、体数に応じて全モンスターを並べ直す(重なり回避・下に配置)
+  relayoutMonsters();
+
   syncMonsterVisible();
 
   state.goldenChainReady = false;
@@ -14434,6 +14500,8 @@ function hideMonster(idOrShouldReschedule, shouldRescheduleMaybe) {
     if (mon.el && mon.el.parentElement) mon.el.remove();
 
     monsters = monsters.filter(m => m.id !== id);
+    // 体数が減ったので残りのモンスターを並べ直す(サイズを戻す・重なり回避)
+    relayoutMonsters();
     syncMonsterVisible();
 
     if (shouldReschedule) scheduleMonster();
