@@ -10505,21 +10505,11 @@ function playSound(kind) {
     }
 
     if (kind === "crit") {
-      // 会心タップ：力強さ(低音パンチ) + 爽快な抜け(きらめき)の一撃音
-      // 音量は通常タップ(0.055)と同程度に抑える(全レイヤーを一括で縮小)
+      // 会心タップ：爽快な抜け(きらめき)のみの一撃音。
+      // 低音パンチ層は廃止(2026-07-11): 小音量では短い低音が急に途切れる
+      // 「ぶつ切り」音に聞こえるため。音量は通常タップ(0.055)と同程度。
       const CRIT_VOL = 0.22;
       const now = audioCtx.currentTime;
-
-      // 芯の低音インパクト(力強さ): sineを急降下でズンと当てる
-      const punch = audioCtx.createOscillator();
-      const pg = audioCtx.createGain();
-      punch.type = "sine";
-      punch.frequency.setValueAtTime(300, now);
-      punch.frequency.exponentialRampToValueAtTime(85, now + 0.12);
-      pg.gain.setValueAtTime(0.16 * CRIT_VOL, now);
-      pg.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-      punch.connect(pg); pg.connect(seBus());
-      punch.start(now); punch.stop(now + 0.16);
 
       // 明るく抜けるきらめき(爽快感): 澄んだ三角波を数音、少し上へ滑らせて「シャキーン」
       [1320, 1980, 2640].forEach((f, i) => {
