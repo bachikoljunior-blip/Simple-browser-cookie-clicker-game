@@ -1609,17 +1609,17 @@
     }
 
     #cookie.boost-all {
-      /* 金クッキー画像を(焼き込みのグローごと)全部見せる=contain。
-         UIの丸い枠は消す: 円形クリップ(overflow/border-radius)・縁取り(::after)・box-shadowの輪を出さない。 */
+      /* 金クッキーはグロー(焼き込みの光の輪)を見せない: 画像を160%に拡大して光を円の外へ出す。
+         枠になるbox-shadowの輪・縁取り(::before/::after)は付けず、円クリップでクッキーを丸く収める。 */
       background: var(--golden-cookie-art);
-      background-size: contain;
+      background-size: 160%;
       background-repeat: no-repeat;
       background-position: center;
       box-shadow: none;
-      overflow: visible;
-      border-radius: 0;
+      overflow: hidden;
+      border-radius: 50%;
     }
-    /* 金クッキー時は、縁取り(::after)と縁の暗いふち(::before)を消して丸い枠を見せない */
+    /* 金クッキー時は、縁取り(::after)と縁の暗いふち(::before)を消して枠を見せない */
     #cookie.boost-all::before,
     #cookie.boost-all::after { display: none; }
 
@@ -2216,13 +2216,13 @@
       width: 90px !important;
       height: 90px !important;
       background: var(--golden-cookie-art) !important;
-      /* 画像を(焼き込みグローごと)全部見せる=contain。UIの丸い枠(円クリップ・box-shadowの輪)は出さない */
-      background-size: contain !important;
+      /* グロー(焼き込みの光の輪)は見せない: 160%に拡大して光を円の外へ出す。枠(box-shadow輪)は付けず円クリップで丸く収める */
+      background-size: 160% !important;
       background-repeat: no-repeat !important;
       background-position: center !important;
       box-shadow: none !important;
-      overflow: visible !important;
-      border-radius: 0 !important;
+      overflow: hidden !important;
+      border-radius: 50% !important;
       filter: drop-shadow(0 6px 12px rgba(0,0,0,0.42)) !important;
     }
 
