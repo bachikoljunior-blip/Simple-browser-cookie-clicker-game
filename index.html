@@ -1612,15 +1612,17 @@
     }
 
     #cookie.boost-all {
-      /* 金クッキー画像を枠いっぱいに表示し、画像に焼き込まれた金色グロー(外周)は円の外に出して隠す。
-         これで金クッキーの外側に枠(輪)が見えず、クッキーが端まで詰まって見える。 */
+      /* 金クッキー画像を(焼き込みのグローごと)全部見せる=contain。
+         UIの丸い枠は消す: 円形クリップ(overflow/border-radius)・縁取り(::after)・box-shadowの輪を出さない。 */
       background: var(--golden-cookie-art);
-      background-size: 160%;
+      background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      box-shadow: 0 0 22px rgba(255,205,95,0.70), 0 12px 22px rgba(0,0,0,0.40);
+      box-shadow: none;
+      overflow: visible;
+      border-radius: 0;
     }
-    /* 金クッキー時は、縁取り(::after)と縁の暗いふち(::before)を消して外枠を見せない */
+    /* 金クッキー時は、縁取り(::after)と縁の暗いふち(::before)を消して丸い枠を見せない */
     #cookie.boost-all::before,
     #cookie.boost-all::after { display: none; }
 
@@ -2217,14 +2219,14 @@
       width: 90px !important;
       height: 90px !important;
       background: var(--golden-cookie-art) !important;
-      /* 画像を枠いっぱいに。焼き込みの金色グロー(外周)は円の外に出して隠し、外枠(輪)を見せない */
-      background-size: 160% !important;
+      /* 画像を(焼き込みグローごと)全部見せる=contain。UIの丸い枠(円クリップ・box-shadowの輪)は出さない */
+      background-size: contain !important;
       background-repeat: no-repeat !important;
       background-position: center !important;
       box-shadow: none !important;
-      filter:
-        drop-shadow(0 0 10px rgba(255, 220, 110, 0.65))
-        drop-shadow(0 8px 14px rgba(0,0,0,0.42)) !important;
+      overflow: visible !important;
+      border-radius: 0 !important;
+      filter: drop-shadow(0 6px 12px rgba(0,0,0,0.42)) !important;
     }
 
     #goldenCookie::before {
@@ -4817,9 +4819,11 @@
     .monsterInstance.mtype-boss .cookieMonsterButton {
       width: 250px;
       height: 250px;
-      box-shadow:
-        0 0 30px rgba(255, 64, 64, 0.72),
-        0 11px 24px rgba(0, 0, 0, 0.45);
+      /* 四角い枠(矩形box-shadow)は出さない。赤い光は絵の形に沿うdrop-shadowで付ける。 */
+      box-shadow: none;
+      filter:
+        drop-shadow(0 0 22px rgba(255, 64, 64, 0.72))
+        drop-shadow(0 11px 22px rgba(0, 0, 0, 0.45));
     }
 
     .monsterInstance.mtype-boss .monsterTypeLabel {
@@ -14787,7 +14791,9 @@ function rewardPreviewText(choice) {
 function upgradeRewardPreviewText(choice) {
   const u = getUpgrade(choice.id);
   const lvNow = state.upgradePerks[u.id] || 0;
-  const lvNext = lvNow + choice.count;
+  // 相性倍率込みの実獲得Lv(rewardChoiceGain)で表示する。
+  // choice.count のままだと「Lv.X → Lv.Y」と「獲得Lv +N(相性込み)」や実際の付与量が食い違うため。
+  const lvNext = lvNow + rewardChoiceGain(choice);
 
   const before = 1 + lvNow * upgradeBoostRate(u);
   const after = 1 + lvNext * upgradeBoostRate(u);
