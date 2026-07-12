@@ -12368,8 +12368,26 @@ function renderResearch() {
     .concat(stageCards.map(sc => ({ id: sc.key, r: null, sc, cost: researchStageCost(sc.r, sc.stageNo) })));
   purchasables.sort((a, b) => a.cost - b.cost);
 
+  // 解放前(ロック中)のカードも混ぜてコスト順に(2026-07-11 ユーザー指示):
+  // 通常研究の？？？と段階2/3の予告(スキル未取得)を1つの群としてコスト順。
+  // 段階2/3はスキルで解放する前から「次の段」を予告カードとして表示する。
+  const stagePreviews = debugMode ? [] : (() => {
+    const arr = [];
+    RESEARCH.forEach(r => {
+      if (!state.research[r.id] || !researchUnlocked(r)) return;
+      const cur = Math.max(1, Math.floor(Number((state.researchStages || {})[r.id]) || 1));
+      if (cur < 2 && RES_STAGE2[r.id] && !hasSkill(RES_STAGE2[r.id])) arr.push({ r, stageNo: 2 });
+      else if (cur === 2 && RES_STAGE3[r.id] && !hasSkill(RES_STAGE3[r.id])) arr.push({ r, stageNo: 3 });
+    });
+    return arr;
+  })();
+
+  const lockedCards = lockedList.map(r => ({ id: "lock:" + r.id, r, sp: null, cost: researchCost(r) }))
+    .concat(stagePreviews.map(sp => ({ id: "stagelock:" + sp.r.id + "__s" + sp.stageNo, r: null, sp, cost: researchStageCost(sp.r, sp.stageNo) })));
+  lockedCards.sort((a, b) => a.cost - b.cost);
+
   const ids = purchasables.map(p => p.id)
-    .concat(lockedList.map(r => "lock:" + r.id))
+    .concat(lockedCards.map(l => l.id))
     .concat(showBhGauge ? ["__bhGauge"] : [])
     .concat(ownedList.map(r => "own:" + r.id));
   let cards = [...box.querySelectorAll(".item.artCard")];
@@ -12398,15 +12416,29 @@ function renderResearch() {
       box.appendChild(btn);
     });
 
-    lockedList.forEach(r => {
+    // 解放前(ロック中)のカード群: 通常研究の？？？と段階予告を混ぜたコスト順で作る
+    lockedCards.forEach(l => {
       const btn = document.createElement("button");
-
-      // 対応設備が未購入: 効果と絵を伏せた購入不可カード
       btn.className = "item artCard artSilhouette researchLocked";
-      btn.dataset.id = "lock:" + r.id;
-      btn.dataset.art = researchArt(r);
-      setArtImage(btn, ASSETS.research[r.id]);
+      btn.dataset.id = l.id;
       btn.disabled = true;
+
+      if (l.r) {
+        // 対応設備が未購入の通常研究: 効果と絵を伏せる(中身は更新パスで？？？表示)
+        btn.dataset.art = researchArt(l.r);
+        setArtImage(btn, ASSETS.research[l.r.id]);
+      } else {
+        // 段階2/3の予告(解放スキル未取得): 解放条件だけ見せ、効果とコストは伏せる
+        btn.dataset.art = researchArt(l.sp.r);
+        setArtImage(btn, ASSETS.research[l.sp.r.id]);
+        const gate = (l.sp.stageNo === 2 ? RES_STAGE2 : RES_STAGE3)[l.sp.r.id];
+        const gateName = (SKILL_NODES.find(n => n.id === gate) || { name: gate }).name;
+        btn.innerHTML = `
+          <b>${l.sp.r.name} 段階${l.sp.stageNo}</b>
+          <div class="desc">解放条件: スキル「${gateName}」を取得</div>
+          <div class="desc">取得すると効果とコストが開示され、購入できるようになる</div>
+        `;
+      }
       box.appendChild(btn);
     });
 
@@ -12469,6 +12501,9 @@ function renderResearch() {
       `;
       return;
     }
+
+    // 段階2/3の予告(未解放)は作成時の内容のまま(静的)
+    if (lockId.startsWith("stagelock:")) return;
 
     if (lockId.startsWith("own:")) {
       const r = RESEARCH.find(x => ("own:" + x.id) === lockId);
