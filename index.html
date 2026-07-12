@@ -4940,6 +4940,40 @@
       box-shadow: inset 0 0 0 2px rgba(255, 205, 122, 0.85);
     }
 
+    /* 重力圧縮の発動ボタン: 研究欄からプレイ画面(クッキーの横)へ移設。
+       モンスター(z-index:40)より前面に置き、重なってもタップできるようにする */
+    #bhGaugeBtn {
+      position: absolute;
+      right: 4px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 60;
+      width: 76px;
+      min-height: 76px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 213, 138, 0.5);
+      background: radial-gradient(circle at 50% 32%, rgba(96, 64, 150, 0.94), rgba(22, 12, 42, 0.96));
+      color: #ffe9c4;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.3;
+      padding: 6px 4px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+      touch-action: manipulation;
+      cursor: pointer;
+    }
+
+    #bhGaugeBtn.bhReady {
+      animation: orderTabBlink 1.1s ease-in-out infinite;
+      border-color: rgba(255, 230, 150, 0.9);
+    }
+
+    body.fxOff #bhGaugeBtn.bhReady {
+      animation: none;
+      box-shadow: inset 0 0 0 2px rgba(255, 205, 122, 0.85);
+    }
+
     /* 研究が新しく解放されたら研究タブを光らせて点滅(開くと解除) */
     .tab.researchNotify {
       animation: orderTabBlink 1.1s ease-in-out infinite;
@@ -5239,6 +5273,7 @@
       <button id="cookie" aria-label="クッキー">
         <span class="sparkle"></span>
       </button>
+      <button id="bhGaugeBtn" type="button" aria-label="重力圧縮の発動" style="display: none;"></button>
       <div id="floatArea"></div>
     </div>
 
@@ -10810,6 +10845,7 @@ function updateTopOnly() {
   if (cpsEl) cpsEl.textContent = pausedForSkillChoice() ? "合計毎秒 準備中" : "合計毎秒 " + fmt(currentCps());
 
   $("cookie").classList.toggle("boost-all", goldenBoostActive());
+  updateBhGaugeButton();
 
   updatePrestigeTabLabel();
   checkPrestigeUnlockNotice();
@@ -12425,8 +12461,8 @@ function renderResearch() {
   });
   // 段階2/3の購入カード(段階式研究)
   const stageCards = visibleResearchStageCards();
-  // 重力圧縮の圧縮ゲージはタップで発動する操作なので、購入後も専用カードとして残す
-  const showBhGauge = state.research.blackHoleCompression && resStage2("blackHoleCompression");
+  // 重力圧縮の発動はプレイ画面(クッキー横の#bhGaugeBtn)へ移設したため、研究欄にはカードを出さない
+  const showBhGauge = false;
   // 購入済みの研究は一番下に「購入済み」として並べる
   const ownedList = RESEARCH.filter(r => state.research[r.id]);
 
@@ -15337,7 +15373,29 @@ function fireBhBoost() {
   state.bhFullSince = 0;
   state.bhUses = (state.bhUses || 0) + 1;
   showMessage(`圧縮解放：60秒間 全生産 x${mult.toFixed(2)}`);
+  updateBhGaugeButton();
 }
+
+// 重力圧縮の発動ボタン(クッキーの横・モンスターより前面)。研究欄のカードから移設。
+function updateBhGaugeButton() {
+  const btn = $("bhGaugeBtn");
+  if (!btn) return;
+  const show = state.research.blackHoleCompression && resStage2("blackHoleCompression") && !pausedForSkillChoice();
+  btn.style.display = show ? "" : "none";
+  if (!show) return;
+  const charge = Math.min(100, Math.floor((state.bhCharge || 0) / 25));
+  const uses = state.bhUses || 0;
+  const maxUses = resStage3("blackHoleCompression") ? 3 : 2;
+  const ready = (state.bhCharge || 0) >= 2500 && uses < maxUses;
+  btn.classList.toggle("bhReady", ready);
+  btn.innerHTML = `重力圧縮<br>${charge}%<br>${uses}/${maxUses}回${ready ? "<br>発動!" : ""}`;
+}
+
+addTap($("bhGaugeBtn"), () => {
+  const uses = state.bhUses || 0;
+  const maxUses = resStage3("blackHoleCompression") ? 3 : 2;
+  if ((state.bhCharge || 0) >= 2500 && uses < maxUses) fireBhBoost();
+});
 
 setInterval(() => {
   // 注文・工房タブは全描画すると画像がちらつくので、タイマー表示だけをその場で更新する
