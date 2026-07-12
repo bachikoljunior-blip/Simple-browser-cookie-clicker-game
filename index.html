@@ -12494,8 +12494,8 @@ function renderResearch() {
   const purchasables = list.map(r => ({ id: r.id, r, sc: null, cost: researchCost(r) }))
     .concat(stageCards.map(sc => ({ id: sc.key, r: null, sc, cost: researchStageCost(sc.r, sc.stageNo) })));
   // 段階式研究(1段目=基礎カードも含む)は一番上(2026-07-11 ユーザー指示)。同種同士はコストの安い順
-  const isStagedEntry = p => Boolean(p.sc || (p.r && (RES_STAGE2[p.r.id] != null || RES_STAGE3[p.r.id] != null)));
-  purchasables.sort((a, b) => ((isStagedEntry(a) ? 0 : 1) - (isStagedEntry(b) ? 0 : 1)) || (a.cost - b.cost));
+  // 解放された(購入可能な)研究は純粋にコストの安い順(2026-07-11 ユーザー指示)
+  purchasables.sort((a, b) => a.cost - b.cost);
 
   // 解放前(ロック中)のカードも混ぜてコスト順に(2026-07-11 ユーザー指示):
   // 通常研究の？？？と段階2/3の予告(スキル未取得)を1つの群としてコスト順。
