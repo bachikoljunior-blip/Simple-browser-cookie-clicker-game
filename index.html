@@ -6466,6 +6466,7 @@ function ensureState() {
   // ==== 第7次 新要素の正規化(旧セーブはデフォルト補完) ====
   state.maxQuotaStage = Math.max(1, Math.floor(Number(state.maxQuotaStage) || 1));
   state.maxQuotaStageEver = Math.max(1, Math.floor(Number(state.maxQuotaStageEver) || 1), state.maxQuotaStage);
+  state.earlyRunMonsters = Math.max(0, Math.floor(Number(state.earlyRunMonsters) || 0));
   state.researchStages = state.researchStages && typeof state.researchStages === "object" ? state.researchStages : {};
   RESEARCH.forEach(r => {
     const v = Math.floor(Number(state.researchStages[r.id]) || 0);
@@ -7761,6 +7762,23 @@ function clearResearchTabNotify() {
   if (tab) tab.classList.remove("researchNotify");
 }
 
+// ==== 周回序盤のクッキーモンスター(2026-07-11 ユーザー指示) ====
+// 周回の初めに30秒おきに通常種クッキーモンスターを1体ずつ、計5体出す。
+// ノルマ達成前でも出る(強制出現)。経過はノルマ時計基準(モーダル中などは進まない)。
+const EARLY_RUN_MONSTER_COUNT = 5;
+const EARLY_RUN_MONSTER_INTERVAL_SEC = 30;
+
+function checkEarlyRunSpawns() {
+  try {
+    const done = Math.max(0, Math.floor(Number(state.earlyRunMonsters) || 0));
+    if (done >= EARLY_RUN_MONSTER_COUNT) return;
+    if (pausedForSkillChoice() || !normalPlayScreenActive()) return;
+    if (quotaElapsedSeconds() < (done + 1) * EARLY_RUN_MONSTER_INTERVAL_SEC) return;
+    state.earlyRunMonsters = done + 1;
+    showMonster("normal");
+  } catch (e) {}
+}
+
 function ensureActiveOrder() {
   if (!orderBoardUnlocked()) return null;
   const def = state.activeOrder ? orderDef(state.activeOrder.id) : null;
@@ -8137,6 +8155,7 @@ function blackHoleQuotaCompressionMultiplier() {
 
 function resetRunLimitedEffects() {
   state.maxQuotaStage = 1;
+  state.earlyRunMonsters = 0; // 周回序盤のクッキーモンスター(30秒おき×5体)を次の周回でも出す
   state.critCombo = 0;
   state.lastCritAt = 0;
   state.lastGoldenAt = Date.now();
@@ -14467,26 +14486,28 @@ function findMonster(id) {
   return monsters.find(m => m.id === id);
 }
 
-function showMonster() {
+function showMonster(forcedTypeId) {
   if (pausedForSkillChoice()) return;
   if (!normalPlayScreenActive()) return;
-  if (!canMonsterAppear()) {
+  // 強制出現(周回序盤のクッキーモンスター等)はノルマ達成前でも出す
+  if (!forcedTypeId && !canMonsterAppear()) {
     scheduleMonster();
     return;
   }
 
-  clearMonsterSpawnTimer();
+  if (!forcedTypeId) clearMonsterSpawnTimer();
 
   // 出現中のモンスターが残っている間は新たに出さず、出現待ちとして溜める。
   // 場が空いたら hideMonster 経由で flushPendingMonsterSpawn が1体ずつ順に消化する。
   // 待機できる時間は「その時点の標準滞在時間」まで(=画面に居られたはずの時間だけ待てる)。
-  if (monsters.length > 0) {
+  // (強制出現は30秒おきに確実に出すため、出現中でも重ねて出す)
+  if (!forcedTypeId && monsters.length > 0) {
     pendingMonsterSpawns.push({ queuedAt: Date.now(), expireMs: monsterStayEstimateMs() });
     return;
   }
 
-  // 種類はステージのロスターから抽選(ボス化・黄金獣置換を含む)
-  const typeId = pickMonsterTypeId();
+  // 種類はステージのロスターから抽選(ボス化・黄金獣置換を含む)。強制出現は指定種で固定
+  const typeId = forcedTypeId || pickMonsterTypeId();
   const type = MONSTER_TYPES[typeId] || MONSTER_TYPES.normal;
   const stage = currentStageInfo();
 
@@ -15331,6 +15352,9 @@ setInterval(() => {
 
   // 研究の新規解放を監視して研究タブを点滅させる(開くと解除)
   checkResearchUnlockNotify();
+
+  // 周回序盤のクッキーモンスター(30秒おき×5体)
+  checkEarlyRunSpawns();
 
   updateTopOnly();
 }, 1000);
