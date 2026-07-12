@@ -4940,6 +4940,16 @@
       box-shadow: inset 0 0 0 2px rgba(255, 205, 122, 0.85);
     }
 
+    /* 研究が新しく解放されたら研究タブを光らせて点滅(開くと解除) */
+    .tab.researchNotify {
+      animation: orderTabBlink 1.1s ease-in-out infinite;
+    }
+
+    body.fxOff .tab.researchNotify {
+      animation: none;
+      box-shadow: inset 0 0 0 2px rgba(255, 205, 122, 0.85);
+    }
+
     /* ===== 直近要望: 表示崩れ対策 ===== */
     /* ダブルタップでの画面拡大を無効化(スクロール・パンは維持) */
     html, body {
@@ -7718,6 +7728,37 @@ function notifyOrderTab() {
 function clearOrderTabNotify() {
   const tab = document.querySelector('.tab[data-tab="orderTab"]');
   if (tab) tab.classList.remove("orderNotify");
+}
+
+// ==== 研究の新規解放の通知(研究タブを光らせて点滅、開くと解除) ====
+let lastResearchAvailKey = null;
+
+function researchAvailIdsNow() {
+  const ids = [];
+  RESEARCH.forEach(r => { if (!state.research[r.id] && researchUnlocked(r)) ids.push(r.id); });
+  visibleResearchStageCards().forEach(sc => ids.push(sc.key));
+  return ids;
+}
+
+function checkResearchUnlockNotify() {
+  try {
+    const ids = researchAvailIdsNow();
+    const key = ids.join(",");
+    if (lastResearchAvailKey === null) { lastResearchAvailKey = key; return; } // 初回は基準を覚えるだけ
+    if (key === lastResearchAvailKey) return;
+    const prev = new Set(lastResearchAvailKey.split(","));
+    const added = ids.some(id => !prev.has(id));
+    lastResearchAvailKey = key;
+    if (added && activeTab !== "researchTab") {
+      const tab = document.querySelector('.tab[data-tab="researchTab"]');
+      if (tab) tab.classList.add("researchNotify");
+    }
+  } catch (e) {}
+}
+
+function clearResearchTabNotify() {
+  const tab = document.querySelector('.tab[data-tab="researchTab"]');
+  if (tab) tab.classList.remove("researchNotify");
 }
 
 function ensureActiveOrder() {
@@ -12049,14 +12090,28 @@ function researchArt(r) {
 }
 
 function upgradeShopEffectRows(u) {
-  const owned = state.upgrades[u.id];
-  const before = upgradeEffectiveContributionAtCount(u, owned, true);
-  const after = upgradeEffectiveContributionAtCount(u, owned + 1, true);
-  const add = Math.max(0, after - before);
-  const kind = u.type === "cps" ? "毎秒" : "タップ";
+  const owned = state.upgrades[u.id] || 0;
+  const isCps = u.type === "cps";
+  const measure = () => (isCps ? currentCps() : currentClickPower());
+
+  // 最終値で表示する(2026-07-11 ユーザー指示): 全ての倍率・ブースト込みの実際の生産で、
+  // 台数を一時的に変えて本物のパイプラインの差分を取る(連携・系列ボーナス等の波及も含む)。
+  const cur = measure();
+  let withoutV, plusOneV;
+  try {
+    state.upgrades[u.id] = 0;
+    withoutV = measure();
+    state.upgrades[u.id] = owned + 1;
+    plusOneV = measure();
+  } finally {
+    state.upgrades[u.id] = owned;
+  }
+  const total = Math.max(0, cur - withoutV);
+  const add = Math.max(0, plusOneV - cur);
+  const kind = isCps ? "毎秒" : "タップ";
 
   // 追加分は「+X」、合計は「毎秒 X(タップ X)」のみを表示する
-  return { addText: `+${fmt(add)}`, totalText: `${kind} ${fmt(before)}` };
+  return { addText: `+${fmt(add)}`, totalText: `${kind} ${fmt(total)}` };
 }
 
 // 経済分析スキル解放後のみ表示するコスパ行(表示条件・情報量は従来と同じ)
@@ -12910,6 +12965,7 @@ function switchTab(tabId) {
   if (activeTab !== tabId) playSound("tab");
   activeTab = tabId;
   if (tabId === "orderTab") clearOrderTabNotify();
+  if (tabId === "researchTab") clearResearchTabNotify();
   updatePrestigeTabLabel();
 
   document.body.classList.toggle("playTabActive", normalPlayScreenActive());
@@ -15270,6 +15326,9 @@ setInterval(() => {
     // 一覧タブもスキル解放などの変化を反映するため毎秒再描画する(スクロール位置は保持)
     renderActiveTab();
   }
+
+  // 研究の新規解放を監視して研究タブを点滅させる(開くと解除)
+  checkResearchUnlockNotify();
 
   updateTopOnly();
 }, 1000);
