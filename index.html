@@ -10887,10 +10887,38 @@ function checkQuotaStageTransition() {
   box.classList.add(up ? "layerUp" : "layerDown");
 }
 
+// 毎秒/ダメージの「増えた分」を5秒間表示するためのトラッカー。
+// 増加が重なったら増分を加算して、そこからまた5秒表示する。減少時は基準だけ静かに更新。
+const statDeltaCps = { last: null, acc: 0, until: 0 };
+const statDeltaDmg = { last: null, acc: 0, until: 0 };
+
+function statDeltaText(tracker, value) {
+  const now = Date.now();
+  if (tracker.last != null && Number.isFinite(value) && Number.isFinite(tracker.last)) {
+    if (value > tracker.last * (1 + 1e-9) + 1e-9) {
+      if (now > tracker.until) tracker.acc = 0; // 表示が切れた後の増加は積算をやり直す
+      tracker.acc += value - tracker.last;
+      tracker.until = now + 5000;
+    }
+  }
+  tracker.last = value;
+  return (now <= tracker.until && tracker.acc > 0) ? ` (+${fmt(tracker.acc)})` : "";
+}
+
 function updateTopOnly() {
   $("cookies").textContent = fmtCookieCount(state.cookies);
   const cpsEl = $("cookieCps");
-  if (cpsEl) cpsEl.textContent = pausedForSkillChoice() ? "合計毎秒 準備中" : "合計毎秒 " + fmt(currentCps());
+  if (cpsEl) {
+    if (pausedForSkillChoice()) {
+      cpsEl.textContent = "合計毎秒 準備中";
+    } else {
+      // ノルマゲージ上の行に、毎秒とモンスターダメージを並べて表示する
+      const cps = currentCps();
+      const dmg = monsterBaseDamage() * monsterDamageMultiplier();
+      cpsEl.textContent = "合計毎秒 " + fmt(cps) + statDeltaText(statDeltaCps, cps)
+        + " ／ ダメージ " + fmt(dmg) + statDeltaText(statDeltaDmg, dmg);
+    }
+  }
 
   $("cookie").classList.toggle("boost-all", goldenBoostActive());
   updateBhGaugeButton();
@@ -12209,7 +12237,10 @@ function upgradeShopEffectRows(u) {
   } finally {
     state.upgrades[u.id] = owned;
   }
-  const total = Math.max(0, cur - withoutV);
+  // タップ設備の「合計」は素手ぶん(基礎タップ×倍率)も含む実際の1タップ量にする。
+  // 設備ぶんだけの差分だと、実際にタップした数値とずれて見えるため(2026-07-11 ユーザー指摘)。
+  // 毎秒設備は従来どおり「その設備の寄与ぶん」。
+  const total = isCps ? Math.max(0, cur - withoutV) : cur;
   const add = Math.max(0, plusOneV - cur);
   const kind = isCps ? "毎秒" : "タップ";
 
