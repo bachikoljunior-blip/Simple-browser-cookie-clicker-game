@@ -6764,8 +6764,9 @@ const TAB_META = {
   shopTab: { name: "強化", locked: () => false },
   researchTab: { name: "研究", locked: () => false },
   prestigeTab: { name: "転生", locked: () => (typeof prestigeUnlocked === "function" ? !prestigeUnlocked() : false) },
-  orderTab: { name: "注文", locked: () => (typeof orderBoardUnlocked === "function" ? !orderBoardUnlocked() : false) },
-  workshopTab: { name: "工房", locked: () => (typeof workshopTabUnlocked === "function" ? !workshopTabUnlocked() : false) },
+  // 注文ボード・工房は最初からシルエットなしで表示する(2026-07-13 ユーザー指示)
+  orderTab: { name: "注文", locked: () => false },
+  workshopTab: { name: "工房", locked: () => false },
   infoTab: { name: "一覧", locked: () => false }
 };
 
