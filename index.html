@@ -165,12 +165,22 @@
 
     /* クッキー画面の合計毎秒生産(小さめのサブ表示) */
     .cookieCps {
-      display: block;
+      /* 毎秒とダメージを左右半分ずつの固定枠に置き、増分(+X)が出ても
+         もう一方の表示位置がずれないようにする */
+      display: grid;
+      grid-template-columns: 1fr 1fr;
       font-size: 12px;
       font-weight: 700;
       line-height: 1.2;
       color: #f2d9a8;
       opacity: 0.9;
+    }
+
+    .cookieCps .statHalf {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
     }
 
     #cookies {
@@ -10910,13 +10920,13 @@ function updateTopOnly() {
   const cpsEl = $("cookieCps");
   if (cpsEl) {
     if (pausedForSkillChoice()) {
-      cpsEl.textContent = "合計毎秒 準備中";
+      cpsEl.innerHTML = `<span class="statHalf">合計毎秒 準備中</span><span class="statHalf"></span>`;
     } else {
-      // ノルマゲージ上の行に、毎秒とモンスターダメージを並べて表示する
+      // ノルマゲージ上の行に、毎秒とモンスターダメージを左右の固定枠で並べて表示する
       const cps = currentCps();
       const dmg = monsterBaseDamage() * monsterDamageMultiplier();
-      cpsEl.textContent = "合計毎秒 " + fmt(cps) + statDeltaText(statDeltaCps, cps)
-        + " ／ ダメージ " + fmt(dmg) + statDeltaText(statDeltaDmg, dmg);
+      cpsEl.innerHTML = `<span class="statHalf">毎秒 ${fmt(cps)}${statDeltaText(statDeltaCps, cps)}</span>`
+        + `<span class="statHalf">ダメージ ${fmt(dmg)}${statDeltaText(statDeltaDmg, dmg)}</span>`;
     }
   }
 
