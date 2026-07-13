@@ -154,7 +154,9 @@
     .cookieCount {
       width: 100%;
       min-width: 0;
-      font-size: clamp(24px, 7.5vw, 32px);
+      /* ゲームは375px基準ボックスを等倍スケールするため、vw(ビューポート相対)ではなく
+         固定pxにして画面幅に依らず同じ比率で表示する(7.5vw@375px相当) */
+      font-size: 28px;
       line-height: 1.05;
       font-weight: 900;
       margin: 2px 0;
@@ -1450,7 +1452,7 @@
       backdrop-filter: blur(8px);
     }
 
-    @media (max-width: 520px) {
+    @media (min-width: 0px) { /* 常時適用: ゲームは基準375pxレイアウトを等倍スケールするため、モバイル版デザインを全画面サイズで使う */
       .skillScreenInner {
         height: calc(100dvh - 16px);
       }
@@ -4517,7 +4519,8 @@
     }
 
     .cookieCount {
-      font-size: clamp(21px, 6.2vw, 27px) !important;
+      /* 固定px(6.2vw@375px相当)。ビューポート幅で文字比率が変わらないようにする */
+      font-size: 23px !important;
       margin: 1px 0 !important;
     }
 
@@ -4659,7 +4662,7 @@
       font-size: 11px;
       color: rgba(255, 224, 150, 0.72);
     }
-    @media (max-width: 380px) {
+    @media (max-width: 0px) { /* 無効化: 縮小フィットは等倍スケールが担うため小画面専用の調整は不要 */
       #policyChoiceRow { gap: 8px; }
       #policyChoiceRow .policyChoiceBtn { min-height: 178px; padding: 12px 6px; }
       #policyChoiceRow .choiceIcon { width: 66px; height: 66px; }
@@ -5149,11 +5152,57 @@
     }
 
     body:not(.sectionFullscreen):not(.playFullscreenMode) .game {
-      --gameAvailW: min(calc(100vw - 12px), 640px);
-      --gameAvailH: calc(100svh - max(8px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
-      width: min(var(--gameAvailW), calc(var(--gameAvailH) * 24 / 35)) !important;
-      height: min(var(--gameAvailH), calc(var(--gameAvailW) * 35 / 24)) !important;
-      margin: auto !important;
+      /* 内容も含めて比率を完全固定する: 基準サイズ(375×547=24:35)でレイアウトし、
+         画面サイズに合わせてゲーム全体を等倍スケール(文字・画像・ボタンも同比率で拡縮)。
+         倍率(--gameScale)はJS(applyGameScale)がリサイズ時に計算する */
+      width: 375px !important;
+      height: calc(375px * 35 / 24) !important;
+      margin: 0 !important;
+      transform: scale(var(--gameScale, 1));
+      transform-origin: center center;
+    }
+
+    /* ── 横並び(ワイド)レイアウト ──
+       端末の横幅が広い時、クッキー画面(.top)とタブ画面(.tabPages+.tabs)を、
+       縦画面と同じ比率のまま左右2列で並べる。全体は 750×305 を等倍スケール。 */
+    body.wideLayout:not(.sectionFullscreen):not(.playFullscreenMode) .game {
+      display: grid !important;
+      grid-template-columns: 375px 375px !important;
+      grid-template-rows: 252px 53px !important;
+      width: 750px !important;
+      height: 305px !important;
+      margin: 0 !important;
+      transform: scale(var(--gameScale, 1));
+      transform-origin: center center;
+    }
+    /* 左列: クッキー画面。縦画面と同じ 375×234 の比率を保ち、縦方向は中央寄せ */
+    body.wideLayout .top {
+      grid-column: 1 !important;
+      grid-row: 1 / span 2 !important;
+      align-self: center !important;
+      flex: none !important;
+      height: 234px !important;
+      min-height: 234px !important;
+      max-height: 234px !important;
+      overflow: hidden !important;
+    }
+    /* 右列上: タブ内容。縦画面と同じ 375×252 */
+    body.wideLayout .tabPages {
+      grid-column: 2 !important;
+      grid-row: 1 !important;
+      flex: none !important;
+      height: 252px !important;
+      min-height: 252px !important;
+      max-height: 252px !important;
+    }
+    /* 右列下: タブバー */
+    body.wideLayout .tabs {
+      grid-column: 2 !important;
+      grid-row: 2 !important;
+    }
+    /* 横並び中はクッキー画面の全画面ボタンを隠す */
+    body.wideLayout #playFullscreenBtn {
+      display: none !important;
     }
 
   </style>
@@ -6843,6 +6892,8 @@ function relayoutMonsters() {
 }
 
 function togglePlayFullscreen() {
+  // 横並びレイアウト中は全画面を禁止する
+  if (document.body.classList.contains("wideLayout")) return;
   playFullscreenOn = !playFullscreenOn;
   document.body.classList.toggle("playFullscreenMode", playFullscreenOn);
   const btn = $("playFullscreenBtn");
@@ -10550,6 +10601,46 @@ function resumeAudioIfNeeded() {
 // iOSで時々起きるダブルタップ拡大の保険(全要素のtouch-action: manipulationに加えて)
 document.addEventListener("dblclick", e => { e.preventDefault(); }, { passive: false });
 
+// 画面サイズが変わっても内容の比率が変わらないよう、基準サイズ(375×547=24:35)に対する
+// 等倍スケールを計算してゲーム全体に適用する(CSSの --gameScale)
+const GAME_BASE_W = 375;
+const GAME_BASE_H = 375 * 35 / 24;
+// 横並び(ワイド)レイアウトの基準サイズ: クッキー画面(375×234)とタブ画面(375×305)を
+// 縦画面と同じ比率のまま横に2列で並べる。全体は 750×305。
+const GAME_WIDE_W = 750;
+const GAME_WIDE_H = 305;
+// 端末の縦横比(横/縦)がこの値以上になったら横並びに切り替える
+const WIDE_ASPECT_THRESHOLD = 1.0;
+
+function applyGameScale() {
+  let wide = false;
+  try {
+    wide = (window.innerWidth / Math.max(1, window.innerHeight)) >= WIDE_ASPECT_THRESHOLD;
+    document.body.classList.toggle("wideLayout", wide);
+    const baseW = wide ? GAME_WIDE_W : GAME_BASE_W;
+    const baseH = wide ? GAME_WIDE_H : GAME_BASE_H;
+    const availW = Math.min(window.innerWidth - 12, wide ? 1400 : 640);
+    const availH = window.innerHeight - 16;
+    const k = Math.max(0.2, Math.min(availW / baseW, availH / baseH));
+    document.documentElement.style.setProperty("--gameScale", String(k));
+  } catch (e) {}
+  // 横並びに切り替わった時は全画面状態を解除しておく(全画面ボタンも無効化される)。
+  // 変数がまだ宣言される前(初回呼び出し時)に触れても落ちないよう別のtryにする。
+  if (wide) {
+    try {
+      if (playFullscreenOn) {
+        playFullscreenOn = false;
+        document.body.classList.remove("playFullscreenMode");
+      }
+      if (pageFullscreenId) closeTabPageFullscreen();
+    } catch (e) {}
+  }
+}
+
+window.addEventListener("resize", applyGameScale);
+window.addEventListener("orientationchange", applyGameScale);
+applyGameScale();
+
 // 自動再生制限のため、最初の操作(タップ)でBGMを開始する
 document.addEventListener("pointerdown", () => { try { startBgm(); } catch (e) {} }, { once: true });
 // 一度中断した音を以降の操作・再表示で必ず復帰させる
@@ -13349,6 +13440,8 @@ function closeTabPageFullscreen() {
 
 function toggleTabPageFullscreen(targetId) {
   if (!targetId) return;
+  // 横並びレイアウト中は全画面を禁止する
+  if (document.body.classList.contains("wideLayout")) return;
 
   if (pageFullscreenId === targetId) {
     closeTabPageFullscreen();
@@ -14237,7 +14330,9 @@ function scheduleMonster() {
 function rectRelativeToHost(el, host) {
   const r = el.getBoundingClientRect();
   const h = host.getBoundingClientRect();
-  return { left: r.left - h.left, top: r.top - h.top, right: r.right - h.left, bottom: r.bottom - h.top };
+  // ゲーム全体をtransform: scaleしているため、画面座標をレイアウト座標(style.left/top と同じ系)へ戻す
+  const k = h.width / Math.max(1, host.clientWidth || h.width);
+  return { left: (r.left - h.left) / k, top: (r.top - h.top) / k, right: (r.right - h.left) / k, bottom: (r.bottom - h.top) / k };
 }
 
 // クッキー本体・金クッキー・他のモンスターと重ならないようにするための配置済み矩形一覧
