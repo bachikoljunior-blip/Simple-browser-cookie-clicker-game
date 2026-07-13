@@ -12332,17 +12332,19 @@ function upgradeShopEffectRows(u, buyCount) {
   // 最終値で表示する(2026-07-11 ユーザー指示): 全ての倍率・ブースト込みの実際の生産で、
   // 台数を一時的に変えて本物のパイプラインの差分を取る(連携・系列ボーナス等の波及も含む)。
   const cur = measure();
-  let plusNV;
+  let withoutV, plusNV;
   try {
+    state.upgrades[u.id] = 0;
+    withoutV = measure();
     state.upgrades[u.id] = owned + count;
     plusNV = measure();
   } finally {
     state.upgrades[u.id] = owned;
   }
-  // 「合計」はゲーム全体の最終値そのもの(毎秒=総合計CPS=画面上部と同じ / タップ=素手込みの実際の1タップ量)。
-  // その設備1種の寄与ぶんだけだと「その設備の生産しか出ていない」と見えるため、全設備合算の総合計にする(2026-07-13 ユーザー指摘)。
-  // 「+追加」は購入でその総合計がどれだけ増えるか(他設備への相乗効果ぶんの波及も含む最終値)。
-  const total = cur;
+  // タップ設備の「合計」は素手ぶん(基礎タップ×倍率)も含む実際の1タップ量にする。
+  // 設備ぶんだけの差分だと、実際にタップした数値とずれて見えるため(2026-07-11 ユーザー指摘)。
+  // 毎秒設備は従来どおり「その設備の寄与ぶん」。
+  const total = isCps ? Math.max(0, cur - withoutV) : cur;
   const add = Math.max(0, plusNV - cur);
   const kind = isCps ? "毎秒" : "タップ";
 
