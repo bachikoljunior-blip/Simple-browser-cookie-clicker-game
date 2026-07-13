@@ -5002,8 +5002,14 @@
     }
 
     /* ===== 直近要望: 表示崩れ対策 ===== */
-    /* ダブルタップでの画面拡大を無効化(スクロール・パンは維持) */
+    /* ダブルタップでの画面拡大を無効化(スクロール・パンは維持)。
+       iOSは「タップされた要素自身」のtouch-actionを見るため、html/bodyだけでは
+       子要素上のダブルタップで時々拡大してしまう。全要素に適用して確実に止める */
     html, body {
+      touch-action: manipulation;
+    }
+
+    *, *::before, *::after {
       touch-action: manipulation;
     }
 
@@ -5124,6 +5130,12 @@
     body:not(.sectionFullscreen):not(.playFullscreenMode) {
       display: grid;
       place-items: center;
+      /* 端末画面に合わせてゲーム全体が見えるよう縮め、余白は黒のレターボックスにする */
+      background: #000 !important;
+    }
+
+    html {
+      background: #000;
     }
 
     body:not(.sectionFullscreen):not(.playFullscreenMode) .game {
@@ -10524,6 +10536,9 @@ function resumeAudioIfNeeded() {
     }
   } catch (e) {}
 }
+
+// iOSで時々起きるダブルタップ拡大の保険(全要素のtouch-action: manipulationに加えて)
+document.addEventListener("dblclick", e => { e.preventDefault(); }, { passive: false });
 
 // 自動再生制限のため、最初の操作(タップ)でBGMを開始する
 document.addEventListener("pointerdown", () => { try { startBgm(); } catch (e) {} }, { once: true });
