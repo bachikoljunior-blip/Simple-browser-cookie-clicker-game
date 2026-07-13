@@ -5118,6 +5118,22 @@
       background-size: contain !important;
     }
 
+    /* ゲーム全体の縦横比をiPhoneスクリーンショット基準(≒24:35)に固定(2026-07-11 ユーザー指示)。
+       どの端末でもこの比率で表示し、余った画面は背景のレターボックスにする。
+       タブ全画面・クッキー全画面モードは従来どおり画面いっぱいを使う */
+    body:not(.sectionFullscreen):not(.playFullscreenMode) {
+      display: grid;
+      place-items: center;
+    }
+
+    body:not(.sectionFullscreen):not(.playFullscreenMode) .game {
+      --gameAvailW: min(calc(100vw - 12px), 640px);
+      --gameAvailH: calc(100svh - max(8px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
+      width: min(var(--gameAvailW), calc(var(--gameAvailH) * 24 / 35)) !important;
+      height: min(var(--gameAvailH), calc(var(--gameAvailW) * 35 / 24)) !important;
+      margin: auto !important;
+    }
+
   </style>
 </head>
 
