@@ -1,0 +1,8 @@
+{
+  "appId": "com.cookiestrateger.app",
+  "appName": "クッキーストラテジャー",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}

@@ -1,5 +1,17 @@
 {
+  "name": "cookiestrateger",
+  "private": true,
+  "scripts": {
+    "build:www": "node scripts/build-www.js",
+    "cap:sync": "npm run build:www && cap sync android"
+  },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.2",
     "playwright-core": "^1.61.1"
+  },
+  "dependencies": {
+    "@capacitor-community/admob": "^8.0.0",
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/core": "^8.4.2"
   }
 }

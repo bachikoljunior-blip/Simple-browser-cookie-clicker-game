@@ -13,17 +13,73 @@
   <meta property="og:url" content="https://cookiestrateger.com/">
   <link rel="canonical" href="https://cookiestrateger.com/">
 
-  <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3280484274197291"
-       crossorigin="anonymous"></script>
+  <!-- 広告: Web版はGoogle AdSense、Androidアプリ版(Capacitor)はAdMobを使う。
+       window.Capacitor はネイティブ実行時にアプリ起動時点で注入済みなのでここで判定できる。
+       このindex.htmlはWeb(GitHub Pages)とアプリ(www/への自動コピー)の両方で共有する唯一の
+       ソースであり、www/index.html を個別に編集しないこと(scripts/build-www.js が生成する)。 -->
+  <script>window.__IS_NATIVE_APP__ = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());</script>
+
   <script>
-    // 転生(周回)の区切りで広告を表示するためのGames Ad Placement API用フック
-    window.adsbygoogle = window.adsbygoogle || [];
-    window.adBreak = window.adBreak || function (o) { adsbygoogle.push(o); };
-    window.adConfig = window.adConfig || function (o) { adsbygoogle.push(o); };
-    // Ad Placement API を初期化しておく。これがないと adBreak のコールバック
-    // (adBreakDone 等)が呼ばれず、広告が出ない環境で進行判定ができない。
-    adConfig({ preloadAdBreaks: "on", sound: "on" });
+    if (!window.__IS_NATIVE_APP__) {
+      var __adsenseScript = document.createElement("script");
+      __adsenseScript.async = true;
+      __adsenseScript.crossOrigin = "anonymous";
+      __adsenseScript.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3280484274197291";
+      document.head.appendChild(__adsenseScript);
+    }
+  </script>
+  <script>
+    // 転生(周回)の区切りで広告を表示するためのフック。
+    // 呼び出し側(adChoiceWatchBtnのタップ処理)は共通で、中身だけWeb/アプリで差し替える。
+    if (window.__IS_NATIVE_APP__) {
+      // ===== Androidアプリ版: AdMobのリワード動画広告を adBreak 互換の形で提供 =====
+      // TODO: 実際にAdMobで広告ユニットを作成したら、下記IDを本番用に差し替え、
+      //       initialize() の initializeForTesting も削除すること。
+      var ADMOB_REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"; // Googleのテスト用ID
+      var __admobReady = null;
+      function __getAdMob() {
+        if (!__admobReady) {
+          var AdMob = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob;
+          __admobReady = AdMob
+            ? AdMob.initialize({ initializeForTesting: true }).then(() => AdMob)
+            : Promise.resolve(null);
+        }
+        return __admobReady;
+      }
+      window.adConfig = function () {};
+      window.adBreak = function (opts) {
+        opts = opts || {};
+        var doneCalled = false;
+        var finish = function () {
+          if (doneCalled) return;
+          doneCalled = true;
+          if (opts.adBreakDone) opts.adBreakDone();
+        };
+        __getAdMob().then(function (AdMob) {
+          if (!AdMob) { finish(); return; }
+          var listeners = [];
+          var addOnce = function (event, fn) {
+            AdMob.addListener(event, fn).then(function (h) { listeners.push(h); });
+          };
+          var cleanup = function () { listeners.forEach(function (h) { h.remove(); }); };
+          addOnce("onRewardedVideoAdShowed", function () { if (opts.beforeAd) opts.beforeAd(); });
+          addOnce("onRewardedVideoAdDismissed", function () { if (opts.afterAd) opts.afterAd(); cleanup(); finish(); });
+          addOnce("onRewardedVideoAdFailedToShow", function () { cleanup(); finish(); });
+          addOnce("onRewardedVideoAdFailedToLoad", function () { cleanup(); finish(); });
+          AdMob.prepareRewardVideoAd({ adId: ADMOB_REWARDED_AD_UNIT_ID })
+            .then(function () { return AdMob.showRewardVideoAd(); })
+            .catch(function () { cleanup(); finish(); });
+        });
+      };
+    } else {
+      // ===== Web版: 従来通りGoogle AdSense (Games Ad Placement API) =====
+      window.adsbygoogle = window.adsbygoogle || [];
+      window.adBreak = window.adBreak || function (o) { adsbygoogle.push(o); };
+      window.adConfig = window.adConfig || function (o) { adsbygoogle.push(o); };
+      // Ad Placement API を初期化しておく。これがないと adBreak のコールバック
+      // (adBreakDone 等)が呼ばれず、広告が出ない環境で進行判定ができない。
+      adConfig({ preloadAdBreaks: "on", sound: "on" });
+    }
   </script>
 
   <style>

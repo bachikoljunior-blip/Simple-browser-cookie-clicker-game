@@ -1,0 +1,9 @@
+node_modules/
+
+# www/ はindex.html + images/ から scripts/build-www.js が自動生成するビルド成果物。
+# コミットせず、ビルド時(npm run cap:sync)に毎回生成する。
+www/
+
+# 署名鍵は絶対にコミットしない
+*.keystore
+*.jks
