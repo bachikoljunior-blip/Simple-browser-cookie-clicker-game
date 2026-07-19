@@ -1,0 +1,20 @@
+{
+  "id": "./",
+  "name": "クッキーストラテジャー",
+  "short_name": "クキスト",
+  "description": "クッキーをタップして強化・研究・転生を進める放置ゲーム。金のクッキーやクッキーモンスター、転生スキルツリーでどこまでも生産量を伸ばそう。",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1d130d",
+  "theme_color": "#1d130d",
+  "categories": ["games"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

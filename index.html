@@ -12,6 +12,9 @@
   <meta property="og:locale" content="ja_JP">
   <meta property="og:url" content="https://cookiestrateger.com/">
   <link rel="canonical" href="https://cookiestrateger.com/">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 
   <!-- Google AdSense -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3280484274197291"
@@ -17534,6 +17537,14 @@ ensureState();
 applyVisualAssets();
 applySettings();
 restoreCloudSessionIfNeeded();
+
+// PWA: Service Worker登録(オフライン対応・Google Play(TWA)配信の前提)。
+// file:// などSWが使えない環境では静かに何もしない
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
 
 // 層演出のクラスは再生し終わったら外す。付けたままだと全画面から戻って
 // ゲージが再表示された瞬間にアニメーションが再生されてしまう
