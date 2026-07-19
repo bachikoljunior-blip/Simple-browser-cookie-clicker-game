@@ -5525,10 +5525,6 @@
       touch-action: manipulation;
     }
 
-    .adGateBtn.buy {
-      background: linear-gradient(180deg, rgba(190, 140, 40, 0.95), rgba(128, 88, 22, 0.95));
-    }
-
     .adGateBtn:disabled {
       opacity: 0.55;
     }
@@ -5633,7 +5629,7 @@
 
         <div class="infoBox">
           <h3>よくある質問</h3>
-          <p><b>Q. 料金はかかりますか？</b><br>A. 基本プレイ無料です。会員登録は不要で、ブラウザだけで遊べます。周回スタート時に広告が表示されることがあります。Google Play版では、広告を非表示にする買い切りアイテム（購入は任意）を用意しています。</p>
+          <p><b>Q. 料金はかかりますか？</b><br>A. 基本プレイ無料です。会員登録は不要で、ブラウザだけで遊べます。周回スタート時に広告が表示されることがあります。</p>
           <p><b>Q. セーブデータはどこに保存されますか？</b><br>A. お使いのブラウザのローカルストレージに自動保存されます。同じ端末・同じブラウザで開けば続きから遊べます。ブラウザのデータを削除するとセーブデータも消えるのでご注意ください。機種変更や別のブラウザに移したいときは、設定画面からGoogleでログインすると、セーブデータがクラウドに自動保存され、別の端末でも同じアカウントで続きから遊べます。</p>
           <p><b>Q. 放置していても進みますか？</b><br>A. はい。ゲームを閉じている間も一定時間分のクッキーが自動で生産され、次に開いたときにまとめて受け取れます。</p>
           <p><b>Q. スマートフォンでも遊べますか？</b><br>A. はい。スマートフォン・タブレット・パソコンのブラウザに対応しています。</p>
@@ -5831,13 +5827,12 @@
 </div>
 
 
-<!-- 周回スタート時の広告ゲート(広告視聴 / Google Play版のみ広告非表示の購入も選べる) -->
+<!-- 周回スタート時の広告ゲート(広告視聴) -->
 <div id="adGateOverlay">
   <div class="adGatePanel">
     <h2>周回スタート</h2>
-    <p id="adGateDesc">広告を見てスタートするか、広告非表示(買い切り)を購入してください。購入後はこの画面が二度と表示されません。</p>
+    <p id="adGateDesc">広告を見ると周回をスタートできます。</p>
     <button id="adGateWatchBtn" class="adGateBtn" type="button">▶ 広告を見てスタート</button>
-    <button id="adGateBuyBtn" class="adGateBtn buy" type="button">広告非表示を購入してスタート</button>
     <div id="adGateNote" class="adGateNote"></div>
     <button id="adGateBackBtn" class="adGateBackBtn" type="button">← スキル選択に戻る</button>
   </div>
@@ -13806,82 +13801,11 @@ function beginRunAfterSkills() {
   showMessage("周回開始");
 }
 
-// ==== 周回スタート時の広告ゲート ====
-// 周回スタートを押した後に「広告を見てスタート」を選ばせる。Google Play(TWA)版では
-// 加えて「広告非表示の購入(Google Play課金)」も選べる。Web(ブラウザ)版は広告視聴のみで、
+// ==== 周回スタート時の広告ゲート(Web版) ====
+// 周回スタートを押した後に「広告を見てスタート」を経由させる。
 // 旧Web版で広告非表示を購入済みだった端末/セーブはゲート自体を出さない。
-//
-// 不正対策の方針:
-//  ・購入状態の「正」は Google Play(Digital Goods API の listPurchases)。localStorage はオフライン起動用の
-//    キャッシュにすぎず、起動時にPlayへ照合して購入が確認できなければ破棄する(手書き改ざん・返金の両方に対応)
-//  ・キャッシュ値は "1" のような自明な値ではなく検証トークン。素の書き換えでは通らない
-//  ・購入直後も listPurchases で本当に付与されたか確認してから解放する(端末側応答の偽装対策)
-//  ・購入状態と付与関数はこのクロージャ内に閉じ、コンソールから直接呼べる形では公開しない
-//  (サーバーを持たないため完全ではない。厳密にやる場合はバックエンド+Play Developer APIでの検証が必要)
+// (Google Play版は別リポジトリで配信しており、そちらにはPlay課金の購入ゲートがある)
 const { adGateRequired, openAdGate } = (() => {
-  const STORAGE_KEY = "cookie_game_ad_free_exist";
-  const PRODUCT_ID = "ad_free"; // Google Play Consoleで作成するアプリ内アイテムのID
-  const BILLING_METHOD = "https://play.google.com/billing";
-
-  // キャッシュ検証トークン(FNV-1aハッシュ)。ソースを読めば再現できるが、
-  // 値を "1" にする類の安易な改ざんを弾き、最終的な正はPlay照合が担う
-  function cacheToken() {
-    const src = PRODUCT_ID + "|exist|adfree-v1|" + STORAGE_KEY;
-    let h = 0x811c9dc5;
-    for (let i = 0; i < src.length; i++) {
-      h ^= src.charCodeAt(i);
-      h = Math.imul(h, 0x01000193) >>> 0;
-    }
-    return "t" + h.toString(36);
-  }
-
-  let purchased = (() => {
-    try { return localStorage.getItem(STORAGE_KEY) === cacheToken(); } catch (_) { return false; }
-  })();
-
-  function grant() {
-    purchased = true;
-    try { localStorage.setItem(STORAGE_KEY, cacheToken()); } catch (_) {}
-  }
-
-  function revoke() {
-    purchased = false;
-    try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
-  }
-
-  // Google Play(TWA)から起動されたか。TWAの初回ナビゲーションは referrer が android-app:// になるので
-  // それを sessionStorage に覚えてリロード後も判定を維持する(Android版ChromeはTWAとブラウザで
-  // localStorage を共有するため、ブラウザ版に漏れない sessionStorage を使う)。動作確認用に ?twa=1 でも有効化できる
-  function isPlayStoreVersion() {
-    try {
-      if (new URLSearchParams(location.search).get("twa") === "1") return true;
-      if (document.referrer && document.referrer.indexOf("android-app://") === 0) {
-        sessionStorage.setItem("cookie_game_twa_session", "1");
-      }
-      return sessionStorage.getItem("cookie_game_twa_session") === "1";
-    } catch (_) { return false; }
-  }
-
-  // Google Play に購入状態を問い合わせる。true/false=確定、null=確認できず(API無し・オフライン等)
-  async function playOwnsItem() {
-    if (!("getDigitalGoodsService" in window)) return null;
-    try {
-      const service = await window.getDigitalGoodsService(BILLING_METHOD);
-      if (!service) return null;
-      const purchases = await service.listPurchases();
-      return purchases.some(p => p.itemId === PRODUCT_ID);
-    } catch (_) { return null; }
-  }
-
-  // 起動時照合: 購入済みなら復元(機種変更・再インストール対応)。
-  // Playが「購入なし」と確定回答したのにキャッシュがあれば破棄(改ざん・返金対応)。
-  // オフライン等で確認できないときはキャッシュを維持する(正規購入者を巻き込まない)
-  (async () => {
-    const owns = await playOwnsItem();
-    if (owns === true) grant();
-    else if (owns === false && purchased) revoke();
-  })();
-
   // 旧Web版の広告非表示(買い切り販売は廃止済み)の引き継ぎ。
   // 端末のlocalStorageフラグ、またはクラウドセーブ由来の state.adsRemoved のどちらかがtrueなら広告なし。
   // stateでtrueを確認したらlocalStorageにも書き戻し、転生でstateが作り直されても消えないようにする
@@ -13907,23 +13831,14 @@ const { adGateRequired, openAdGate } = (() => {
   // ボタンの表示を初期状態(押せる状態)に戻す
   function resetButtons() {
     const watch = $("adGateWatchBtn");
-    const buy = $("adGateBuyBtn");
     watch.disabled = false;
     watch.textContent = "▶ 広告を見てスタート";
-    buy.disabled = false;
-    buy.textContent = "広告非表示を購入してスタート";
   }
 
   function open(fn) {
     onPass = fn;
     note("");
     resetButtons();
-    // 広告非表示の購入はGoogle Play版のみ。Web版では視聴ボタンだけを見せる
-    const playVer = isPlayStoreVersion();
-    $("adGateBuyBtn").style.display = playVer ? "" : "none";
-    $("adGateDesc").textContent = playVer
-      ? "広告を見てスタートするか、広告非表示(買い切り)を購入してください。購入後はこの画面が二度と表示されません。"
-      : "広告を見ると周回をスタートできます。";
     $("adGateOverlay").classList.add("active");
   }
 
@@ -13971,7 +13886,6 @@ const { adGateRequired, openAdGate } = (() => {
   function showAdThenPass() {
     const watch = $("adGateWatchBtn");
     watch.disabled = true;
-    $("adGateBuyBtn").disabled = true;
 
     // 広告未設定(AdSense審査前)は従来どおり素通し
     if (!adsConfigured()) {
@@ -13980,16 +13894,14 @@ const { adGateRequired, openAdGate } = (() => {
       return;
     }
 
-    // 通さずにゲートへ戻す(広告視聴・購入・戻るを選び直せる)
+    // 通さずにゲートへ戻す(広告視聴・戻るを選び直せる)
     const block = msg => {
       resetButtons();
       note(msg);
     };
 
     if (!navigator.onLine) {
-      block(isPlayStoreVersion()
-        ? "オフラインのため広告を表示できません。通信環境をご確認いただくか、広告非表示をご購入ください"
-        : "オフラインのため広告を表示できません。通信環境をご確認ください");
+      block("オフラインのため広告を表示できません。通信環境をご確認ください");
       return;
     }
 
@@ -14033,58 +13945,15 @@ const { adGateRequired, openAdGate } = (() => {
     });
   }
 
-  // 広告非表示(買い切り)を Google Play 課金で購入する。
-  // TWA + Digital Goods API + Payment Request API 構成(Bubblewrap/PWABuilder で Play Billing の有効化が必要)。
-  // 購入の承認(acknowledge)はTWA側ライブラリ(android-browser-helper billing)が行う
-  async function purchaseAdFree() {
-    if (!("getDigitalGoodsService" in window) || !window.PaymentRequest) {
-      note("購入は Google Play 版アプリでのみ利用できます");
-      return;
-    }
-    const buy = $("adGateBuyBtn");
-    $("adGateWatchBtn").disabled = true;
-    buy.disabled = true;
-    buy.innerHTML = '<span class="adGateSpinner"></span>Google Play に接続しています…';
-    try {
-      note("");
-      const service = await window.getDigitalGoodsService(BILLING_METHOD);
-      const details = await service.getDetails([PRODUCT_ID]);
-      if (!details || !details.length) throw new Error("no product");
-      const item = details[0];
-      const request = new PaymentRequest(
-        [{ supportedMethods: BILLING_METHOD, data: { sku: PRODUCT_ID } }],
-        { total: { label: item.title || "広告非表示", amount: item.price } }
-      );
-      const response = await request.show();
-      await response.complete("success");
-      // 支払い応答だけを信用せず、Playの購入一覧で本当に付与されたか照合してから解放する。
-      // 照合が「確認できず(null)」なら支払い成功を優先して解放する(正規購入者を巻き込まない)
-      if ((await playOwnsItem()) === false) throw new Error("not-owned");
-      grant();
-      note("");
-      showMessage("広告非表示を購入しました。ありがとうございます!");
-      playSound("start");
-      pass();
-    } catch (_) {
-      // キャンセル・通信失敗・照合不一致。ゲートは開いたまま選び直せるようにする
-      resetButtons();
-      note("購入は完了しませんでした");
-    }
-  }
-
   addTap($("adGateWatchBtn"), showAdThenPass);
-  addTap($("adGateBuyBtn"), () => { purchaseAdFree(); });
   addTap($("adGateBackBtn"), () => {
     playSound("tab");
     close();
   });
 
   return {
-    // Web版はPlay課金が使えないため、旧Web版の広告非表示引き継ぎだけを購入扱いにする
-    adGateRequired: () => {
-      if (isPlayStoreVersion()) return !purchased;
-      return !purchased && !legacyAdsRemoved();
-    },
+    // 旧Web版で広告非表示を購入済みの場合だけゲートを出さない
+    adGateRequired: () => !legacyAdsRemoved(),
     openAdGate: open
   };
 })();
@@ -14124,7 +13993,7 @@ addTap($("skillStartBtn"), () => {
     return;
   }
 
-  // Google Play版のみ: スタートの前に広告ゲート(広告視聴 or 広告非表示購入)を挟む
+  // スタートの前に広告ゲート(広告視聴)を挟む
   if (adGateRequired()) {
     openAdGate(proceedRunStartFlow);
     return;
