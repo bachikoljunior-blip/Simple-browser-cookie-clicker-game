@@ -6353,7 +6353,17 @@ const ASSETS = {
     offline_1: "images/skill_offline_1.webp",
     start_2: "images/skill_start_2.webp",
     endless_oven: "images/skill_endless_oven.webp",
-    master_final: "images/skill_master_final.webp"
+    master_final: "images/skill_master_final.webp",
+    // 専用画像が未制作のノードは、テーマの近い既存画像を流用する
+    golden_echo: "images/skill_golden_1.webp",      // 金は金を呼ぶ → 金色の匂い
+    ensemble: "images/skill_core.webp",             // 編成の心得 → 分岐炉心
+    click_stall: "images/skill_economy_1.webp",     // 土産の屋台 → 仕入れ(商いつながり)
+    monster_peddler: "images/skill_economy_2.webp", // 戦利品の行商 → まとめ買い(商いつながり)
+    eqcraft_t2: "images/skill_workshop_2.webp",     // 上位工房I〜V → 工房の拡張(装備作成欄と同テーマ)
+    eqcraft_t3: "images/skill_workshop_2.webp",
+    eqcraft_t4: "images/skill_workshop_2.webp",
+    eqcraft_t5: "images/skill_workshop_2.webp",
+    eqcraft_t6: "images/skill_workshop_2.webp"
   },
   currency: {
     cookie: "images/currency_cookie.webp",
@@ -13184,36 +13194,55 @@ function renderSkillChoiceScreen() {
     }).join("");
   }).join("");
 
-  const nodes = visibleSkills.map(skill => {
+  // ノードの状態クラス。初回構築と差分更新の両方で使う
+  const nodeClass = skill => {
     const done = hasSkill(skill.id);
     const canBuy = skillCanBuy(skill);
     const locked = !done && !canBuy;
     const selectedClass = selectedSkillId === skill.id ? "selected" : "";
+    return `skillNode branch-${skill.branchId} ${selectedClass} ${done ? "done" : ""} ${canBuy ? "canBuy" : ""} ${locked ? "locked" : ""}`;
+  };
 
-    return `
+  const mapEl = $("skillMap");
+  const sig = visibleSkills.map(s => s.id).join(",");
+
+  // 表示ノードの構成が同じ間はDOMを作り直さない。ノード選択のたびに全再構築すると、
+  // 全スキル解放時は約75枚の画像の作り直しとリスナーの再登録になり、タップや
+  // 画面遷移が目に見えて重くなる。状態クラスと線(SVGパスのみ)の更新で済ませ、
+  // 画像要素には一切触れない。
+  if (mapEl.dataset.builtSig === sig) {
+    mapEl.querySelector(".skillLines").innerHTML = lines;
+    visibleSkills.forEach(skill => {
+      const btn = mapEl.querySelector(`[data-skill-node="${skill.id}"]`);
+      if (btn) btn.className = nodeClass(skill);
+    });
+    return;
+  }
+
+  const nodes = visibleSkills.map(skill => `
       <button
-        class="skillNode branch-${skill.branchId} ${selectedClass} ${done ? "done" : ""} ${canBuy ? "canBuy" : ""} ${locked ? "locked" : ""}"
+        class="${nodeClass(skill)}"
         style="left:${skill.x}px; top:${skill.y}px;"
         data-skill-node="${skill.id}"
         aria-label="${skill.name}"
       >
         ${ASSETS.skills && ASSETS.skills[skill.id]
-          ? `<img class="nodeArt" src="${assetUrl(ASSETS.skills[skill.id])}" alt="" aria-hidden="true" decoding="async">`
+          ? `<img class="nodeArt" src="${assetUrl(ASSETS.skills[skill.id])}" alt="" aria-hidden="true" loading="lazy" decoding="async">`
           : `<span class="nodeMark">${skill.icon}</span>`}
       </button>
-    `;
-  }).join("");
+    `).join("");
 
-  $("skillMap").innerHTML = `
+  mapEl.innerHTML = `
     <svg class="skillLines" viewBox="0 0 ${SKILL_MAP_WIDTH} ${SKILL_MAP_HEIGHT}" preserveAspectRatio="none">
       ${lines}
     </svg>
     ${nodes}
   `;
+  mapEl.dataset.builtSig = sig;
 
   syncSkillMapZoom();
 
-  document.querySelectorAll("[data-skill-node]").forEach(btn => {
+  mapEl.querySelectorAll("[data-skill-node]").forEach(btn => {
     addTap(btn, () => selectSkill(btn.dataset.skillNode));
   });
 }
