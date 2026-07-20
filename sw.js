@@ -3,7 +3,7 @@
 // ・images/ など同一オリジンの静的ファイルはキャッシュ優先(初回取得時に保存)
 // ・広告(AdSense)・課金(Play Billing)・Firebase などクロスオリジンの通信には一切関与しない
 // ゲーム本体を更新したら CACHE のバージョン番号を上げること(古いキャッシュは activate で消える)
-const CACHE = "cookie-strategist-v1";
+const CACHE = "cookie-strategist-v2";
 const PRECACHE = [
   "./",
   "./index.html",
