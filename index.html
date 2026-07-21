@@ -12148,23 +12148,21 @@ function applyGameScale() {
     const availH = vh - padT - padB;
     let k, boxW, boxH;
     if (wide) {
-      // 横並びは固定グリッド(750×356)のまま等倍フィットで中央寄せ。
-      // 表示が極端に小さくならないよう下限0.66(=幅約500px相当)を設ける
+      // 横並びは固定グリッド(750×356)のまま、画面に必ず収まる倍率で中央寄せ
       boxW = GAME_WIDE_W;
       boxH = (gameEl && gameEl.offsetHeight) || 356;
-      k = Math.max(0.66, Math.min(availW / boxW, availH / boxH));
+      k = Math.max(0.05, Math.min(availW / boxW, availH / boxH));
     } else {
-      // 縦画面: 幅を使い切る倍率にし、高さは画面ぶんに合わせて可変。
-      // 表示が極端に小さくならないよう下限0.75(=幅約281px相当)を設ける
+      // 縦画面: 幅を使い切る倍率(画面幅との比)にし、高さは画面ぶんに合わせて可変
       boxW = GAME_BASE_W;
-      k = Math.max(0.75, availW / boxW);
+      k = Math.max(0.05, availW / boxW);
       // 最低限の高さ(クッキー303+マージン8+タブ内容140+タブ53)は確保し、
-      // 収まらないほど低い画面では倍率を下げて全体を見せる(その場合のみ左右に余白)
+      // 収まらないほど低い画面では倍率を下げて必ず全体を画面内に収める
       const MIN_BOX_H = 504;
       boxH = Math.round(availH / k);
       if (boxH < MIN_BOX_H) {
         boxH = MIN_BOX_H;
-        k = Math.max(0.75, availH / MIN_BOX_H);
+        k = Math.max(0.05, availH / MIN_BOX_H);
       }
       document.documentElement.style.setProperty("--gameBoxH", boxH + "px");
     }
