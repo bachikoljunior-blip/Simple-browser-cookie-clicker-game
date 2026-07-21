@@ -46,6 +46,9 @@
     }
 
     :root {
+      /* セーフエリアをJS(applyGameScale)から読めるようにCSS変数化しておく */
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
       --bg: #1d130d;
       --panel: #332318;
       --panel2: #24170f;
@@ -5375,7 +5378,10 @@
        タブ全画面・クッキー全画面モードは従来どおり画面いっぱいを使う */
     body:not(.sectionFullscreen):not(.playFullscreenMode) {
       display: grid;
-      place-items: center;
+      /* 中央寄せはJS(applyGameScale)がtranslateで行う。place-items:centerだと
+         画面がゲームの基準サイズ(667px)より低いときにグリッド行ごと下へあふれ、
+         縮小表示してもタブバーが画面外に切れてしまう(2026-07-21) */
+      place-items: start;
       /* 端末画面に合わせてゲーム全体が見えるよう縮め、余白は黒のレターボックスにする */
       background: #000 !important;
     }
@@ -5391,8 +5397,8 @@
       width: 375px !important;
       height: 667px !important;
       margin: 0 !important;
-      transform: scale(var(--gameScale, 1));
-      transform-origin: center center;
+      transform: translate(var(--gameShiftX, 0px), var(--gameShiftY, 0px)) scale(var(--gameScale, 1));
+      transform-origin: top left;
     }
 
     /* ── 横並び(ワイド)レイアウト ──
@@ -5405,8 +5411,8 @@
       width: 750px !important;
       height: 356px !important;
       margin: 0 !important;
-      transform: scale(var(--gameScale, 1));
-      transform-origin: center center;
+      transform: translate(var(--gameShiftX, 0px), var(--gameShiftY, 0px)) scale(var(--gameScale, 1));
+      transform-origin: top left;
     }
     /* 左列: クッキー画面。縦画面と同じ 375×303 に揃える(縦横で比率を統一) */
     body.wideLayout .top {
@@ -12120,18 +12126,32 @@ function applyGameScale() {
     const vh = (vv ? vv.height : window.innerHeight);
     wide = (vw / Math.max(1, vh)) >= WIDE_ASPECT_THRESHOLD;
     document.body.classList.toggle("wideLayout", wide);
-    const availH = vh - 8;
-    if (wide) {
-      const availW = Math.min(vw - 12, 1400);
-      const k = Math.max(0.2, Math.min(availW / GAME_WIDE_W, availH / GAME_WIDE_H));
-      document.documentElement.style.setProperty("--gameScale", String(k));
-    } else {
-      // 縦画面: 固定基準(375×667=端末画面と同じ比率)を等倍スケールで可視領域に収める。
-      // 全端末で内容の比率は完全に同一。基準と同じ比率の端末なら黒帯はほぼ出ない。
-      const availW = Math.min(vw - 8, 900);
-      const k = Math.max(0.35, Math.min(availW / GAME_BASE_W, availH / GAME_BASE_H));
-      document.documentElement.style.setProperty("--gameScale", String(k));
-    }
+
+    // 倍率はゲームボックスの実サイズ(縦375×667 / 横並び750×356)と、bodyの
+    // padding(セーフエリア込み)を除いた可視領域から求める。
+    // CSSのtransformはレイアウト上の枠を縮めないため、縮小後の見た目サイズで
+    // 上下左右の余白を計算し、translateで明示的に中央へ寄せる。
+    // (place-items:centerだと画面が基準より低いときに行ごと下へあふれ、
+    //  タブバーが画面外に切れてしまう)
+    const gameEl = document.querySelector(".game");
+    // 余白はbodyのpadding定義(max(8px, セーフエリア) 8px)と同じ値を使う。
+    // body自体のcomputed styleはタイトル画面中などpadding:0のモードがあり
+    // クラス状態に依存してしまうため、:rootのCSS変数から直接読む
+    const rootCs = getComputedStyle(document.documentElement);
+    const padT = Math.max(8, parseFloat(rootCs.getPropertyValue("--safe-top")) || 0);
+    const padB = Math.max(8, parseFloat(rootCs.getPropertyValue("--safe-bottom")) || 0);
+    const padL = 8, padR = 8;
+    // ボックス実サイズ(縦375×667 / 横並び750×356)。タイトル画面中など非表示で測れない間は既定値
+    const boxW = (gameEl && gameEl.offsetWidth) || (wide ? GAME_WIDE_W : GAME_BASE_W);
+    const boxH = (gameEl && gameEl.offsetHeight) || (wide ? 356 : GAME_BASE_H);
+    const availW = Math.min(vw - padL - padR, wide ? 1400 : 900);
+    const availH = vh - padT - padB;
+    const k = Math.max(wide ? 0.2 : 0.35, Math.min(availW / boxW, availH / boxH));
+    const shiftX = Math.max(0, (vw - boxW * k) / 2 - padL);
+    const shiftY = Math.max(0, (vh - boxH * k) / 2 - padT);
+    document.documentElement.style.setProperty("--gameScale", String(k));
+    document.documentElement.style.setProperty("--gameShiftX", shiftX + "px");
+    document.documentElement.style.setProperty("--gameShiftY", shiftY + "px");
   } catch (e) {}
   // 横並びに切り替わった時は全画面状態を解除しておく(全画面ボタンも無効化される)。
   // 変数がまだ宣言される前(初回呼び出し時)に触れても落ちないよう別のtryにする。
