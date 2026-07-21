@@ -91,7 +91,8 @@
     body {
       /* 端末のノッチ/ステータスバー(セーフエリア)分を上下に確保し、
          クッキー数などの表示が上端で見切れないようにする */
-      padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
+      /* 黒の余白を出さず画面いっぱいに使う。ノッチ等のセーフエリアぶんだけ確保する(2026-07-21) */
+      padding: var(--safe-top) 0 var(--safe-bottom);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -5285,8 +5286,9 @@
     /* ===== クッキー画面(上部)の各表示が潰れない調整 ===== */
     /* クッキー画面はスクロールさせない。収まらない分はクッキー画像(.cookieWrap)を
        縮めて必ず画面内に全部を表示する(数値・ノルマ等は縮めない設定のまま)。 */
-    /* 縦画面でもクッキー画面とタブ内容を同じ高さ(303px)で2等分し、横並びと比率を揃える(2026-07-14 ユーザー指示)。
-       303 + 8(.top下マージン) + 303 + 53(.tabs) = 667(=.gameの固定高さ) */
+    /* クッキー画面は303px固定で比率を維持。タブ内容(.tabPages)は画面の高さに合わせて
+       伸縮させ、黒の余白が出ないようゲーム全体(--gameBoxH)で画面を使い切る(2026-07-21)。
+       303 + 8(.top下マージン) + タブ内容(可変・最小140) + 53(.tabs) = --gameBoxH */
     .top {
       overflow: hidden !important;
       scrollbar-width: none;
@@ -5297,10 +5299,10 @@
     }
     .top::-webkit-scrollbar { display: none; }
     .tabPages {
-      flex: 0 0 303px !important;
-      height: 303px !important;
-      min-height: 303px !important;
-      max-height: 303px !important;
+      flex: 1 1 auto !important;
+      height: auto !important;
+      min-height: 140px !important;
+      max-height: none !important;
     }
     .cookieWrap {
       min-height: 72px !important;
@@ -5395,7 +5397,8 @@
          ゲーム全体を等倍スケール。全端末で文字・画像・ボタン・プレイ画面の比率がすべて同一になる。
          倍率(--gameScale)はJS(applyGameScale)がリサイズ時に計算する */
       width: 375px !important;
-      height: 667px !important;
+      /* 高さはJS(applyGameScale)が画面の高さ÷倍率で算出し、黒の余白なく画面を使い切る */
+      height: var(--gameBoxH, 667px) !important;
       margin: 0 !important;
       transform: translate(var(--gameShiftX, 0px), var(--gameShiftY, 0px)) scale(var(--gameScale, 1));
       transform-origin: top left;
@@ -12127,26 +12130,39 @@ function applyGameScale() {
     wide = (vw / Math.max(1, vh)) >= WIDE_ASPECT_THRESHOLD;
     document.body.classList.toggle("wideLayout", wide);
 
-    // 倍率はゲームボックスの実サイズ(縦375×667 / 横並び750×356)と、bodyの
-    // padding(セーフエリア込み)を除いた可視領域から求める。
-    // CSSのtransformはレイアウト上の枠を縮めないため、縮小後の見た目サイズで
-    // 上下左右の余白を計算し、translateで明示的に中央へ寄せる。
-    // (place-items:centerだと画面が基準より低いときに行ごと下へあふれ、
-    //  タブバーが画面外に切れてしまう)
+    // 黒の余白を出さないため、縦画面は「幅ぴったりの倍率」でスケールし、
+    // ゲームボックスの高さ(--gameBoxH)を画面の高さ÷倍率で可変にして画面を使い切る。
+    // (クッキー画面303pxとタブバーは固定のまま、タブ内容エリアが伸縮する)
+    // CSSのtransformはレイアウト上の枠を縮めないため、位置はtranslateで明示的に合わせる。
     const gameEl = document.querySelector(".game");
-    // 余白はbodyのpadding定義(max(8px, セーフエリア) 8px)と同じ値を使う。
-    // body自体のcomputed styleはタイトル画面中などpadding:0のモードがあり
-    // クラス状態に依存してしまうため、:rootのCSS変数から直接読む
+    // セーフエリアはbodyのpaddingと同じ値を:rootのCSS変数から読む
+    // (bodyのcomputed styleはタイトル画面中などpadding:0のモードがありクラス状態に依存するため)
     const rootCs = getComputedStyle(document.documentElement);
-    const padT = Math.max(8, parseFloat(rootCs.getPropertyValue("--safe-top")) || 0);
-    const padB = Math.max(8, parseFloat(rootCs.getPropertyValue("--safe-bottom")) || 0);
-    const padL = 8, padR = 8;
-    // ボックス実サイズ(縦375×667 / 横並び750×356)。タイトル画面中など非表示で測れない間は既定値
-    const boxW = (gameEl && gameEl.offsetWidth) || (wide ? GAME_WIDE_W : GAME_BASE_W);
-    const boxH = (gameEl && gameEl.offsetHeight) || (wide ? 356 : GAME_BASE_H);
+    const padT = parseFloat(rootCs.getPropertyValue("--safe-top")) || 0;
+    const padB = parseFloat(rootCs.getPropertyValue("--safe-bottom")) || 0;
+    const padL = 0, padR = 0;
     const availW = Math.min(vw - padL - padR, wide ? 1400 : 900);
     const availH = vh - padT - padB;
-    const k = Math.max(wide ? 0.2 : 0.35, Math.min(availW / boxW, availH / boxH));
+    let k, boxW, boxH;
+    if (wide) {
+      // 横並びは固定グリッド(750×356)のまま等倍フィットで中央寄せ
+      boxW = GAME_WIDE_W;
+      boxH = (gameEl && gameEl.offsetHeight) || 356;
+      k = Math.max(0.2, Math.min(availW / boxW, availH / boxH));
+    } else {
+      // 縦画面: 幅を使い切る倍率にし、高さは画面ぶんに合わせて可変
+      boxW = GAME_BASE_W;
+      k = Math.max(0.35, availW / boxW);
+      // 最低限の高さ(クッキー303+マージン8+タブ内容140+タブ53)は確保し、
+      // 収まらないほど低い画面では倍率を下げて全体を見せる(その場合のみ左右に余白)
+      const MIN_BOX_H = 504;
+      boxH = Math.round(availH / k);
+      if (boxH < MIN_BOX_H) {
+        boxH = MIN_BOX_H;
+        k = Math.max(0.2, availH / MIN_BOX_H);
+      }
+      document.documentElement.style.setProperty("--gameBoxH", boxH + "px");
+    }
     const shiftX = Math.max(0, (vw - boxW * k) / 2 - padL);
     const shiftY = Math.max(0, (vh - boxH * k) / 2 - padT);
     document.documentElement.style.setProperty("--gameScale", String(k));
