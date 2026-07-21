@@ -5286,16 +5286,17 @@
     /* ===== クッキー画面(上部)の各表示が潰れない調整 ===== */
     /* クッキー画面はスクロールさせない。収まらない分はクッキー画像(.cookieWrap)を
        縮めて必ず画面内に全部を表示する(数値・ノルマ等は縮めない設定のまま)。 */
-    /* クッキー画面は303px固定で比率を維持。タブ内容(.tabPages)は画面の高さに合わせて
-       伸縮させ、黒の余白が出ないようゲーム全体(--gameBoxH)で画面を使い切る(2026-07-21)。
-       303 + 8(.top下マージン) + タブ内容(可変・最小140) + 53(.tabs) = --gameBoxH */
+    /* クッキー画面は240px固定で比率を維持(購入欄を広く取るため303→240に縮小)。
+       タブ内容(.tabPages)は画面の高さに合わせて伸縮させ、黒の余白が出ないよう
+       ゲーム全体(--gameBoxH)で画面を使い切る(2026-07-21)。
+       240 + 8(.top下マージン) + タブ内容(可変・最小140) + 53(.tabs) = --gameBoxH */
     .top {
       overflow: hidden !important;
       scrollbar-width: none;
-      flex: 0 0 303px !important;
-      height: 303px !important;
-      min-height: 303px !important;
-      max-height: 303px !important;
+      flex: 0 0 240px !important;
+      height: 240px !important;
+      min-height: 240px !important;
+      max-height: 240px !important;
     }
     .top::-webkit-scrollbar { display: none; }
     .tabPages {
@@ -5306,6 +5307,30 @@
     }
     .cookieWrap {
       min-height: 72px !important;
+    }
+
+    /* 設備(強化)・研究の購入カードを圧縮し、非全画面でも2〜3個見えるようにする。
+       文字・ボタンは小さくなるが、1画面で買える選択肢を見比べられることを優先(2026-07-21) */
+    #shop .item, #research .item {
+      min-height: 0 !important;
+      padding: 5px 80px 5px 9px !important;
+      margin: 4px 0 !important;
+      font-size: 10.5px !important;
+      line-height: 1.3;
+    }
+    #shop .item b, #research .item b {
+      font-size: 12px;
+    }
+    #shop .item .desc, #research .item .desc,
+    #shop .item .price, #research .item .price {
+      font-size: 10.5px !important;
+      line-height: 1.3 !important;
+      margin: 0 !important;
+    }
+    #shop .artCard::before, #research .artCard::before {
+      width: 92px;
+      height: 92px;
+      right: -12px;
     }
 
     /* ===== スキルツリーのスワイプ中はアニメ/重フィルタを止めてガクつきを防ぐ ===== */
@@ -12156,9 +12181,9 @@ function applyGameScale() {
       // 縦画面: 幅を使い切る倍率(画面幅との比)にし、高さは画面ぶんに合わせて可変
       boxW = GAME_BASE_W;
       k = Math.max(0.05, availW / boxW);
-      // 最低限の高さ(クッキー303+マージン8+タブ内容140+タブ53)は確保し、
+      // 最低限の高さ(クッキー240+マージン8+タブ内容140+タブ53)は確保し、
       // 収まらないほど低い画面では倍率を下げて必ず全体を画面内に収める
-      const MIN_BOX_H = 504;
+      const MIN_BOX_H = 441;
       boxH = Math.round(availH / k);
       if (boxH < MIN_BOX_H) {
         boxH = MIN_BOX_H;
