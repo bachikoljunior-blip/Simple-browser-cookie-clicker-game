@@ -5243,20 +5243,20 @@
       touch-action: manipulation;
     }
 
-    /* タブは常に一行。収まらなければ横スワイプで全部見えるようにする */
+    /* タブは常に一行。6個全部が画面幅に収まるよう均等割りにする(はみ出し・横スクロールなし) */
     .tabs {
       display: flex !important;
       flex-wrap: nowrap !important;
       grid-template-columns: none !important;
-      overflow-x: auto !important;
+      overflow-x: hidden !important;
       overflow-y: hidden !important;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
     }
     .tabs::-webkit-scrollbar { display: none; }
     .tab {
-      flex: 1 0 auto !important;
-      min-width: 72px !important;
+      flex: 1 1 0 !important;
+      min-width: 0 !important;
       white-space: nowrap;
       touch-action: manipulation !important;
     }
