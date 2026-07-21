@@ -14064,13 +14064,19 @@ const { adGateRequired, openAdGate } = (() => {
 
   // 広告を1回見せてから通す。AdSense H5 Games Ads(Ad Placement API)の adBreak を使う。
   // 未設定時のみ素通し。設定済みで読み込めない場合は通さず、理由を表示して選び直させる
+  // AdSense審査の通過フラグ。審査中はスニペットが有効でも広告が配信されず、
+  // フェイルクローズ対策が「ブロックされている」と誤判定してスタートできなくなるため、
+  // 通過するまでは広告なしで素通しさせる。
+  // ★AdSense承認されたらここを true にする(広告ブロッカー対策などが有効になる)
+  const ADS_APPROVED = false;
+
   function showAdThenPass() {
     const watch = $("adGateWatchBtn");
     watch.disabled = true;
     $("adGateBuyBtn").disabled = true;
 
-    // 広告未設定(AdSense審査前)は従来どおり素通し
-    if (!adsConfigured()) {
+    // 広告未設定(スニペット無効)または審査通過前は従来どおり素通し
+    if (!adsConfigured() || !ADS_APPROVED) {
       playSound("start");
       pass();
       return;
