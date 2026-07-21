@@ -14932,7 +14932,7 @@ function renderPrestige() {
       <div class="infoRow">今回の総クッキー：${fmt(state.runCookies)}</div>
       <div class="infoRow">今回のノルマ維持記録：${fmtTime(state.quotaHoldSeconds || 0)} / ノルマ中討伐 ${fmt(state.quotaMonsterKills || 0)}体</div>
       <div class="infoRow">今回獲得できるPT：+${fmt(gain)}</div>
-      <div class="infoRow">転生で所持クッキー ${fmt(prestigeCost)} を消費(現在 ${fmt(state.cookies)})。必要量は「これまでの周回1回での最高総クッキー数」を10のべき乗に切り捨てた量(最低1億)。記録を更新すると次の周回から上がります。</div>
+      <div class="infoRow">転生で所持クッキー ${fmt(prestigeCost)} を消費(現在 ${fmt(state.cookies)})。</div>
       <button id="prestigeBtn" class="item ${canPrestige ? "canBuy" : "locked"}">${canPrestige ? `転生する(${fmt(prestigeCost)}クッキー消費)` : (gain <= 0 ? "未獲得PTなし" : `クッキー${fmt(prestigeCost)}が必要`)}</button>
       <button id="resetBtn" class="item danger">完全リセット</button>
     </div>
