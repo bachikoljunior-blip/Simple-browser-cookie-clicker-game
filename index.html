@@ -6897,6 +6897,7 @@ function freshState() {
     cookieRemainder: 0,
     totalCookies: D(0),
     runCookies: D(0),
+    bestRunCookies: D(0),     // 周回1回での最高総クッキー数(転生持ち越し・転生実行時に更新)。転生コストの基準
     earnEma: D(0),            // 直近稼ぎ率EMA(時定数90秒・sim同期2026-07-11): 銀行利息キャップの基準
     emaLastRunCookies: D(0),  // EMA更新用: 前回サンプル時の runCookies
     lastSecondEarn: D(0),     // 直近1秒の実獲得(瞬間ペース): 注文報酬cookieの基準
@@ -7019,6 +7020,12 @@ function ensureState() {
   state.quotaMonsterKills = Math.max(0, Math.floor(Number(state.quotaMonsterKills) || 0));
   state.everFeatures = state.everFeatures && typeof state.everFeatures === "object" ? state.everFeatures : {};
   state.prestigeRuns = Math.floor(Number(state.prestigeRuns) || 0);
+  // 転生コスト基準(2026-07-21): 周回1回での最高総クッキー数(転生持ち越し)
+  state.bestRunCookies = D(state.bestRunCookies || 0);
+  // 旧セーブ互換: 記録なしの転生経験者は旧固定テーブルの現在コスト相当を記録として引き継ぐ(コストが1億へ落ちないようにする)
+  if (state.bestRunCookies.lte(0) && state.prestigeRuns > 0) {
+    state.bestRunCookies = D(legacyPrestigeCost(state.prestigeRuns));
+  }
   state.runStart = Number(state.runStart) || Date.now();
   state.monstersDefeated = Math.floor(Number(state.monstersDefeated) || 0);
 
@@ -8466,17 +8473,26 @@ function orderScale() {
     * levelGrowth(kills, 0.025);
 }
 
-// 転生コスト(2026-07-11 ユーザー仕様・確定形): 完成版の測定(基準方針100hシム)で「第n回が転生した時点の
-// 毎秒生産×500」を10のべき乗に切り捨てた固定テーブル(全プレイヤー共通)。sim/prestige_costs.json と同期。
-// テーブルを超えた周回は末尾の桁ステップで自動延長。初回は1億(2026-07-11)。
-const PRESTIGE_COST_TABLE = [100000000, 1000000000, 1000000000000, 100000000000000, 10000000000000000, 10000000000000000000, 1e+25, 1e+30, 1e+32, 1.0000000000000001e+34, 9.999999999999999e+35, 1.0000000000000001e+39, 1e+45, 1e+48, 1e+53, 1e+55, 1.0000000000000001e+58, 1.0000000000000001e+61, 1e+64, 1e+66, 1e+71, 1e+77, 1e+84, 1e+90, 1e+97, 1e+101, 1e+108, 1e+113, 1e+119, 1e+121, 1e+124, 1.0000000000000001e+126, 1.0000000000000001e+126, 1.0000000000000001e+126, 1e+127, 1e+128, 1e+131, 1e+133, 1e+135, 1e+138, 1e+140, 9.999999999999999e+141, 1e+148, 1e+151, 1e+153, 1e+156, 1e+160, 1e+160, 1e+163, 1.0000000000000001e+166, 1.0000000000000001e+169, 1e+172, 1e+175, 1e+178, 1e+181, 1e+184, 1.0000000000000001e+187, 1e+190, 1e+193, 1e+196, 1e+199, 1e+202, 1e+205, 1e+208, 1e+211, 1e+214, 1e+217, 1e+220];
+// 転生コスト(2026-07-21 ユーザー仕様): プレイヤーごとの「周回1回での最高総クッキー数(bestRunCookies)」を
+// 10のべき乗に切り捨てた値。全員共通の固定テーブルは廃止。最低は転生解放条件と同じ1億。
+// 記録は転生実行時に更新するため、周回中に表示コストは動かず、記録を更新した周回の転生には旧記録ベースの
+// コストが適用される(新記録は次周回のコストから反映)。
+const PRESTIGE_MIN_COST = 100000000;
 function prestigeCookieCost() {
-  const runs = Math.max(0, Math.floor(Number(state.prestigeRuns) || 0));
-  if (PRESTIGE_COST_TABLE[runs] != null) return PRESTIGE_COST_TABLE[runs]; // 初回もテーブル(10のべき乗・調整対象)
+  const best = D(state.bestRunCookies || 0);
+  if (best.lt(PRESTIGE_MIN_COST)) return D(PRESTIGE_MIN_COST);
+  return new Decimal(1, best.e); // 仮数を1に落とす=10のべき乗へ切り捨て(1<=|m|<10 なので指数はそのまま)
+}
+
+// 旧仕様(〜2026-07-11 全プレイヤー共通の固定テーブル)。bestRunCookies を持たない旧セーブの
+// 記録初期化(ensureState)にのみ使用し、コストの連続性を保つ
+const LEGACY_PRESTIGE_COST_TABLE = [100000000, 1000000000, 1000000000000, 100000000000000, 10000000000000000, 10000000000000000000, 1e+25, 1e+30, 1e+32, 1.0000000000000001e+34, 9.999999999999999e+35, 1.0000000000000001e+39, 1e+45, 1e+48, 1e+53, 1e+55, 1.0000000000000001e+58, 1.0000000000000001e+61, 1e+64, 1e+66, 1e+71, 1e+77, 1e+84, 1e+90, 1e+97, 1e+101, 1e+108, 1e+113, 1e+119, 1e+121, 1e+124, 1.0000000000000001e+126, 1.0000000000000001e+126, 1.0000000000000001e+126, 1e+127, 1e+128, 1e+131, 1e+133, 1e+135, 1e+138, 1e+140, 9.999999999999999e+141, 1e+148, 1e+151, 1e+153, 1e+156, 1e+160, 1e+160, 1e+163, 1.0000000000000001e+166, 1.0000000000000001e+169, 1e+172, 1e+175, 1e+178, 1e+181, 1e+184, 1.0000000000000001e+187, 1e+190, 1e+193, 1e+196, 1e+199, 1e+202, 1e+205, 1e+208, 1e+211, 1e+214, 1e+217, 1e+220];
+function legacyPrestigeCost(runs) {
+  runs = Math.max(0, Math.floor(Number(runs) || 0));
+  if (LEGACY_PRESTIGE_COST_TABLE[runs] != null) return LEGACY_PRESTIGE_COST_TABLE[runs];
   if (runs === 0) return 100000000;
-  // テーブル外: 末尾の桁ステップ(3桁/回)で延長
-  const last = PRESTIGE_COST_TABLE[PRESTIGE_COST_TABLE.length - 1] || 1e7;
-  const over = runs - (PRESTIGE_COST_TABLE.length - 1);
+  const last = LEGACY_PRESTIGE_COST_TABLE[LEGACY_PRESTIGE_COST_TABLE.length - 1] || 1e7;
+  const over = runs - (LEGACY_PRESTIGE_COST_TABLE.length - 1);
   const exp = Math.min(300, Math.floor(Math.log10(last)) + 3 * over);
   return Math.pow(10, exp);
 }
@@ -14922,7 +14938,7 @@ function renderPrestige() {
       <div class="infoRow">今回の総クッキー：${fmt(state.runCookies)}</div>
       <div class="infoRow">今回のノルマ維持記録：${fmtTime(state.quotaHoldSeconds || 0)} / ノルマ中討伐 ${fmt(state.quotaMonsterKills || 0)}体</div>
       <div class="infoRow">今回獲得できるPT：+${fmt(gain)}</div>
-      <div class="infoRow">転生で所持クッキー ${fmt(prestigeCost)} を消費(現在 ${fmt(state.cookies)})。必要量は周回が進むほど上がっていきます。</div>
+      <div class="infoRow">転生で所持クッキー ${fmt(prestigeCost)} を消費(現在 ${fmt(state.cookies)})。</div>
       <button id="prestigeBtn" class="item ${canPrestige ? "canBuy" : "locked"}">${canPrestige ? `転生する(${fmt(prestigeCost)}クッキー消費)` : (gain <= 0 ? "未獲得PTなし" : `クッキー${fmt(prestigeCost)}が必要`)}</button>
       <button id="resetBtn" class="item danger">完全リセット</button>
     </div>
@@ -15538,6 +15554,7 @@ function buildRunStartFromCurrent() {
   const cur = state;
   const s = freshState();
   s.totalCookies = cur.totalCookies;
+  s.bestRunCookies = D(cur.bestRunCookies || 0);
   s.totalClicks = cur.totalClicks;
   // 周回方針は引き継がない(やり直し後のスキル画面で選び直す)
   s.runPolicy = "balanced";
@@ -15626,7 +15643,10 @@ function prestigeReset() {
   try { localStorage.setItem(PREREBIRTH_KEY, JSON.stringify(state)); } catch (e) {}
 
   state.cookies = state.cookies.sub(prestigeCookieCost());
-  const keepLastPrestigeCps = Number(currentCps()) || 0; // 次回コストの基準=この瞬間の毎秒生産
+  const keepLastPrestigeCps = Number(currentCps()) || 0;
+
+  // 次回以降のコスト基準: 周回1回での最高総クッキー数を更新(コスト消費後に更新=今回の転生は旧記録ベース)
+  const keepBestRunCookies = Decimal.max(D(state.bestRunCookies || 0), state.runCookies);
 
   const keepTotal = state.totalCookies;
   const keepClicks = state.totalClicks;
@@ -15674,6 +15694,7 @@ function prestigeReset() {
   state = freshState();
 
   state.totalCookies = keepTotal;
+  state.bestRunCookies = keepBestRunCookies;
   state.totalClicks = keepClicks;
   // 周回方針は引き継がない。転生直後のスキル画面で必ず選び直す(周回中は変更不可)
   state.runPolicy = "balanced";
