@@ -3,10 +3,11 @@
 // ・images/ など同一オリジンの静的ファイルはキャッシュ優先(初回取得時に保存)
 // ・広告(AdSense)・課金(Play Billing)・Firebase などクロスオリジンの通信には一切関与しない
 // ゲーム本体を更新したら CACHE のバージョン番号を上げること(古いキャッシュは activate で消える)
-const CACHE = "cookie-strategist-v2";
+const CACHE = "cookie-strategist-v3";
 const PRECACHE = [
   "./",
   "./index.html",
+  "./play.html",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -35,14 +36,21 @@ self.addEventListener("fetch", e => {
   if (new URL(req.url).origin !== self.location.origin) return;
 
   if (req.mode === "navigate") {
+    // ナビゲーションはネット優先。取得できたら「そのページのURL」でキャッシュし、
+    // オフライン時は同じページ→なければ play.html→index.html の順で返す。
+    // (index.html は紹介ページ、play.html はゲーム本体。ページごとに別々に保存する)
     e.respondWith(
       fetch(req)
         .then(res => {
           const copy = res.clone();
-          caches.open(CACHE).then(c => c.put("./index.html", copy));
+          caches.open(CACHE).then(c => c.put(req, copy));
           return res;
         })
-        .catch(() => caches.match("./index.html"))
+        .catch(() =>
+          caches.match(req).then(hit =>
+            hit || caches.match("./play.html").then(p => p || caches.match("./index.html"))
+          )
+        )
     );
     return;
   }

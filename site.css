@@ -1,0 +1,309 @@
+/* クッキーストラテジャー 情報ページ 共通スタイル
+   ゲーム本体(play.html)とは独立。JavaScript無効でも主要文章が読める静的レイアウト。
+   iPhone SE相当(幅320px)からPCまで対応。 */
+
+* { box-sizing: border-box; }
+
+:root {
+  --bg: #1d130d;
+  --text: #fff3df;
+  --sub: #dbc6aa;
+  --accent: #ffd38a;
+  --accent2: #ffb454;
+  --good: #9cffb2;
+  --panel: #2a1b11;
+  --panel2: #33241a;
+  --line: rgba(255, 211, 138, 0.28);
+  --maxw: 880px;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(255,211,138,0.10), transparent 38%),
+    linear-gradient(180deg, #25170f, #1d130d 50%, #120b07);
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+  line-height: 1.85;
+  -webkit-text-size-adjust: 100%;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+img { max-width: 100%; height: auto; }
+
+a { color: var(--accent); }
+a:hover { color: #ffe5ad; }
+
+/* ===== 共通ヘッダー ===== */
+.siteHeader {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: linear-gradient(180deg, rgba(42,27,17,0.98), rgba(29,19,13,0.96));
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  backdrop-filter: blur(4px);
+}
+.siteHeaderInner {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.siteBrand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: var(--text);
+  font-weight: 800;
+  font-size: 16px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.siteBrand img { width: 30px; height: 30px; border-radius: 7px; }
+
+.siteNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-left: auto;
+}
+.siteNav a {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--sub);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.siteNav a:hover { background: rgba(255,211,138,0.10); color: var(--accent); }
+.siteNav a.active {
+  color: #2a1a0c;
+  background: linear-gradient(180deg, var(--accent), var(--accent2));
+  border-color: rgba(255,218,137,0.6);
+}
+.siteNav a.play {
+  color: #2a1a0c;
+  background: linear-gradient(180deg, #ffe1a6, #ff9f3d);
+  border-color: rgba(255,218,137,0.7);
+}
+
+/* ===== 本文 ===== */
+main {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 20px 16px 56px;
+}
+
+h1 {
+  font-size: 26px;
+  color: #ffe5ad;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.55);
+  margin: 10px 0 6px;
+  line-height: 1.4;
+}
+h2 {
+  font-size: 20px;
+  color: var(--accent);
+  margin: 40px 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+  line-height: 1.4;
+}
+h3 {
+  font-size: 16px;
+  color: #ffdca0;
+  margin: 24px 0 6px;
+}
+p, li { font-size: 15px; color: #ece0cb; }
+ul, ol { padding-left: 22px; }
+li { margin: 3px 0; }
+.lead { font-size: 16px; color: #f4e8d2; }
+.muted { color: var(--sub); font-size: 13px; }
+
+/* ===== ヒーロー ===== */
+.hero {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 26px 16px 8px;
+  text-align: center;
+}
+.hero .heroLogo { width: min(280px, 74%); height: auto; filter: drop-shadow(0 6px 18px rgba(0,0,0,0.5)); }
+.hero .heroTitle { font-size: 24px; color: #ffe5ad; margin: 10px 0 0; text-shadow: 0 2px 10px rgba(0,0,0,0.55); }
+.hero .tagline { font-size: 16px; color: var(--accent); font-weight: 700; margin: 8px 0 4px; }
+.hero .heroDesc { font-size: 15px; color: #ece0cb; max-width: 640px; margin: 8px auto 0; }
+
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin: 22px 0 6px;
+}
+.btn {
+  display: inline-block;
+  padding: 13px 26px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 16px;
+  text-decoration: none;
+  border: 1px solid rgba(255,218,137,0.5);
+}
+.btn.primary {
+  color: #2a1a0c;
+  background: linear-gradient(180deg, #ffe1a6, #ff9f3d);
+  box-shadow: 0 8px 22px rgba(255,150,40,0.28);
+}
+.btn.primary:hover { color: #2a1a0c; filter: brightness(1.05); }
+.btn.ghost {
+  color: var(--text);
+  background: linear-gradient(180deg, rgba(191,118,43,0.55), rgba(98,52,16,0.7));
+}
+.btn.ghost:hover { color: var(--text); }
+
+/* ===== カード ===== */
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin: 16px 0;
+}
+.card {
+  background: linear-gradient(160deg, var(--panel2), var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.22);
+}
+.card h3 { margin-top: 0; display: flex; align-items: center; gap: 8px; }
+.card img.ic { width: 34px; height: 34px; border-radius: 8px; flex: 0 0 auto; }
+.card p { font-size: 14px; margin: 6px 0 0; }
+
+/* アイコン付き見出しの小画像 */
+.icInline { width: 26px; height: 26px; vertical-align: middle; border-radius: 6px; margin-right: 4px; }
+
+/* ===== 図(ステージ等) ===== */
+figure { margin: 16px 0; }
+figure img { border-radius: 14px; border: 1px solid var(--line); box-shadow: 0 6px 18px rgba(0,0,0,0.3); width: 100%; }
+figcaption { font-size: 13px; color: var(--sub); margin-top: 6px; text-align: center; }
+
+.thumbRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+.thumbRow figure { margin: 0; }
+.thumbRow img { aspect-ratio: 3 / 4; object-fit: cover; }
+
+/* ===== 表 ===== */
+.tableWrap { overflow-x: auto; margin: 14px 0; -webkit-overflow-scrolling: touch; }
+table { border-collapse: collapse; width: 100%; min-width: 420px; font-size: 14px; }
+th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: rgba(255,211,138,0.10); color: var(--accent); font-weight: 700; }
+td .ic { width: 26px; height: 26px; border-radius: 6px; vertical-align: middle; }
+
+/* ===== 補足ボックス ===== */
+.note {
+  background: rgba(255,211,138,0.07);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin: 16px 0;
+  font-size: 14px;
+}
+.note strong { color: var(--accent); }
+
+/* 手順リスト */
+ol.steps { counter-reset: step; list-style: none; padding-left: 0; }
+ol.steps > li {
+  position: relative;
+  padding: 10px 12px 10px 48px;
+  margin: 10px 0;
+  background: linear-gradient(160deg, var(--panel2), var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 15px;
+}
+ol.steps > li::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: 12px; top: 10px;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, var(--accent), var(--accent2));
+  color: #2a1a0c;
+  font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+
+/* パンくず / ページ内目次 */
+.toc {
+  background: rgba(0,0,0,0.18);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin: 18px 0;
+}
+.toc strong { color: var(--accent); font-size: 14px; }
+.toc ul { margin: 6px 0 0; }
+.toc a { font-size: 14px; }
+
+.pageLinks {
+  display: flex; flex-wrap: wrap; gap: 10px; margin: 30px 0 0;
+}
+.pageLinks a {
+  flex: 1 1 200px;
+  text-decoration: none;
+  background: linear-gradient(160deg, var(--panel2), var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--text);
+}
+.pageLinks a b { color: var(--accent); display: block; font-size: 15px; }
+.pageLinks a span { font-size: 13px; color: var(--sub); }
+
+/* ===== フッター ===== */
+.siteFooter {
+  border-top: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(18,11,7,0.4), rgba(18,11,7,0.85));
+  margin-top: 40px;
+}
+.siteFooterInner {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 24px 16px 32px;
+}
+.footNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+.footNav a { font-size: 14px; color: var(--sub); text-decoration: none; }
+.footNav a:hover { color: var(--accent); }
+.siteFooter .copyright { color: var(--sub); font-size: 12px; margin: 8px 0 0; }
+.siteFooter p { font-size: 13px; color: var(--sub); }
+
+@media (max-width: 520px) {
+  h1 { font-size: 22px; }
+  h2 { font-size: 18px; }
+  .siteBrand { font-size: 15px; }
+  .siteHeaderInner { padding: 7px 10px; }
+  main { padding: 16px 13px 48px; }
+  .siteNav { width: 100%; margin-left: 0; }
+}

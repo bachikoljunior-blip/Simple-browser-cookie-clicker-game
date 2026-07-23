@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>更新履歴｜クッキーストラテジャー</title>
+  <meta name="description" content="クッキーストラテジャーのこれまでの主なアップデート内容。ゲーム本体の実装・調整、画面レイアウトの改善、PWA対応、サイト構成の再編など、実際の変更にもとづいた更新履歴です。">
+  <meta name="theme-color" content="#1d130d">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="更新履歴｜クッキーストラテジャー">
+  <meta property="og:description" content="クッキーストラテジャーの主なアップデート内容をまとめた更新履歴です。">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:url" content="https://cookiestrateger.com/updates.html">
+  <meta property="og:image" content="https://cookiestrateger.com/icons/icon-512.png">
+  <link rel="canonical" href="https://cookiestrateger.com/updates.html">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<header class="siteHeader">
+  <div class="siteHeaderInner">
+    <a class="siteBrand" href="index.html">
+      <img src="icons/icon-192.png" alt="クッキーストラテジャーのアイコン">
+      <span>クッキーストラテジャー</span>
+    </a>
+    <nav class="siteNav" aria-label="メインナビゲーション">
+      <a href="index.html">トップ</a>
+      <a href="play.html" class="play">▶ 遊ぶ</a>
+      <a href="guide.html">遊び方</a>
+      <a href="systems.html">システム</a>
+      <a href="strategy.html">攻略</a>
+      <a href="updates.html" class="active">更新履歴</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <h1>更新履歴</h1>
+  <p class="lead">クッキーストラテジャーの主なアップデート内容です。ゲームの実装・調整の履歴にもとづいてまとめています（細かな修正は省略しています）。</p>
+
+  <h2>2026年7月23日 — サイト構成の再編</h2>
+  <ul>
+    <li>ゲーム本体を <code>play.html</code> に移し、トップページ（<code>index.html</code>）を軽量なゲーム紹介ページに変更しました。</li>
+    <li>「遊び方」「システム解説」「攻略」「更新履歴」の各ページを追加し、操作しなくても内容がわかるようにしました。</li>
+    <li>全ページに共通のヘッダー・フッターを設置し、スマートフォンからPCまで読みやすいレイアウトに調整しました。</li>
+    <li>セーブデータの保存先や遊び方は変更していません。これまでの続きからそのまま遊べます。</li>
+  </ul>
+
+  <h2>2026年7月21日 — 表示レイアウトと転生コストの調整</h2>
+  <ul>
+    <li>黒い余白をなくし、ゲームを画面いっぱいに表示するレイアウトに変更しました。端末の画面サイズに合わせて自動で拡大・縮小し、表示が潰れないように調整しています。</li>
+    <li>全画面モードでクッキーをより大きく表示するようにしました。</li>
+    <li>設備・研究の購入欄を、通常表示でも複数まとめて見えるように圧縮しました。</li>
+    <li>転生に必要なコストを、プレイヤーごとの「1周回での最高総クッキー数」を基準とする方式に変更しました。</li>
+  </ul>
+
+  <h2>2026年7月20日 — 画像の軽量化</h2>
+  <ul>
+    <li>すべての画像を、ゲーム内での実際の表示サイズに合わせて一括で縮小し、読み込みを軽くしました。</li>
+    <li>スキルツリーの描画を軽量化し、スワイプ時のもたつきを抑えました。</li>
+  </ul>
+
+  <h2>2026年7月19日 — Web版の反映とPWA対応</h2>
+  <ul>
+    <li>ゲーム本体をWeb版に反映しました。</li>
+    <li>ホーム画面に追加してアプリのように起動できるよう、PWA（プログレッシブ・ウェブアプリ）一式を整備しました。オフラインでも起動できるようになっています。</li>
+  </ul>
+
+  <h2>2026年7月13日 — 画面レイアウトと装備システム</h2>
+  <ul>
+    <li>画面の縦横比を一定にして端末サイズに合わせて等倍でスケールする方式にし、横長の画面では左右2列のレイアウトに対応しました。</li>
+    <li>設備購入欄の毎秒生産・追加生産の表示を、実際の増加量に合わせて修正しました。</li>
+    <li>工房の装備システムを整備しました。</li>
+  </ul>
+
+  <h2>2026年7月12日 — 研究まわりの改善</h2>
+  <ul>
+    <li>解放された研究をコスト順に並べ替え、買える研究があると研究タブが点滅して知らせるようにしました。</li>
+    <li>研究「重力圧縮」の発動を、クッキー横のボタンから行えるように移設しました。</li>
+    <li>段階式研究の表示順を整理しました。</li>
+  </ul>
+
+  <h2>2026年7月11日 — モンスターと演出の調整</h2>
+  <ul>
+    <li>周回のはじめに、一定間隔でクッキーモンスターが出現するようにしました。</li>
+    <li>複数のモンスターが重ならないよう配置を改善し、出現待ちに期限を設けました。</li>
+    <li>金のクッキーの表示サイズや切り取り位置を調整し、視認性を高めました。</li>
+    <li>タップの効果音（会心音など）を聞きやすく調整しました。</li>
+    <li>数値表示のレイアウトを整えました。</li>
+  </ul>
+
+  <p class="muted">※ 日付・内容は実際の実装・調整にもとづいています。今後の更新もこのページに追記していきます。</p>
+
+  <div class="pageLinks">
+    <a href="systems.html"><b>システム解説</b><span>現在の各システムの仕組み。</span></a>
+    <a href="strategy.html"><b>攻略・周回の考え方</b><span>効率よく進めるための考え方。</span></a>
+    <a href="play.html"><b>▶ ゲームを遊ぶ</b><span>最新のゲームをプレイ。</span></a>
+  </div>
+</main>
+
+<footer class="siteFooter">
+  <div class="siteFooterInner">
+    <nav class="footNav" aria-label="フッターナビゲーション">
+      <a href="index.html">トップ</a>
+      <a href="play.html">ゲームを遊ぶ</a>
+      <a href="guide.html">遊び方</a>
+      <a href="systems.html">システム</a>
+      <a href="strategy.html">攻略</a>
+      <a href="updates.html">更新履歴</a>
+      <a href="terms.html">利用規約</a>
+      <a href="privacy.html">プライバシーポリシー</a>
+      <a href="mailto:cookiestrateger@gmail.com">お問い合わせ</a>
+    </nav>
+    <p class="copyright">© 2026 クッキーストラテジャー</p>
+  </div>
+</footer>
+
+</body>
+</html>

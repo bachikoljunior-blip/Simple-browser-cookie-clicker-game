@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>システム解説｜クッキーストラテジャー</title>
+  <meta name="description" content="クッキーストラテジャーの各システムを解説。設備・研究・金のクッキー・クッキーモンスターと報酬・出現ノルマ・ステージと層・転生スキルツリー・工房・装備・料理・注文ボード・素材ドロップ・セーブの仕組みをまとめています。">
+  <meta name="theme-color" content="#1d130d">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="システム解説｜クッキーストラテジャー">
+  <meta property="og:description" content="設備・研究・ノルマ・転生スキルツリー・工房・注文ボードなど、クッキーストラテジャーの各システムの仕組みを解説します。">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:url" content="https://cookiestrateger.com/systems.html">
+  <meta property="og:image" content="https://cookiestrateger.com/icons/icon-512.png">
+  <link rel="canonical" href="https://cookiestrateger.com/systems.html">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<header class="siteHeader">
+  <div class="siteHeaderInner">
+    <a class="siteBrand" href="index.html">
+      <img src="icons/icon-192.png" alt="クッキーストラテジャーのアイコン">
+      <span>クッキーストラテジャー</span>
+    </a>
+    <nav class="siteNav" aria-label="メインナビゲーション">
+      <a href="index.html">トップ</a>
+      <a href="play.html" class="play">▶ 遊ぶ</a>
+      <a href="guide.html">遊び方</a>
+      <a href="systems.html" class="active">システム</a>
+      <a href="strategy.html">攻略</a>
+      <a href="updates.html">更新履歴</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <h1>システム解説</h1>
+  <p class="lead">クッキーストラテジャーには、単純なクリック放置にとどまらない複数のシステムがあります。ここでは、実際のゲームの各仕組みを一つずつ解説します。</p>
+
+  <div class="toc">
+    <strong>このページの目次</strong>
+    <ul>
+      <li><a href="#production">1. クッキー生産と設備（強化）</a></li>
+      <li><a href="#research">2. 研究</a></li>
+      <li><a href="#golden">3. 金のクッキー</a></li>
+      <li><a href="#monster">4. クッキーモンスターと報酬</a></li>
+      <li><a href="#quota">5. モンスター出現ノルマ（維持の戦略）</a></li>
+      <li><a href="#stage">6. ステージ・周回・層</a></li>
+      <li><a href="#prestige">7. 転生とスキルツリー</a></li>
+      <li><a href="#workshop">8. 工房・装備・料理</a></li>
+      <li><a href="#order">9. 注文ボードと固定クエスト</a></li>
+      <li><a href="#material">10. 素材とドロップ</a></li>
+      <li><a href="#save">11. セーブ（ローカル＆クラウド）</a></li>
+    </ul>
+  </div>
+
+  <h2 id="production">1. クッキー生産と設備（強化）</h2>
+  <p>画面中央のクッキーを<strong>タップ</strong>すると、タップ1回ぶんのクッキーが手に入ります。基本のタップ力は「強い指」を買うほど強くなり、研究「指先の型」を取ると毎秒生産のおよそ0.4%がタップ力にも上乗せされます。上部には所持クッキー数と<strong>合計毎秒（1秒あたりの自動生産量）</strong>が表示されます。</p>
+  <p>「強化」タブでは設備を購入します。設備は大きく2種類――タップ力を上げる<strong>タップ系</strong>（強い指・神の指）と、毎秒の自動生産を上げる<strong>生産系</strong>――に分かれます。設備は<strong>1台買うごとに次の値段が上がる</strong>ため、どこにどれだけ投資するかがそのまま伸びの差になります。まとめ買い（×1／×10／×100／最大）にも対応しています。</p>
+
+  <div class="tableWrap">
+  <table>
+    <thead><tr><th>設備</th><th>種類</th><th>基本効果（1台あたり）</th></tr></thead>
+    <tbody>
+      <tr><td><img class="ic" src="images/upgrade_finger.webp" alt=""> 強い指</td><td>タップ</td><td>1タップ +1</td></tr>
+      <tr><td><img class="ic" src="images/upgrade_grandma.webp" alt=""> おばあちゃん</td><td>毎秒</td><td>毎秒 +1</td></tr>
+      <tr><td><img class="ic" src="images/upgrade_oven.webp" alt=""> オーブン</td><td>毎秒</td><td>毎秒 +8</td></tr>
+      <tr><td><img class="ic" src="images/upgrade_factory.webp" alt=""> 工場</td><td>毎秒</td><td>毎秒 +45</td></tr>
+      <tr><td><img class="ic" src="images/upgrade_bank.webp" alt=""> クッキー銀行</td><td>毎秒</td><td>毎秒 +260</td></tr>
+      <tr><td><img class="ic" src="images/upgrade_spiceRack.webp" alt=""> 香料棚</td><td>毎秒</td><td>毎秒 +780</td></tr>
+      <tr><td><img class="ic" src="images/upgrade_portal.webp" alt=""> 異世界クッキー炉</td><td>毎秒</td><td>毎秒 +1,600</td></tr>
+      <tr><td><img class="ic" src="images/upgrade_moonBakery.webp" alt=""> 月面ベーカリー</td><td>毎秒</td><td>毎秒 +9,800</td></tr>
+      <tr><td><img class="ic" src="images/upgrade_timeOven.webp" alt=""> 時空オーブン</td><td>毎秒</td><td>毎秒 +6.5万</td></tr>
+      <tr><td><img class="ic" src="images/upgrade_galaxyFactory.webp" alt=""> 銀河工場</td><td>毎秒</td><td>毎秒 +45万</td></tr>
+      <tr><td><img class="ic" src="images/upgrade_blackHoleMixer.webp" alt=""> ブラックホールミキサー</td><td>毎秒</td><td>毎秒 +330万</td></tr>
+      <tr><td><img class="ic" src="images/upgrade_universeOven.webp" alt=""> 宇宙焼成炉</td><td>毎秒</td><td>毎秒 +2,600万</td></tr>
+      <tr><td><img class="ic" src="images/upgrade_godFinger.webp" alt=""> 神の指</td><td>タップ</td><td>1タップ +260万（さらにタップ力全体を強化）</td></tr>
+      <tr><td><img class="ic" src="images/upgrade_cookieSingularity.webp" alt=""> クッキー特異点</td><td>毎秒</td><td>毎秒 +2.3億</td></tr>
+      <tr><td><img class="ic" src="images/upgrade_quantumBakery.webp" alt=""> 量子ベーカリー</td><td>毎秒</td><td>毎秒 +21億</td></tr>
+      <tr><td><img class="ic" src="images/upgrade_antimatterOven.webp" alt=""> 反物質オーブン</td><td>毎秒</td><td>毎秒 +220億</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="muted">上位の設備（月面ベーカリー以降）は、転生スキルツリーの「設備」系スキルを取ると解放されます。数値は基本効果で、研究やスキルによってさらに大きく伸びます。</p>
+
+  <h2 id="research">2. 研究</h2>
+  <p>「研究」タブでは、稼いだクッキーを使って研究を購入します。研究には大きく2系統あります。</p>
+  <ul>
+    <li><strong>設備連動の研究</strong>：その周回で対応する設備を購入していると解放され、特定の設備（おばあちゃん、オーブン、工場、香料棚、銀行……）の生産を大きく増幅します。一部は転生スキルで「段階2・段階3」が開放され、効果が積み増しされます。</li>
+    <li><strong>実績研究（マイルストーン研究）</strong>：設備の所持数や各種の達成条件で解放される、永続的な倍率アップの研究です。コストは「そのときの毎秒生産の数十秒ぶん」に設定されており、常に手が届く範囲で少しずつ全体を底上げします。</li>
+  </ul>
+  <p>解放できる研究があると研究タブが点滅して知らせます。研究はその周回の生産を伸ばす主役で、設備の購入と並行して進めるのが基本です。</p>
+
+  <h2 id="golden">3. 金のクッキー</h2>
+  <p>プレイ中、ときどき<img class="icInline" src="images/object_goldenCookie.webp" alt="">金のクッキーが出現します。タップすると、まとまったクッキーを<strong>即時獲得</strong>したり、一定時間すべての生産が<strong>ブースト</strong>されたりします。出現には間隔があり、見つけたら早めにタップするのがコツです。</p>
+  <p>転生スキルの「金クッキー」系や、モンスター撃破で得られる報酬カード（下記）によって、<strong>出現間隔の短縮・即時獲得量アップ・ブースト倍率アップ・ブースト時間の延長</strong>などを重ねられます。金のクッキー中心に伸ばす「金色型」の周回方針もあります。</p>
+  <div class="note">金のクッキーの効果は取得ごとに変化します。「必ず動画広告になる」「必ず大量獲得する」といった固定の挙動ではありません。</div>
+
+  <h2 id="monster">4. クッキーモンスターと報酬</h2>
+  <p><img class="icInline" src="images/object_cookieMonster.webp" alt="">クッキーモンスターが出現したら、<strong>連打して撃破</strong>します。モンスターにはHPがあり、タップのダメージで削り切ると撃破です。撃破すると<strong>報酬を選択</strong>する画面が開き、提示されたカードから<strong>好きな1つ</strong>を選んで強化できます。</p>
+  <p>モンスターには通常種のほか、群れ・タンク・スピーディ・金獣・ボスなどの種別があり、ステージによって出現する種類やHPが変わります。ボスを倒すとそのステージの「ボス核」素材が手に入ります。</p>
+  <p>報酬カードには、常時選べる基本カードと、転生スキルツリーで解禁する上位カードがあります。主な系統は次の通りです。</p>
+  <div class="tableWrap">
+  <table>
+    <thead><tr><th>系統</th><th>おもな効果の例</th></tr></thead>
+    <tbody>
+      <tr><td>金クッキー系</td><td>金クッキー出現率アップ／金ブースト倍率アップ／金クッキー獲得量アップ／黄金連鎖 など</td></tr>
+      <tr><td>狩り系</td><td>対モンスターダメージアップ／モンスター出現率アップ／濃い餌（滞在延長）／撃破数で全生産・毎秒が伸びる など</td></tr>
+      <tr><td>リスク系</td><td>連戦準備・狩猟集中・深追いの契約など、見返りが大きいぶんHPや時間切れのリスクを伴うカード</td></tr>
+      <tr><td>設備系</td><td>設備の個別強化を底上げするカード など</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2 id="quota">5. モンスター出現ノルマ（維持の戦略）</h2>
+  <p>このゲームで最も独自性が強いのが、<strong>モンスターの出現ノルマ</strong>です。モンスターはいつでも出るわけではなく、<strong>「その周回の必要ノルマ（クッキー量）」を満たしている間だけ</strong>出現します。</p>
+  <p>必要ノルマは<strong>周回の経過時間とともに上昇</strong>します。序盤（開始から約30秒）はノルマ0でウォームアップ、その後はゆるやかに増え、周回の中盤～後半（おおよそ8分・10分・14分あたり）で急に重くなる「壁」が段階的に立ち上がります。さらに2周目以降は、前回の周回の長さを基準にした<strong>到達判定</strong>も加わります。</p>
+  <p>あなたの生産がノルマの上昇に追いつけなくなると、<strong>「ノルマ終了：この周回のモンスターチャンス終了」</strong>となり、その周回はもうモンスターが出なくなります。つまり――</p>
+  <div class="note"><strong>「どれだけ長くノルマを維持し、モンスターを狩り続けられるか」がこのゲームの核心の駆け引きです。</strong> ノルマを維持した秒数は記録として残り、転生画面でも確認できます。狩りを続けるほど報酬カードで強くなれますが、ノルマの壁はいずれ必ず生産を追い越します。その手前でどこまで粘るか、いつ切り上げて転生するかを判断していきます。</div>
+  <p>ノルマの上部ゲージは複数の「層」で表現され、深い層まで押し上げるほど（＝最高到達層が深いほど）、多くの設備・研究・スキルの効果が上がる設計になっています。研究「重力圧縮」を取ると、ノルマ未達の寸前で必要量を軽減して延命することもできます。</p>
+
+  <h2 id="stage">6. ステージ・周回・層</h2>
+  <p>1回のプレイの区切りを<strong>周回</strong>と呼びます。周回のはじめに、スキル選択 → 周回方針の選択 → ステージの選択、の順で準備をしてからスタートします。</p>
+  <p><strong>周回方針</strong>は途中変更できない5種類（標準／会心型／焼成型／狩猟型／金色型）で、その周回で狙う方向性や落ちやすい素材が変わります。</p>
+  <p><strong>ステージ</strong>は狩り場です。解放済みのステージから1つ選びます。ステージごとに出現モンスターや落とす素材、金のクッキーの出やすさなどが異なります。</p>
+  <div class="thumbRow">
+    <figure><img src="images/bg_stage1_meadow.webp" alt="バター草原"><figcaption>1. バター草原</figcaption></figure>
+    <figure><img src="images/bg_stage2_volcano.webp" alt="チョコレート火山"><figcaption>2. チョコレート火山</figcaption></figure>
+    <figure><img src="images/bg_stage3_glacier.webp" alt="ミントの氷河"><figcaption>3. ミントの氷河</figcaption></figure>
+    <figure><img src="images/bg_stage4_dune.webp" alt="香料の砂丘"><figcaption>4. 香料の砂丘</figcaption></figure>
+    <figure><img src="images/bg_stage5_galaxy.webp" alt="星屑の銀河"><figcaption>5. 星屑の銀河</figcaption></figure>
+    <figure><img src="images/bg_stage6_deep.webp" alt="深層領域"><figcaption>6. 深層領域（この先へ）</figcaption></figure>
+  </div>
+  <p>草原・火山・氷河・砂丘・銀河の5ステージの先には、さらに深く潜っていく<strong>深層領域</strong>が広がっています。次のステージは、そのステージで一定数のモンスターを倒す<strong>固定クエスト</strong>を達成すると解放されます（ステージ解放は周回をまたいで引き継がれます）。</p>
+
+  <h2 id="prestige">7. 転生とスキルツリー</h2>
+  <p>所持クッキーが1億に達すると<strong>転生</strong>が解放されます（一度解放されれば以降は常に使えます）。転生すると、その周回の総クッキー量に応じた<strong>転生ポイント</strong>を獲得し、クッキーや一部の進行はリセットされます。一方で、転生ポイント・スキルツリー・素材・装備・レシピ・ステージ解放・討伐記録などは<strong>引き継がれ</strong>、周回を重ねるほど恒久的に強くなります。</p>
+  <p>転生に必要なコストは、<strong>あなた自身の「1周回での最高総クッキー数」</strong>を基準に決まります（最低1億）。この記録は転生した瞬間に更新されるため、表示コストが周回の途中で動くことはありません。</p>
+  <p>獲得した転生ポイントは、巨大な<strong>スキルツリー</strong>で消費します。中核の「分岐炉心」を起点に、タップ／自動焼成／経済／研究／設備／金クッキー／怪物狩り／報酬／周回支援／超越といった枝が広がり、設備や上位システム・報酬カードを解放したり、全体の生産倍率を高めたりできます。ツリーはスワイプで見渡し、ピンチで拡大縮小できます。頂点には最終スキル「超越体」があります。</p>
+  <div class="note">周回で強くなる主な倍率は、生の転生ポイント数そのものではなく、<strong>スキルツリーで取得した効果</strong>から生まれます。ポイントを何に使うかが成長のカギです。</div>
+
+  <h2 id="workshop">8. 工房・装備・料理</h2>
+  <p>転生スキル「素材の嗅覚」を取ると<strong>工房</strong>が解放され、モンスターが素材を落とすようになります。工房では2種類のものづくりができます。</p>
+  <ul>
+    <li><strong>装備の作成</strong>：色鉱石の粉やステージ素材を使って装備を作ります。装備は<strong>周回をまたいで残る</strong>永続の強化で、部位（武器・盾・防具・手・帽子・靴・アクセサリーなど）とランクがあります。1周回で作成できる回数には上限があります。</li>
+    <li><strong>料理</strong>：素材を使って料理（<img class="icInline" src="images/dish_butterCookie.webp" alt="">バタークッキー生地、濃厚ショコラ、ミントアイスサンド、狩人のシチュー、霜降りケーキ、星屑パフェ、虚空タルトなど）を焼きます。料理は<strong>一定時間の時限バフ</strong>で、同時に複数はかけられません。効果は転生でリセットされますが、覚えたレシピは残ります。</li>
+  </ul>
+  <p>素材が足りないときは、ワイルドカード素材「万能粉」（標準方針で入手）で一部を補えます。</p>
+
+  <h2 id="order">9. 注文ボードと固定クエスト</h2>
+  <p>転生スキル「注文ボード」を取ると<strong>注文ボード</strong>が解放されます。注文は時間制限つきの依頼で、達成すると<strong>一定時間の収入アップ・毎秒生産アップ・素材の獲得</strong>などの報酬がもらえます。依頼は1件ずつ提示され、時間内に条件を満たすと成功です。</p>
+  <p>これとは別に、期限のない<strong>固定クエスト</strong>があります。今いる最前線ステージで規定数のモンスターを倒すと、次のステージが解放されます。固定クエストの進行は周回をまたいで引き継がれます。</p>
+
+  <h2 id="material">10. 素材とドロップ</h2>
+  <p>モンスターを倒すと素材が落ちます。落ちるドロップは<strong>「どう倒したか」で変わる</strong>のが特徴です。おおまかには次のような対応です。</p>
+  <ul>
+    <li>通常の撃破 → 基本素材</li>
+    <li>金ブースト中の撃破 → 「黄金粉」（このときだけ入手）</li>
+    <li>HPを大きく上回るダメージでの一撃（オーバーキル）→ レア素材</li>
+    <li>短時間に連続撃破（狩り連鎖）→ ボス核系</li>
+    <li>ノルマに余裕を持って倒す → 発酵素材</li>
+    <li>標準方針 → ワイルドカードの「万能粉」</li>
+  </ul>
+  <p>集めた素材は工房で装備や料理に使います。ステージが深いほど、また倒し方を工夫するほど、狙った素材を集めやすくなります。</p>
+
+  <h2 id="save">11. セーブ（ローカル＆クラウド）</h2>
+  <p>セーブは<strong>自動</strong>です。進行状況はお使いのブラウザのローカルストレージに定期的に保存され、同じ端末・同じブラウザで開けば続きから遊べます。会員登録は不要です。</p>
+  <p>設定画面から<strong>Google アカウントでログイン</strong>すると（任意）、セーブデータがクラウド（Google Firebase）にも自動保存され、<strong>別の端末でも同じアカウントで続き</strong>から遊べます。取り扱いの詳細は<a href="privacy.html">プライバシーポリシー</a>をご覧ください。</p>
+
+  <div class="pageLinks">
+    <a href="guide.html"><b>遊び方を見る</b><span>基本操作から周回までの流れ。</span></a>
+    <a href="strategy.html"><b>攻略・周回の考え方</b><span>最初にやること、ノルマ維持、周回のタイミング。</span></a>
+    <a href="play.html"><b>▶ ゲームを遊ぶ</b><span>ブラウザですぐにプレイ。</span></a>
+  </div>
+</main>
+
+<footer class="siteFooter">
+  <div class="siteFooterInner">
+    <nav class="footNav" aria-label="フッターナビゲーション">
+      <a href="index.html">トップ</a>
+      <a href="play.html">ゲームを遊ぶ</a>
+      <a href="guide.html">遊び方</a>
+      <a href="systems.html">システム</a>
+      <a href="strategy.html">攻略</a>
+      <a href="updates.html">更新履歴</a>
+      <a href="terms.html">利用規約</a>
+      <a href="privacy.html">プライバシーポリシー</a>
+      <a href="mailto:cookiestrateger@gmail.com">お問い合わせ</a>
+    </nav>
+    <p class="copyright">© 2026 クッキーストラテジャー</p>
+  </div>
+</footer>
+
+</body>
+</html>
