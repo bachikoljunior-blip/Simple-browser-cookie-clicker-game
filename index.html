@@ -18,6 +18,21 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="site.css">
 
+  <!-- Google Play(TWA)判定の引き継ぎ。TWAがサイトのルート(このページ)から起動された場合、
+       初回ナビゲーションの referrer(android-app://)をここで捕捉して sessionStorage に記録しておく。
+       これで「▶遊ぶ」で play.html へ移動しても、ゲーム側の Play版判定(=Play課金の有効化)が
+       正しく引き継がれる。TWAが play.html を直接起動する場合はゲーム側だけで完結する。
+       ブラウザ版に漏れないよう sessionStorage を使用(Android Chrome は TWA とブラウザで
+       localStorage を共有するため)。動作確認用に ?twa=1 でも有効化できる。 -->
+  <script>
+    try {
+      if (new URLSearchParams(location.search).get("twa") === "1"
+          || (document.referrer && document.referrer.indexOf("android-app://") === 0)) {
+        sessionStorage.setItem("cookie_game_twa_session", "1");
+      }
+    } catch (_) {}
+  </script>
+
   <!-- Google AdSense(標準の読み込みコード。トップページとゲームページに設置) -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3280484274197291"
        crossorigin="anonymous"></script>
