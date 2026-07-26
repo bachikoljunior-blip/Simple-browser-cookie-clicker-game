@@ -4,7 +4,8 @@ name: 2. Androidアプリをビルド
 # APK(実機確認用)をビルドします。PC は不要で、成果物は Artifacts から
 # スマホにそのままダウンロードできます。
 #
-# 事前に「1. 署名鍵をつくる」を実行し、Secrets を3つ登録しておいてください。
+# 事前に Secret `ANDROID_KEYSTORE_PASSPHRASE` を登録し、
+# 「1. 署名鍵をつくる」を実行しておいてください。
 
 on:
   workflow_dispatch:
@@ -28,6 +29,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      KEYSTORE_ENC: store/android/upload-keystore.jks.enc
     steps:
       - uses: actions/checkout@v4
 
@@ -40,20 +43,23 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Secrets が登録されているか確認
+      - name: 署名鍵を復号
         env:
-          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          PASS: ${{ secrets.ANDROID_KEYSTORE_PASSPHRASE }}
         run: |
-          missing=""
-          [ -n "$KS_B64" ]   || missing="$missing ANDROID_KEYSTORE_BASE64"
-          [ -n "$KS_PASS" ]  || missing="$missing ANDROID_KEYSTORE_PASSWORD"
-          [ -n "$KS_ALIAS" ] || missing="$missing ANDROID_KEY_ALIAS"
-          if [ -n "$missing" ]; then
-            echo "::error::次の Secret が未登録です:$missing 。先に「1. 署名鍵をつくる」を実行してください。"
+          set -euo pipefail
+          if [ -z "${PASS:-}" ]; then
+            echo "::error::Secret ANDROID_KEYSTORE_PASSPHRASE が未登録です。"
             exit 1
           fi
+          if [ ! -f "$KEYSTORE_ENC" ]; then
+            echo "::error::$KEYSTORE_ENC がありません。先に「1. 署名鍵をつくる」を実行してください。"
+            exit 1
+          fi
+          mkdir -p android-build
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -md sha512 \
+            -in "$KEYSTORE_ENC" -out android-build/upload-keystore.jks -pass env:PASS \
+            || { echo "::error::復号に失敗しました。ANDROID_KEYSTORE_PASSPHRASE が鍵の作成時と違います。"; exit 1; }
 
       - name: Bubblewrap を用意
         run: |
@@ -70,16 +76,13 @@ jobs:
 
       - name: プロジェクトを組み立てる
         env:
-          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KS_ALIAS: upload
           VERSION_NAME: ${{ inputs.version_name }}
           VERSION_CODE: ${{ inputs.version_code }}
         run: |
           set -euo pipefail
-          mkdir -p android-build
           cp store/android/twa-manifest.json android-build/
           cp store/android/generate-project.cjs android-build/
-          echo "$KS_B64" | base64 -d > android-build/upload-keystore.jks
 
           # 入力値(バージョン・署名鍵の場所)を twa-manifest.json に反映
           node -e '
@@ -111,14 +114,14 @@ jobs:
       - name: ビルド(AAB + APK)
         working-directory: android-build
         env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSPHRASE }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSPHRASE }}
         run: bubblewrap build
 
       - name: 署名鍵の指紋を取り出す
         env:
-          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSPHRASE }}
+          KS_ALIAS: upload
         run: |
           set -euo pipefail
           SHA256=$(keytool -list -v -keystore android-build/upload-keystore.jks \

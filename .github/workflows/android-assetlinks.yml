@@ -6,7 +6,7 @@ name: 3. assetlinks.json を更新
 # 必要なのは Play Console の「アプリ署名鍵」の SHA-256 指紋だけです。
 # Play Console → テストとリリース → 設定 → アプリの署名 →
 # 「アプリ署名鍵の証明書」の SHA-256 証明書フィンガープリントをコピーして貼ってください。
-# アップロード鍵の指紋は Secrets のキーストアから自動で取り出します。
+# アップロード鍵の指紋は暗号化済みキーストアから自動で取り出します。
 
 on:
   workflow_dispatch:
@@ -32,21 +32,22 @@ jobs:
 
       - name: アップロード鍵の指紋を取り出す
         env:
-          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          PASS: ${{ secrets.ANDROID_KEYSTORE_PASSPHRASE }}
         run: |
           set -euo pipefail
-          if [ -z "$KS_B64" ]; then
-            echo "::error::ANDROID_KEYSTORE_BASE64 が未登録です。先に「1. 署名鍵をつくる」を実行してください。"
+          ENC=store/android/upload-keystore.jks.enc
+          if [ ! -f "$ENC" ]; then
+            echo "::error::$ENC がありません。先に「1. 署名鍵をつくる」を実行してください。"
             exit 1
           fi
-          echo "$KS_B64" | base64 -d > /tmp/upload-keystore.jks
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -md sha512 \
+            -in "$ENC" -out /tmp/upload-keystore.jks -pass env:PASS \
+            || { echo "::error::復号に失敗しました。ANDROID_KEYSTORE_PASSPHRASE を確認してください。"; exit 1; }
           SHA256=$(keytool -list -v -keystore /tmp/upload-keystore.jks \
-            -alias "$KS_ALIAS" -storepass "$KS_PASS" \
+            -alias upload -storepass "$PASS" \
             | grep -m1 'SHA256:' | sed 's/.*SHA256: *//')
           echo "UPLOAD_SHA256=$SHA256" >> "$GITHUB_ENV"
-          rm -f /tmp/upload-keystore.jks
+          shred -u /tmp/upload-keystore.jks
 
       - name: assetlinks.json を生成
         env:
