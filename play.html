@@ -14316,12 +14316,53 @@ const { adGateRequired, openAdGate, markRunStarted } = (() => {
     } catch (_) { return false; }
   }
 
+  // ==== 時刻の取得(端末の時計を進める改ざんへの対策) ====
+  // 端末の時計をそのまま信じると、時計を24時間進めるだけで制限を飛ばせてしまう。
+  // そこで同一オリジンへのHEADリクエストのレスポンスヘッダ(Date)をサーバー時刻として使い、
+  // 端末時計とのズレ(オフセット)を覚えておく。判定は常にこのサーバー基準で行う。
+  // ・HEADなのでSW(GETのみ介入)を素通りし、キャッシュされた古い日時をつかまない
+  // ・取得できないうち(オフライン等)は「確認できていない」扱いにして通さない(フェイルクローズ)。
+  //   通してしまうと、機内モードにして時計を進めるだけで抜けられてしまうため
+  let serverOffsetMs = null;   // null = 未取得
+  let offsetFetching = null;   // 取得中のPromise(多重に走らせない)
+
+  function fetchServerOffset() {
+    if (offsetFetching) return offsetFetching;
+    offsetFetching = (async () => {
+      try {
+        const res = await fetch("manifest.json?t=" + Date.now(), { method: "HEAD", cache: "no-store" });
+        const header = res.headers.get("date");
+        const serverMs = header ? Date.parse(header) : NaN;
+        if (Number.isFinite(serverMs)) serverOffsetMs = serverMs - Date.now();
+      } catch (_) {
+        // オフライン・失敗。serverOffsetMs は null のまま
+      } finally {
+        offsetFetching = null;
+      }
+      return serverOffsetMs;
+    })();
+    return offsetFetching;
+  }
+
+  // サーバー基準の現在時刻。未取得のときは端末時計で代用する
+  // (代用値は表示にしか使わない。通す判断は timeVerified() を必ず見る)
+  function now() {
+    return serverOffsetMs === null ? Date.now() : Date.now() + serverOffsetMs;
+  }
+
+  function timeVerified() {
+    return serverOffsetMs !== null;
+  }
+
+  // 起動時に先に取っておく。スタートを押した時点で待たされないようにする
+  fetchServerOffset();
+
   // 次にスタートできるまでの残り時間(ミリ秒)。0 なら今すぐスタートできる。
   // 端末の時計を戻す改ざんに対しては、残りが24時間を超えることはないので上限で丸める
   function cooldownRemaining() {
     const next = Math.max(0, Number(state.nextStartAt) || 0);
     if (!next) return 0;
-    return Math.min(START_COOLDOWN_MS, Math.max(0, next - Date.now()));
+    return Math.min(START_COOLDOWN_MS, Math.max(0, next - now()));
   }
 
   function formatRemaining(ms) {
@@ -14394,6 +14435,15 @@ const { adGateRequired, openAdGate, markRunStarted } = (() => {
   // 残り時間の表示を1秒ごとに書き換える。0になったらその場でスタートできるようにする
   function renderCountdown() {
     const el = $("adGateTimer");
+
+    // サーバー時刻が取れていないと残り時間を確定できない。取れるまでは待たせる
+    if (!timeVerified()) {
+      el.innerHTML = `--:--:--<small>残り時間を確認しています…</small>`;
+      note("確認にはインターネット接続が必要です");
+      fetchServerOffset();
+      return;
+    }
+
     const remaining = cooldownRemaining();
     if (remaining <= 0) {
       stopCountdown();
@@ -14401,6 +14451,7 @@ const { adGateRequired, openAdGate, markRunStarted } = (() => {
       pass();
       return;
     }
+    note("");
     el.innerHTML = `${formatRemaining(remaining)}<small>次に周回を始められるまで</small>`;
   }
 
@@ -14601,7 +14652,15 @@ const { adGateRequired, openAdGate, markRunStarted } = (() => {
   return {
     adGateRequired: () => {
       // Play版: 24時間のスタート制限にかかっている間だけゲートを出す
-      if (isPlayStoreVersion()) return cooldownApplies() && cooldownRemaining() > 0;
+      if (isPlayStoreVersion()) {
+        if (!cooldownApplies()) return false;
+        // まだ一度もスタートしていない(制限がかかっていない)なら、通信できなくても通す
+        if (!(Number(state.nextStartAt) || 0)) return false;
+        // 制限中にサーバー時刻を確認できないときは通さない。
+        // 通すと、機内モードにして時計を進めるだけで制限を抜けられてしまう
+        if (!timeVerified()) return true;
+        return cooldownRemaining() > 0;
+      }
       // Web版はPlay課金が使えないため、旧Web版の広告非表示引き継ぎだけを購入扱いにする
       return !purchased && !legacyAdsRemoved();
     },
@@ -14609,7 +14668,7 @@ const { adGateRequired, openAdGate, markRunStarted } = (() => {
     // 周回スタートが通ったときに呼ぶ。次に始められる時刻を24時間先へ進める
     markRunStarted: () => {
       if (!cooldownApplies()) return;
-      state.nextStartAt = Date.now() + START_COOLDOWN_MS;
+      state.nextStartAt = now() + START_COOLDOWN_MS;
       saveGame();
     }
   };
