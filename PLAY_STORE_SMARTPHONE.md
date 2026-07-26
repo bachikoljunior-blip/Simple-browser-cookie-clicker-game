@@ -159,7 +159,7 @@ https://cookiestrateger.com/.well-known/assetlinks.json
 末尾の「Android 端末が無いことの影響」の代替手段を使ってください。**
 
 - [ ] URL バーが出ていない（出ていたら Step 4 を見直す）
-- [ ] 広告非表示の購入ダイアログが出る（先に `ad_free` の登録が必要 → `PLAY_STORE.md` §5）
+- [ ] スタート制限の解除の購入ダイアログが出る（先に `unlimited_start` の登録が必要 → `PLAY_STORE.md` §5）
 - [ ] Google ログイン（クラウドセーブ）が通る
 - [ ] ⚙設定 → 「アカウントとクラウドデータを削除」が動く
 - [ ] 転生 → スキルツリーが表示される
@@ -206,7 +206,7 @@ iPhone だけでは埋められない部分が2つあります。ビルドと Pl
 | ゲームが動くか・見た目 | ✅ 可能 | Safari で `cookiestrateger.com/play.html` を開けば中身は同じ |
 | Play 版の課金導線の見た目 | ✅ 可能 | Safari で `play.html?twa=1` を開くと Play 版判定を強制できる |
 | URL バーが出ていないか | ❌ 不可 | Android 実機、またはブラウザで使えるクラウド実機サービス |
-| `ad_free` の購入が通るか | ❌ 不可 | **内部テスト経由で入れた Android 実機のみ**。クラウド実機でも不可 |
+| `unlimited_start` の購入が通るか | ❌ 不可 | **内部テスト経由で入れた Android 実機のみ**。クラウド実機でも不可 |
 | TWA での Google ログイン | ❌ 不可 | Android 実機 |
 
 **クラウド実機サービス**（BrowserStack App Live、LambdaTest など）は Safari から
@@ -228,7 +228,7 @@ Android 端末を持つ知人を12人集めるか、テスター募集のコミ�
 
 1. まず iPhone だけで **内部テストまで**進める（AAB を作って Play に上げ、assetlinks を仕上げる）
 2. Android 端末を1台借りて、URL バーとログインを確認する
-3. `ad_free` を登録して、同じ端末で購入を1回確認する
+3. `unlimited_start` を登録して、同じ端末で購入を1回確認する
 4. そのうえでクローズドテストのテスターを集め始める
 
 **2 が終わるまでは製品版に出さないでください。** URL バーが出たままのアプリは

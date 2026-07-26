@@ -16,11 +16,34 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-  <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3280484274197291"
-       crossorigin="anonymous"></script>
+  <!-- Google AdSense
+       Google Play(TWA)版では広告を一切出さないので、AdSense のスクリプト自体を読み込まない。
+       Play判定は referrer(android-app://)と sessionStorage。ブラウザ版に漏れないよう
+       localStorage ではなく sessionStorage を使う(Android版ChromeはTWAとブラウザで共有するため)。
+       動作確認用に ?twa=1 でも Play版扱いにできる -->
+  <script>
+    window.isPlayStoreBuild = (function () {
+      try {
+        if (new URLSearchParams(location.search).get("twa") === "1") {
+          sessionStorage.setItem("cookie_game_twa_session", "1");
+        } else if (document.referrer && document.referrer.indexOf("android-app://") === 0) {
+          sessionStorage.setItem("cookie_game_twa_session", "1");
+        }
+        return sessionStorage.getItem("cookie_game_twa_session") === "1";
+      } catch (_) { return false; }
+    })();
+
+    if (!window.isPlayStoreBuild) {
+      var adsenseTag = document.createElement("script");
+      adsenseTag.async = true;
+      adsenseTag.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3280484274197291";
+      adsenseTag.crossOrigin = "anonymous";
+      document.head.appendChild(adsenseTag);
+    }
+  </script>
   <script>
     // 周回スタート時の広告表示に使うGames Ad Placement API用フック
+    // (Play版ではSDKを読み込まないので、push した内容は誰にも消費されず無害)
     window.adsbygoogle = window.adsbygoogle || [];
     window.adBreak = window.adBreak || function (o) { adsbygoogle.push(o); };
     window.adConfig = window.adConfig || function (o) { adsbygoogle.push(o); };
@@ -5633,6 +5656,29 @@
       min-height: 1em;
     }
 
+    /* 次にスタートできるまでの残り時間(Google Play版) */
+    .adGateTimer {
+      margin: 10px 0 14px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 213, 138, 0.28);
+      background: rgba(0, 0, 0, 0.3);
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      font-variant-numeric: tabular-nums;
+      color: #ffe3a6;
+    }
+
+    .adGateTimer small {
+      display: block;
+      margin-top: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0;
+      opacity: 0.72;
+    }
+
     .adGateSpinner {
       display: inline-block;
       width: 13px;
@@ -5914,13 +5960,14 @@
 </div>
 
 
-<!-- 周回スタート時の広告ゲート(広告視聴 / Google Play版のみ広告非表示の購入も選べる) -->
+<!-- 周回スタート時のゲート(Web版=広告視聴 / Google Play版=24時間に1回・買い切りで解除) -->
 <div id="adGateOverlay">
   <div class="adGatePanel">
     <h2>周回スタート</h2>
-    <p id="adGateDesc">広告を見てスタートするか、広告非表示(買い切り)を購入してください。購入後はこの画面が二度と表示されません。</p>
+    <p id="adGateDesc">広告を見ると周回をスタートできます。</p>
+    <div id="adGateTimer" class="adGateTimer" style="display:none"></div>
     <button id="adGateWatchBtn" class="adGateBtn" type="button">▶ 広告を見てスタート</button>
-    <button id="adGateBuyBtn" class="adGateBtn buy" type="button">広告非表示を購入してスタート</button>
+    <button id="adGateBuyBtn" class="adGateBtn buy" type="button">制限を解除する(買い切り)</button>
     <div id="adGateNote" class="adGateNote"></div>
     <button id="adGateBackBtn" class="adGateBackBtn" type="button">← スキル選択に戻る</button>
   </div>
@@ -6938,6 +6985,10 @@ function freshState() {
     lastSecondEarn: D(0),     // 直近1秒の実獲得(瞬間ペース): 注文報酬cookieの基準
     totalClicks: 0,
 
+    // 次に周回スタートできる時刻(ミリ秒)。Google Play版のスタート間隔制限に使う。
+    // 0 = 制限なし。初回転生後のスタートで初めてセットされる
+    nextStartAt: 0,
+
     prestige: 0,
     prestigeTotal: 0,
     prestigeBaseTotal: 0,
@@ -7051,6 +7102,8 @@ function ensureState() {
   state.emaLastRunCookies = D(state.emaLastRunCookies || 0);
   state.lastSecondEarn = D(state.lastSecondEarn || 0);
   state.totalClicks = Math.floor(Number(state.totalClicks) || 0);
+
+  state.nextStartAt = Math.max(0, Math.floor(Number(state.nextStartAt) || 0));
 
   state.prestige = Math.floor(Number(state.prestige) || 0);
   state.prestigeTotal = Math.floor(Number(state.prestigeTotal ?? state.prestige) || 0);
@@ -14208,10 +14261,11 @@ function beginRunAfterSkills() {
   showMessage("周回開始");
 }
 
-// ==== 周回スタート時の広告ゲート ====
-// 周回スタートを押した後に「広告を見てスタート」を選ばせる。Google Play(TWA)版では
-// 加えて「広告非表示の購入(Google Play課金)」も選べる。Web(ブラウザ)版は広告視聴のみで、
-// 旧Web版で広告非表示を購入済みだった端末/セーブはゲート自体を出さない。
+// ==== 周回スタート時のゲート ====
+// Web(ブラウザ)版: 「広告を見てスタート」。旧Web版で広告非表示を購入済みならゲート自体を出さない。
+// Google Play版: 広告を一切出さない代わりに「スタートは24時間に1回」。
+//   タイマーは初回転生よりあとのスタートで動き出し、次に始められる時刻を state.nextStartAt に持つ。
+//   買い切りのアプリ内アイテムを購入するとこの制限が外れ、以後いつでもスタートできる。
 //
 // 不正対策の方針:
 //  ・購入状態の「正」は Google Play(Digital Goods API の listPurchases)。localStorage はオフライン起動用の
@@ -14220,15 +14274,16 @@ function beginRunAfterSkills() {
 //  ・購入直後も listPurchases で本当に付与されたか確認してから解放する(端末側応答の偽装対策)
 //  ・購入状態と付与関数はこのクロージャ内に閉じ、コンソールから直接呼べる形では公開しない
 //  (サーバーを持たないため完全ではない。厳密にやる場合はバックエンド+Play Developer APIでの検証が必要)
-const { adGateRequired, openAdGate } = (() => {
-  const STORAGE_KEY = "cookie_game_ad_free_exist";
-  const PRODUCT_ID = "ad_free"; // Google Play Consoleで作成するアプリ内アイテムのID
+const { adGateRequired, openAdGate, markRunStarted } = (() => {
+  const STORAGE_KEY = "cookie_game_unlimited_start";
+  const PRODUCT_ID = "unlimited_start"; // Google Play Consoleで作成するアプリ内アイテムのID
   const BILLING_METHOD = "https://play.google.com/billing";
+  const START_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
   // キャッシュ検証トークン(FNV-1aハッシュ)。ソースを読めば再現できるが、
   // 値を "1" にする類の安易な改ざんを弾き、最終的な正はPlay照合が担う
   function cacheToken() {
-    const src = PRODUCT_ID + "|exist|adfree-v1|" + STORAGE_KEY;
+    const src = PRODUCT_ID + "|exist|unlimited-v1|" + STORAGE_KEY;
     let h = 0x811c9dc5;
     for (let i = 0; i < src.length; i++) {
       h ^= src.charCodeAt(i);
@@ -14251,17 +14306,36 @@ const { adGateRequired, openAdGate } = (() => {
     try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
   }
 
-  // Google Play(TWA)から起動されたか。TWAの初回ナビゲーションは referrer が android-app:// になるので
-  // それを sessionStorage に覚えてリロード後も判定を維持する(Android版ChromeはTWAとブラウザで
-  // localStorage を共有するため、ブラウザ版に漏れない sessionStorage を使う)。動作確認用に ?twa=1 でも有効化できる
+  // Google Play(TWA)から起動されたか。判定は <head> で済ませて window.isPlayStoreBuild に入れてある
+  // (AdSense のスクリプトを読み込むかどうかを、そこで決める必要があるため)。
+  // referrer は初回ナビゲーションでしか見られないので、判定結果は sessionStorage に残している。
   function isPlayStoreVersion() {
+    if (window.isPlayStoreBuild) return true;
     try {
-      if (new URLSearchParams(location.search).get("twa") === "1") return true;
-      if (document.referrer && document.referrer.indexOf("android-app://") === 0) {
-        sessionStorage.setItem("cookie_game_twa_session", "1");
-      }
       return sessionStorage.getItem("cookie_game_twa_session") === "1";
     } catch (_) { return false; }
+  }
+
+  // 次にスタートできるまでの残り時間(ミリ秒)。0 なら今すぐスタートできる。
+  // 端末の時計を戻す改ざんに対しては、残りが24時間を超えることはないので上限で丸める
+  function cooldownRemaining() {
+    const next = Math.max(0, Number(state.nextStartAt) || 0);
+    if (!next) return 0;
+    return Math.min(START_COOLDOWN_MS, Math.max(0, next - Date.now()));
+  }
+
+  function formatRemaining(ms) {
+    const total = Math.ceil(ms / 1000);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    const pad = n => String(n).padStart(2, "0");
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  }
+
+  // スタート間隔の制限を受ける状態か。購入済み・Web版・初回転生前は制限なし
+  function cooldownApplies() {
+    return isPlayStoreVersion() && !purchased && (Number(state.prestigeRuns) || 0) >= 1;
   }
 
   // Google Play に購入状態を問い合わせる。true/false=確定、null=確認できず(API無し・オフライン等)
@@ -14305,6 +14379,7 @@ const { adGateRequired, openAdGate } = (() => {
   }
 
   let onPass = null;
+  let timerHandle = null;
 
   // ボタンの表示を初期状態(押せる状態)に戻す
   function resetButtons() {
@@ -14313,23 +14388,60 @@ const { adGateRequired, openAdGate } = (() => {
     watch.disabled = false;
     watch.textContent = "▶ 広告を見てスタート";
     buy.disabled = false;
-    buy.textContent = "広告非表示を購入してスタート";
+    buy.textContent = "制限を解除する(買い切り)";
+  }
+
+  // 残り時間の表示を1秒ごとに書き換える。0になったらその場でスタートできるようにする
+  function renderCountdown() {
+    const el = $("adGateTimer");
+    const remaining = cooldownRemaining();
+    if (remaining <= 0) {
+      stopCountdown();
+      note("");
+      pass();
+      return;
+    }
+    el.innerHTML = `${formatRemaining(remaining)}<small>次に周回を始められるまで</small>`;
+  }
+
+  function stopCountdown() {
+    if (timerHandle) clearInterval(timerHandle);
+    timerHandle = null;
   }
 
   function open(fn) {
     onPass = fn;
     note("");
     resetButtons();
-    // 広告非表示の購入はGoogle Play版のみ。Web版では視聴ボタンだけを見せる
+    stopCountdown();
+
+    // Google Play版は広告を出さない。代わりに24時間に1回のスタート制限を見せ、
+    // 買い切りで解除できるようにする。Web版はこれまで通り広告視聴で通す
     const playVer = isPlayStoreVersion();
+    const timerEl = $("adGateTimer");
+
+    $("adGateWatchBtn").style.display = playVer ? "none" : "";
     $("adGateBuyBtn").style.display = playVer ? "" : "none";
+    timerEl.style.display = playVer ? "" : "none";
+
     $("adGateDesc").textContent = playVer
-      ? "広告を見てスタートするか、広告非表示(買い切り)を購入してください。購入後はこの画面が二度と表示されません。"
+      ? "周回のスタートは24時間に1回です。買い切りで制限を解除すると、いつでも始められるようになります。"
       : "広告を見ると周回をスタートできます。";
+
+    // カウントダウンは表示状態にしてから始める。先に回すと、残り0のときに
+    // pass() → close() が走ったあとで active が付き、ゲートが開いたままになる
     $("adGateOverlay").classList.add("active");
+
+    if (playVer) {
+      renderCountdown();
+      if (timerHandle === null && $("adGateOverlay").classList.contains("active")) {
+        timerHandle = setInterval(renderCountdown, 1000);
+      }
+    }
   }
 
   function close() {
+    stopCountdown();
     $("adGateOverlay").classList.remove("active");
     onPass = null;
   }
@@ -14394,10 +14506,9 @@ const { adGateRequired, openAdGate } = (() => {
       note(msg);
     };
 
+    // 広告視聴はWeb版だけの導線(Play版は視聴ボタンを出さない)なので、案内も1つで足りる
     if (!navigator.onLine) {
-      block(isPlayStoreVersion()
-        ? "オフラインのため広告を表示できません。通信環境をご確認いただくか、広告非表示をご購入ください"
-        : "オフラインのため広告を表示できません。通信環境をご確認ください");
+      block("オフラインのため広告を表示できません。通信環境をご確認ください");
       return;
     }
 
@@ -14441,10 +14552,10 @@ const { adGateRequired, openAdGate } = (() => {
     });
   }
 
-  // 広告非表示(買い切り)を Google Play 課金で購入する。
-  // TWA + Digital Goods API + Payment Request API 構成(Bubblewrap/PWABuilder で Play Billing の有効化が必要)。
+  // スタート制限の解除(買い切り)を Google Play 課金で購入する。
+  // TWA + Digital Goods API + Payment Request API 構成(Bubblewrap で Play Billing の有効化が必要)。
   // 購入の承認(acknowledge)はTWA側ライブラリ(android-browser-helper billing)が行う
-  async function purchaseAdFree() {
+  async function purchaseUnlimitedStart() {
     if (!("getDigitalGoodsService" in window) || !window.PaymentRequest) {
       note("購入は Google Play 版アプリでのみ利用できます");
       return;
@@ -14461,7 +14572,7 @@ const { adGateRequired, openAdGate } = (() => {
       const item = details[0];
       const request = new PaymentRequest(
         [{ supportedMethods: BILLING_METHOD, data: { sku: PRODUCT_ID } }],
-        { total: { label: item.title || "広告非表示", amount: item.price } }
+        { total: { label: item.title || "スタート制限の解除", amount: item.price } }
       );
       const response = await request.show();
       await response.complete("success");
@@ -14470,7 +14581,7 @@ const { adGateRequired, openAdGate } = (() => {
       if ((await playOwnsItem()) === false) throw new Error("not-owned");
       grant();
       note("");
-      showMessage("広告非表示を購入しました。ありがとうございます!");
+      showMessage("スタート制限を解除しました。ありがとうございます!");
       playSound("start");
       pass();
     } catch (_) {
@@ -14481,19 +14592,26 @@ const { adGateRequired, openAdGate } = (() => {
   }
 
   addTap($("adGateWatchBtn"), showAdThenPass);
-  addTap($("adGateBuyBtn"), () => { purchaseAdFree(); });
+  addTap($("adGateBuyBtn"), () => { purchaseUnlimitedStart(); });
   addTap($("adGateBackBtn"), () => {
     playSound("tab");
     close();
   });
 
   return {
-    // Web版はPlay課金が使えないため、旧Web版の広告非表示引き継ぎだけを購入扱いにする
     adGateRequired: () => {
-      if (isPlayStoreVersion()) return !purchased;
+      // Play版: 24時間のスタート制限にかかっている間だけゲートを出す
+      if (isPlayStoreVersion()) return cooldownApplies() && cooldownRemaining() > 0;
+      // Web版はPlay課金が使えないため、旧Web版の広告非表示引き継ぎだけを購入扱いにする
       return !purchased && !legacyAdsRemoved();
     },
-    openAdGate: open
+    openAdGate: open,
+    // 周回スタートが通ったときに呼ぶ。次に始められる時刻を24時間先へ進める
+    markRunStarted: () => {
+      if (!cooldownApplies()) return;
+      state.nextStartAt = Date.now() + START_COOLDOWN_MS;
+      saveGame();
+    }
   };
 })();
 
@@ -14532,13 +14650,19 @@ addTap($("skillStartBtn"), () => {
     return;
   }
 
-  // Google Play版のみ: スタートの前に広告ゲート(広告視聴 or 広告非表示購入)を挟む
+  // スタートの前にゲートを挟む。Web版は広告視聴、Google Play版は24時間の
+  // スタート制限(買い切りで解除可)。制限にかかっていなければそのまま通る
+  const startRun = () => {
+    markRunStarted();
+    proceedRunStartFlow();
+  };
+
   if (adGateRequired()) {
-    openAdGate(proceedRunStartFlow);
+    openAdGate(startRun);
     return;
   }
 
-  proceedRunStartFlow();
+  startRun();
 });
 
 function upgradeArt(u) {
@@ -15956,6 +16080,9 @@ function prestigeReset() {
   const keepEverFeatures = { ...(state.everFeatures || {}) };
   const keepPrestigeRuns = state.prestigeRuns + 1;
   const keepSkills = state.skills;
+  // スタート制限の残り時間は転生をまたいで持ち越す。
+  // ここで freshState の 0 に戻すと、転生するたびに制限が消えてしまう
+  const keepNextStartAt = Math.max(0, Math.floor(Number(state.nextStartAt) || 0));
 
   // 転生持ち越し: 素材・レシピ開示・装備・工房解放・ステージ解放・討伐数
   // (料理バフ・現在ステージ・段階購入(researchStages)は持ち越さない=freshStateの初期値に戻る)
@@ -16011,6 +16138,7 @@ function prestigeReset() {
   state.prestigeBaseTotal = keepPrestigeBaseTotal;
   state.quotaBonusTotal = keepQuotaBonusTotal;
   state.prestigeRuns = keepPrestigeRuns;
+  state.nextStartAt = keepNextStartAt;
   state.quotaActive = true;
   state.quotaFailed = false;
   state.quotaHoldSeconds = 0;

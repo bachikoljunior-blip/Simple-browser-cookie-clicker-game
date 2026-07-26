@@ -2,7 +2,7 @@
 
 このサイトは PWA として完成しており、`play.html` には既に
 Google Play 版の判定（`android-app://` referrer）と Digital Goods API による
-`ad_free` 課金が実装済みです。したがって **TWA（Trusted Web Activity）** として
+`unlimited_start` 課金が実装済みです。したがって **TWA（Trusted Web Activity）** として
 パッケージ化するのが最短ルートです。Web を更新すればアプリ側も自動で更新されます。
 
 以下は「Play Console のアカウント登録が済んでいる」状態からの手順です。
@@ -37,11 +37,11 @@ Google Play 版の判定（`android-app://` referrer）と Digital Goods API に
 **あなたにしかできないこと**は次の6つだけです。すべてローカル環境か Play Console 上の操作で、
 このリポジトリからは代行できません。
 
-1. **署名鍵（キーストア）の作成**とパスワード管理 — 失うとアプリを更新できなくなります
-2. **`bubblewrap build` の実行** — JDK と Android SDK が入った手元の PC が必要
-3. **署名鍵の SHA-256 指紋を `.well-known/assetlinks.json` に記入して push**（§3）
+1. **署名鍵のパスフレーズを決めて Secret に登録**（PC 版なら鍵ファイルの管理）— 失うとアプリを更新できなくなります
+2. **ビルドの実行** — PC なら `bubblewrap build`、スマホなら Actions の「2. Androidアプリをビルド」
+3. **Play アプリ署名鍵の指紋を assetlinks.json に反映**（PC なら §3、スマホなら Actions の「3.」）
 4. **Play Console での入力・アップロード**（`store/` の素材とテキストを貼るだけ）
-5. **販売者アカウント（Payments profile）の設定**と `ad_free` の登録（§5）
+5. **販売者アカウント（Payments profile）の設定**と `unlimited_start` の登録（§5）
 6. **実機での動作確認**と**クローズドテストのテスター12人集め**（§6・§7）
 
 ---
@@ -54,7 +54,7 @@ Google Play 版の判定（`android-app://` referrer）と Digital Goods API に
 | 2 | Bubblewrap で TWA プロジェクト生成・AAB ビルド | PC | 1時間 |
 | 3 | Digital Asset Links を本サイトに設置 | このリポジトリ | 15分 |
 | 4 | Play Console でアプリ作成・掲載情報・各種申告 | Play Console | 2〜4時間 |
-| 5 | アプリ内アイテム `ad_free` を登録 | Play Console | 30分 |
+| 5 | アプリ内アイテム `unlimited_start` を登録 | Play Console | 30分 |
 | 6 | 内部テストで実機確認（課金・ログイン・URLバー） | 実機 | 1時間 |
 | 7 | クローズドテスト 12人 × 14日 → 製品版アクセス申請 | Play Console | **最短14日 + 審査** |
 | 8 | 製品版公開 | Play Console | 審査数日 |
@@ -102,7 +102,7 @@ bubblewrap init --manifest https://cookiestrateger.com/manifest.json
 | Splash screen color | `#1d130d` |
 | Icon URL | `https://cookiestrateger.com/icons/icon-512.png` |
 | Maskable icon URL | `https://cookiestrateger.com/icons/icon-maskable-512.png` |
-| Include support for Play Billing? | **Yes**（`ad_free` の課金に必須） |
+| Include support for Play Billing? | **Yes**（`unlimited_start` の課金に必須） |
 | Signing key | 新規作成。**キーストアとパスワードは絶対に失くさない**（失うとアプリ更新不可） |
 
 生成された `twa-manifest.json` は、**このリポジトリの `store/android/twa-manifest.json` と
@@ -112,7 +112,7 @@ bubblewrap init --manifest https://cookiestrateger.com/manifest.json
 |---|---|---|
 | `startUrl` | `/play.html` | ゲーム本体を直接起動する |
 | `orientation` | `portrait` | 縦持ち固定 |
-| `features.playBilling.enabled` | `true` | `ad_free` の Play 課金に必須 |
+| `features.playBilling.enabled` | `true` | `unlimited_start` の Play 課金に必須 |
 | `alphaDependencies.enabled` | `true` | Play Billing 用の依存を有効化するために必要 |
 | `enableNotifications` | **`true`** | Play Billing 有効時は必須。`false` だとビルドがエラーで止まります |
 | `appVersion` | `"1.0.0"` | バージョン名のキーは `appVersion`。**`appVersionName` と書いても無視されます** |
@@ -225,10 +225,10 @@ curl -i https://cookiestrateger.com/.well-known/assetlinks.json
 上から順に写していけば埋まります。要点だけ挙げると：
 
 - **プライバシーポリシー**: `https://cookiestrateger.com/privacy.html`
-- **広告**: 「はい」
+- **広告**: 「**いいえ**」（Play 版は広告を出さないため。§8-1 参照）
 - **アプリのアクセス権限**: 制限なし（テストアカウント提出は不要）
-- **ターゲットユーザー**: **12歳以下を含めない**。含めるとファミリー向けポリシーの広告規制で
-  現在の AdSense 構成が通らなくなる可能性が高いです
+- **ターゲットユーザー**: **12歳以下を含めない**。含めるとファミリー向けプログラムの対象になり、
+  審査項目とアプリ内購入まわりの要件が増えます
 - **データセーフティ**: ユーザーID とセーブデータの収集、広告用の識別子の共有を申告
 - **アカウント削除**: 実装済みです。アプリ内（⚙設定 → クラウド保存 →
   「アカウントとクラウドデータを削除」）と、Web の削除リクエスト URL
@@ -236,15 +236,15 @@ curl -i https://cookiestrateger.com/.well-known/assetlinks.json
 
 ---
 
-## 5. アプリ内アイテム `ad_free` の登録
+## 5. アプリ内アイテム `unlimited_start` の登録
 
 収益化 → アプリ内アイテム → アプリ内アイテムを作成：
 
 | 項目 | 値 |
 |---|---|
-| 商品 ID | **`ad_free`** ← `play.html` にハードコードされているので完全一致必須 |
+| 商品 ID | **`unlimited_start`** ← `play.html` にハードコードされているので完全一致必須 |
 | 種類 | 1回限りの購入（買い切り） |
-| 名前 / 説明 | 「広告非表示」など |
+| 名前 / 説明 | 「スタート制限の解除」など |
 | 価格 | 任意 |
 | ステータス | **「有効」にする**（作っただけでは購入できません） |
 
@@ -259,7 +259,7 @@ curl -i https://cookiestrateger.com/.well-known/assetlinks.json
 テスターとして自分の Google アカウントを登録 → 配布リンクからインストールして確認：
 
 - [ ] URL バーが出ていない（= assetlinks が効いている）
-- [ ] `ad_free` の購入ダイアログが出て、購入後に広告ゲートが消える
+- [ ] `unlimited_start` の購入ダイアログが出て、購入後にスタート制限が消える
 - [ ] 一度アンインストール→再インストールしても購入状態が復元される（`listPurchases` 経由）
 - [ ] Google ログイン（クラウドセーブ）が成功する ← §8-2 参照
 - [ ] ⚙設定 →「アカウントとクラウドデータを削除」が動く（Play の申告内容と一致すること）
@@ -291,14 +291,29 @@ curl -i https://cookiestrateger.com/.well-known/assetlinks.json
 
 ## 8. このアプリ特有の注意点
 
-### 8-1. AdSense H5 Games Ads とアプリ配信（要確認・重要）
+### 8-1. 広告は Play 版だけ出さない（AdSense のリスクを回避）
 
-現在の広告は AdSense の H5 Games Ads（`adBreak` / `adConfig`, `ca-pub-3280484274197291`）です。
-Google のポリシー上、**自分が所有するアプリにゲームを埋め込んで配信する場合は
-AdMob を使うのが正規ルート**とされています。TWA は WebView ではなく Chrome の実体なので
-グレーゾーンではありますが、AdSense アカウント側の措置リスクがあります。
-公開前に AdSense サポートに「TWA での Play 配信」について確認しておくことを勧めます。
-（Play 側の審査というより AdSense 側の規約の問題です）
+当初は AdSense の H5 Games Ads をそのままアプリでも出す構成でしたが、
+Google のポリシーは「自分が所有するアプリに埋め込むなら AdMob を使え」としており、
+グレーゾーンでした。かといって **AdMob は TWA では技術的に使えません**
+（AdMob は Android ネイティブ SDK で、Chrome が全画面を描画する TWA の上に
+広告ビューを重ねる手段がありません）。
+
+そこで **Play 版では広告を一切出さない**構成にしました。
+
+- `play.html` の `<head>` で Play 版（TWA）と判定した場合、
+  **AdSense のスクリプトそのものを読み込みません**（`window.isPlayStoreBuild`）
+- 広告の代わりに「周回スタートは24時間に1回」の制限を設け、
+  買い切りの `unlimited_start` で解除できるようにしています
+- 制限は**初回の転生よりあとのスタートから**かかります。それまでは自由に遊べます
+- 残り時間は `state.nextStartAt` に持ち、転生をまたいでも持ち越します
+
+**ブラウザ版（cookiestrateger.com）は従来どおり AdSense を表示します。**
+アプリ外のウェブサイトなので Play のポリシーには関係せず、収益もそのままです。
+
+> 注意: 24時間に1回という制限はかなり強い作りです。ストアの説明文には
+> `store/listing.md` で明記してありますが、レビューで不満が出やすい設計ではあります。
+> 緩めたい場合は `play.html` の `START_COOLDOWN_MS` の値を変えれば調整できます。
 
 ### 8-2. TWA での Google ログイン（対応済み・要動作確認）
 
