@@ -1,0 +1,126 @@
+name: 3. assetlinks.json を更新
+
+# Digital Asset Links (.well-known/assetlinks.json) を自動生成して commit します。
+# これが正しく置かれていないと、アプリ内に Chrome の URL バーが出たままになります。
+#
+# 必要なのは Play Console の「アプリ署名鍵」の SHA-256 指紋だけです。
+# Play Console → テストとリリース → 設定 → アプリの署名 →
+# 「アプリ署名鍵の証明書」の SHA-256 証明書フィンガープリントをコピーして貼ってください。
+# アップロード鍵の指紋は暗号化済みキーストアから自動で取り出します。
+
+on:
+  workflow_dispatch:
+    inputs:
+      play_signing_sha256:
+        description: 'Play の「アプリ署名鍵」の SHA-256 指紋(AA:BB:... 形式。まだ無ければ空でOK)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  assetlinks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: アップロード鍵の指紋を取り出す
+        env:
+          PASS: ${{ secrets.ANDROID_KEYSTORE_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          ENC=store/android/upload-keystore.jks.enc
+          if [ ! -f "$ENC" ]; then
+            echo "::error::$ENC がありません。先に「1. 署名鍵をつくる」を実行してください。"
+            exit 1
+          fi
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -md sha512 \
+            -in "$ENC" -out /tmp/upload-keystore.jks -pass env:PASS \
+            || { echo "::error::復号に失敗しました。ANDROID_KEYSTORE_PASSPHRASE を確認してください。"; exit 1; }
+          SHA256=$(keytool -list -v -keystore /tmp/upload-keystore.jks \
+            -alias upload -storepass "$PASS" \
+            | grep -m1 'SHA256:' | sed 's/.*SHA256: *//')
+          echo "UPLOAD_SHA256=$SHA256" >> "$GITHUB_ENV"
+          shred -u /tmp/upload-keystore.jks
+
+      - name: assetlinks.json を生成
+        env:
+          PLAY_SHA256: ${{ inputs.play_signing_sha256 }}
+        run: |
+          set -euo pipefail
+          node -e '
+            const fs = require("fs");
+            const pkg = JSON.parse(fs.readFileSync("store/android/twa-manifest.json", "utf8")).packageId;
+
+            const norm = s => (s || "").trim().toUpperCase().replace(/[^0-9A-F:]/g, "");
+            const valid = s => /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/.test(s);
+
+            const prints = [];
+            for (const [label, raw] of [["アップロード鍵", process.env.UPLOAD_SHA256],
+                                       ["Playアプリ署名鍵", process.env.PLAY_SHA256]]) {
+              const v = norm(raw);
+              if (!v) { console.log(`- ${label}: 未指定のため入れません`); continue; }
+              if (!valid(v)) throw new Error(`${label} の指紋の形式が不正です: ${raw}`);
+              if (!prints.includes(v)) prints.push(v);
+              console.log(`- ${label}: ${v}`);
+            }
+            if (!prints.length) throw new Error("指紋が1つもありません");
+
+            const doc = [{
+              relation: ["delegate_permission/common.handle_all_urls"],
+              target: { namespace: "android_app", package_name: pkg, sha256_cert_fingerprints: prints }
+            }];
+            fs.mkdirSync(".well-known", { recursive: true });
+            fs.writeFileSync(".well-known/assetlinks.json", JSON.stringify(doc, null, 2) + "\n");
+            console.log(`\npackage_name: ${pkg} / 指紋 ${prints.length} 件を書き込みました`);
+          '
+          cat .well-known/assetlinks.json
+
+      - name: .nojekyll があることを確認
+        run: |
+          # GitHub Pages(Jekyll)はドットで始まるディレクトリを配信しないため、
+          # .nojekyll が無いと assetlinks.json が 404 になる
+          if [ ! -f .nojekyll ]; then
+            touch .nojekyll
+            echo "::notice::.nojekyll が無かったので作成しました"
+          fi
+
+      - name: commit する
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .well-known/assetlinks.json .nojekyll
+          if git diff --cached --quiet; then
+            echo "変更なし。commit しません。"
+            exit 0
+          fi
+          git commit -m "assetlinks.json を更新(署名鍵の指紋を反映)"
+          git push
+
+      - name: 次にやることを表示
+        run: |
+          {
+            echo "## assetlinks.json を更新しました"
+            echo
+            echo "GitHub Pages の反映(1〜2分)を待ってから、次の URL が JSON を返すか確認してください。"
+            echo
+            echo "- https://cookiestrateger.com/.well-known/assetlinks.json"
+            echo
+            echo "Google の検証ツールでも確認できます。"
+            echo
+            echo "- https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://cookiestrateger.com\&relation=delegate_permission/common.handle_all_urls"
+            echo
+            if [ -z "${{ inputs.play_signing_sha256 }}" ]; then
+              echo "> ⚠️ **Play のアプリ署名鍵の指紋がまだ入っていません。**"
+              echo "> Play Console に AAB を1回アップロードすると指紋が発行されるので、"
+              echo "> そのあとこのワークフローをもう一度実行して指紋を貼ってください。"
+              echo "> これを入れないと、製品版のアプリで URL バーが出たままになります。"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
