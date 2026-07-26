@@ -95,7 +95,7 @@ bubblewrap init --manifest https://cookiestrateger.com/manifest.json
 | URL path | `/play.html` （ゲーム本体を直接起動する） |
 | Application name | `クッキーストラテジャー` |
 | Short name | `クキスト` |
-| Application ID (package) | `com.cookiestrateger.app` ← **公開後は永久に変更不可**。慎重に |
+| Application ID (package) | `com.cookiestrateger.game` ← **公開後は永久に変更不可**。慎重に |
 | Display mode | `standalone` |
 | Orientation | `portrait` |
 | Status bar / Nav bar color | `#1d130d` |
@@ -176,7 +176,7 @@ bubblewrap fingerprint generateAssetLinks
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.cookiestrateger.app",
+      "package_name": "com.cookiestrateger.game",
       "sha256_cert_fingerprints": ["<アップロード鍵>", "<Playアプリ署名鍵>"]
     }
   }
