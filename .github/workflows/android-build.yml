@@ -61,18 +61,40 @@ jobs:
             -in "$KEYSTORE_ENC" -out android-build/upload-keystore.jks -pass env:PASS \
             || { echo "::error::復号に失敗しました。ANDROID_KEYSTORE_PASSPHRASE が鍵の作成時と違います。"; exit 1; }
 
-      - name: Bubblewrap を用意
+      - name: Bubblewrap と Android SDK を用意
         run: |
           set -euo pipefail
           npm install -g @bubblewrap/cli@1.24.1
           npm install --no-save @bubblewrap/core@1.24.1
-          # 対話プロンプト(JDK/SDK を入れるか)を出させないため、
-          # ランナーに入っている JDK と Android SDK を先に指定しておく
+
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          echo "Android SDK: $SDK"
+          ls "$SDK"
+
+          # sdkmanager の実体を探す。GitHub のランナーでは cmdline-tools 配下にある
+          SDKMGR=$(ls -d "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | tail -1 || true)
+          [ -n "$SDKMGR" ] || SDKMGR=$(command -v sdkmanager || true)
+          if [ -z "$SDKMGR" ]; then
+            echo "::error::sdkmanager が見つかりません"
+            exit 1
+          fi
+          echo "sdkmanager: $SDKMGR"
+
+          # bubblewrap は SDK の妥当性を「<sdk>/tools か <sdk>/bin があるか」だけで判定し、
+          # sdkmanager も <sdk>/tools/bin か <sdk>/bin からしか探さない。
+          # ランナーの SDK は cmdline-tools 配下にしか無いので、bin を作って橋渡しする
+          mkdir -p "$SDK/bin"
+          ln -sf "$SDKMGR" "$SDK/bin/sdkmanager"
+
+          # bubblewrap が決め打ちで使う build-tools 34.0.0(zipalign/apksigner)と、
+          # compileSdk 用のプラットフォームを先に入れておく
+          yes | "$SDKMGR" --licenses > /dev/null 2>&1 || true
+          "$SDKMGR" "platform-tools" "build-tools;34.0.0" "platforms;android-${{ inputs.target_sdk }}"
+
+          # 対話プロンプト(JDK/SDK を入れるか)を出させないため、使うパスを先に指定しておく
           mkdir -p ~/.bubblewrap
-          printf '{"jdkPath":"%s","androidSdkPath":"%s"}\n' \
-            "$JAVA_HOME" "${ANDROID_SDK_ROOT:-$ANDROID_HOME}" > ~/.bubblewrap/config.json
+          printf '{"jdkPath":"%s","androidSdkPath":"%s"}\n' "$JAVA_HOME" "$SDK" > ~/.bubblewrap/config.json
           cat ~/.bubblewrap/config.json
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
 
       - name: プロジェクトを組み立てる
         env:
