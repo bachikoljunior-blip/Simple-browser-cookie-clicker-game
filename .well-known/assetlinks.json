@@ -1,12 +1,13 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "com.cookiestrateger.app",
       "sha256_cert_fingerprints": [
-        "PLACEHOLDER_UPLOAD_KEY_SHA256_REPLACE_ME",
-        "PLACEHOLDER_PLAY_APP_SIGNING_KEY_SHA256_REPLACE_ME"
+        "40:F7:02:BE:82:C5:A6:BA:3B:72:19:24:A1:3C:0A:89:56:86:40:7B:8E:71:63:CD:1C:43:57:46:0C:21:5D:BD"
       ]
     }
   }
