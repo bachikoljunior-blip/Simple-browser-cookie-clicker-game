@@ -1,0 +1,43 @@
+{
+  "packageId": "com.cookiestrateger.app",
+  "host": "cookiestrateger.com",
+  "name": "クッキーストラテジャー",
+  "launcherName": "クキスト",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#1d130d",
+  "themeColorDark": "#1d130d",
+  "navigationColor": "#1d130d",
+  "navigationColorDark": "#1d130d",
+  "navigationDividerColor": "#1d130d",
+  "navigationDividerColorDark": "#1d130d",
+  "backgroundColor": "#1d130d",
+  "startUrl": "/play.html",
+  "webManifestUrl": "https://cookiestrateger.com/manifest.json",
+  "iconUrl": "https://cookiestrateger.com/icons/icon-512.png",
+  "maskableIconUrl": "https://cookiestrateger.com/icons/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "minSdkVersion": 23,
+  "enableNotifications": false,
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fallbackType": "customtabs",
+  "shortcuts": [],
+  "features": {
+    "playBilling": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": true
+  },
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "android"
+  },
+  "fingerprints": [],
+  "generatorApp": "bubblewrap-cli"
+}

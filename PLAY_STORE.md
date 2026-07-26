@@ -9,6 +9,35 @@ Google Play 版の判定（`android-app://` referrer）と Digital Goods API に
 
 ---
 
+## 準備済みのもの / これから必要なもの
+
+このリポジトリ側で用意できるものは生成・実装済みです。
+
+| ファイル | 中身 |
+|---|---|
+| `store/listing.md` | アプリ名・簡単な説明・詳しい説明（文字数チェック済み・コピペ用） |
+| `store/play-console-answers.md` | データセーフティ / レーティング / 対象年齢など**全申告フォームの回答** |
+| `store/app_icon_512.png` | アプリアイコン 512×512 |
+| `store/feature_graphic_1024x500.png` | フィーチャーグラフィック 1024×500 |
+| `store/screenshots/01〜07*.png` | スマートフォン用スクリーンショット 1080×1920（実機相当・実画面） |
+| `store/android/twa-manifest.json` | Bubblewrap 設定ファイル（署名鍵の項目だけ要記入） |
+| `.well-known/assetlinks.json` | Digital Asset Links（指紋だけ要記入） |
+| `.nojekyll` | GitHub Pages で `.well-known/` を配信させるための必須ファイル |
+| `privacy.html` §3 | アカウント削除の手順と削除リクエスト窓口（Play の必須要件） |
+| `play.html` | アプリ内のアカウント削除ボタン、TWA でのログイン失敗時のリダイレクト切替 |
+
+**あなたにしかできないこと**は次の6つだけです。すべてローカル環境か Play Console 上の操作で、
+このリポジトリからは代行できません。
+
+1. **署名鍵（キーストア）の作成**とパスワード管理 — 失うとアプリを更新できなくなります
+2. **`bubblewrap build` の実行** — JDK と Android SDK が入った手元の PC が必要
+3. **署名鍵の SHA-256 指紋を `.well-known/assetlinks.json` に記入して push**（§3）
+4. **Play Console での入力・アップロード**（`store/` の素材とテキストを貼るだけ）
+5. **販売者アカウント（Payments profile）の設定**と `ad_free` の登録（§5）
+6. **実機での動作確認**と**クローズドテストのテスター12人集め**（§6・§7）
+
+---
+
 ## 0. 全体の流れ
 
 | # | やること | 場所 | 所要 |
@@ -68,22 +97,21 @@ bubblewrap init --manifest https://cookiestrateger.com/manifest.json
 | Include support for Play Billing? | **Yes**（`ad_free` の課金に必須） |
 | Signing key | 新規作成。**キーストアとパスワードは絶対に失くさない**（失うとアプリ更新不可） |
 
-生成された `twa-manifest.json` で以下を確認・修正します：
+生成された `twa-manifest.json` は、**このリポジトリの `store/android/twa-manifest.json` と
+見比べて差分を埋めてください**（値はすべてこのアプリ用に設定済みです）。特に重要なのは以下です。
 
-```jsonc
-{
-  "packageId": "com.cookiestrateger.app",
-  "host": "cookiestrateger.com",
-  "startUrl": "/play.html",
-  "appVersionCode": 1,
-  "appVersionName": "1.0.0",
-  "orientation": "portrait",
-  "display": "standalone",
-  "fallbackType": "customtabs",
-  "alphaDependencies": { "enabled": true },      // Play Billing に必要
-  "features": { "playBilling": { "enabled": true } }
-}
-```
+| キー | 値 | 理由 |
+|---|---|---|
+| `startUrl` | `/play.html` | ゲーム本体を直接起動する |
+| `orientation` | `portrait` | 縦持ち固定 |
+| `features.playBilling.enabled` | `true` | `ad_free` の Play 課金に必須 |
+| `alphaDependencies.enabled` | `true` | Play Billing 用の依存を有効化するために必要 |
+| `fallbackType` | `customtabs` | TWA 非対応端末で Custom Tabs にフォールバック |
+| `signingKey.path` / `alias` | **手元のキーストアに合わせる** | ここだけはこちらで埋められません |
+
+`bubblewrap init` が生成する項目名はバージョンで変わることがあるので、
+**生成されたファイルを土台にして値を移す**方向で作業してください
+（こちらのファイルで丸ごと上書きしないほうが安全です）。
 
 編集したら反映してビルド：
 
@@ -169,33 +197,32 @@ curl -i https://cookiestrateger.com/.well-known/assetlinks.json
 
 ### 4-1. ストアの掲載情報
 
-| 項目 | 内容 |
-|---|---|
-| アプリ名 | 30文字以内（例: `クッキーストラテジャー`） |
-| 簡単な説明 | 80文字以内 |
-| 詳しい説明 | 4000文字以内（`index.html` の説明文を流用できます） |
-| アプリアイコン | 512×512 PNG → `icons/icon-512.png` がそのまま使えます |
-| フィーチャーグラフィック | **1024×500 PNG/JPG。新規に作る必要あり** |
-| スクリーンショット（スマホ） | **最低2枚**、推奨4〜8枚。9:16 の 1080×1920 など |
+**テキストは `store/listing.md` にコピペ用で用意済み**（文字数上限チェック済み。
+`python3 store/check_listing.py` で再検証できます）。素材も生成済みです。
+
+| 項目 | 使うファイル | 状態 |
+|---|---|---|
+| アプリ名 / 簡単な説明 / 詳しい説明 | `store/listing.md` | ✅ 作成済み |
+| アプリアイコン 512×512 | `store/app_icon_512.png` | ✅ 生成済み |
+| フィーチャーグラフィック 1024×500 | `store/feature_graphic_1024x500.png` | ✅ 生成済み |
+| スクリーンショット（スマホ・最低2枚） | `store/screenshots/*.png` （1080×1920 が7枚） | ✅ 生成済み |
+| タブレット用スクリーンショット | — | 任意。無くても公開できます |
 
 ### 4-2. 「アプリのコンテンツ」— 全項目の入力が公開の前提条件
 
-- **プライバシーポリシー**: `https://cookiestrateger.com/privacy.html`（設置済み）
-- **広告**: 「はい、広告が含まれています」
-- **アプリのアクセス権限**: ログイン無しで全機能が遊べるので「制限なし」。テスト用アカウント提出は不要
-- **コンテンツのレーティング**: IARC 質問票に回答（このゲームなら全年齢相当）
-- **ターゲットユーザーとコンテンツ**: 対象年齢層を選択。
-  **13歳未満を含めるとファミリー向けポリシー＋広告規制が一気に厳しくなる**ので、
-  意図が無ければ含めない方が通しやすいです
-- **データセーフティ**: Google ログインでクラウドセーブを使うので、正直に申告が必要です。
-  - 収集する: 「個人情報 → ユーザー ID」（Firebase の uid）、「アプリのアクティビティ → アプリ内のアクション」（セーブデータ）
-  - 用途: アプリの機能（セーブ同期）
-  - 転送時に暗号化される: はい
-  - ユーザーがデータ削除をリクエストできる: はい
-- **アカウント削除**: Google ログイン機能があるため、
-  **アプリ内の削除導線＋Web 上の削除リクエスト URL** の提出を求められます。
-  `privacy.html` に削除手順と連絡先を書き、その URL を申告するのが手軽です
-- 政府/ 金融 / 健康アプリ: いずれも「いいえ」
+**全フォームの回答は `store/play-console-answers.md` にまとめてあります。**
+このアプリの実装（Google ログイン・Firestore・AdSense）に照らして選択肢まで確定させてあるので、
+上から順に写していけば埋まります。要点だけ挙げると：
+
+- **プライバシーポリシー**: `https://cookiestrateger.com/privacy.html`
+- **広告**: 「はい」
+- **アプリのアクセス権限**: 制限なし（テストアカウント提出は不要）
+- **ターゲットユーザー**: **12歳以下を含めない**。含めるとファミリー向けポリシーの広告規制で
+  現在の AdSense 構成が通らなくなる可能性が高いです
+- **データセーフティ**: ユーザーID とセーブデータの収集、広告用の識別子の共有を申告
+- **アカウント削除**: 実装済みです。アプリ内（⚙設定 → クラウド保存 →
+  「アカウントとクラウドデータを削除」）と、Web の削除リクエスト URL
+  `https://cookiestrateger.com/privacy.html#account-deletion` の両方が揃っています
 
 ---
 
@@ -225,8 +252,10 @@ curl -i https://cookiestrateger.com/.well-known/assetlinks.json
 - [ ] `ad_free` の購入ダイアログが出て、購入後に広告ゲートが消える
 - [ ] 一度アンインストール→再インストールしても購入状態が復元される（`listPurchases` 経由）
 - [ ] Google ログイン（クラウドセーブ）が成功する ← §8-2 参照
+- [ ] ⚙設定 →「アカウントとクラウドデータを削除」が動く（Play の申告内容と一致すること）
 - [ ] 広告（`adBreak`）が再生される
 - [ ] 端末の戻るボタンでアプリが変な挙動をしない
+- [ ] 転生 →「スキルツリーを確認する」でノードが表示される
 
 課金テストは Play Console → 設定 → ライセンステスト にアカウントを登録すると
 実際の課金なしでテストできます。
@@ -261,14 +290,17 @@ AdMob を使うのが正規ルート**とされています。TWA は WebView �
 公開前に AdSense サポートに「TWA での Play 配信」について確認しておくことを勧めます。
 （Play 側の審査というより AdSense 側の規約の問題です）
 
-### 8-2. TWA での Google ログイン
+### 8-2. TWA での Google ログイン（対応済み・要動作確認）
 
-`play.html` は `signInWithPopup` を使っています。TWA からのポップアップは
-別タブ（Custom Tab）で開くため、**opener への postMessage が返らずログインが
-完結しないことがあります**。内部テストの実機で必ず確認し、失敗するようなら
-`signInWithRedirect` に切り替えてください。あわせて Firebase Console →
-Authentication → 設定 → 承認済みドメイン に `cookiestrateger.com` が
-入っていることも確認を。
+TWA からのポップアップは別タブ（Custom Tab）で開くため、opener への postMessage が返らず
+ログインが完結しないことがあります。そこで `signInToCloud()` を、
+**`signInWithPopup` が `auth/popup-blocked` などで失敗したら `signInWithRedirect` に
+自動で切り替える**実装に変更済みです。
+
+ただしリダイレクト方式は Firebase 側の設定が前提なので、**Firebase Console →
+Authentication → 設定 → 承認済みドメイン に `cookiestrateger.com` が入っていることを
+必ず確認してください**（入っていないとリダイレクト後に認証が拒否されます）。
+そのうえで実機でのログイン確認をお願いします。
 
 ### 8-3. Digital Goods API は Play 経由のインストールでのみ動く
 
@@ -281,7 +313,7 @@ Authentication → 設定 → 承認済みドメイン に `cookiestrateger.com`
 
 - **Web の更新（ゲーム内容・バランス・文言）はアプリを再ビルドせずに反映されます。**
   ただし Service Worker のキャッシュが効くので、`sw.js` の `CACHE` バージョン
-  （現在 `cookie-strategist-v3`）を上げるのを忘れないでください
+  （現在 `cookie-strategist-v4`）を上げるのを忘れないでください
 - **再ビルドが必要なのは**アイコン / アプリ名 / `targetSdkVersion` / Play Billing 設定など
   ネイティブ側を変えたときだけ。その場合は `twa-manifest.json` の
   `appVersionCode` を +1（`appVersionName` も更新）してから `bubblewrap build`
