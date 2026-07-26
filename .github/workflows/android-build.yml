@@ -1,0 +1,159 @@
+name: 2. Androidアプリをビルド
+
+# store/android/twa-manifest.json をもとに TWA の AAB(Play アップロード用)と
+# APK(実機確認用)をビルドします。PC は不要で、成果物は Artifacts から
+# スマホにそのままダウンロードできます。
+#
+# 事前に「1. 署名鍵をつくる」を実行し、Secrets を3つ登録しておいてください。
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'バージョン名(ストアに表示される。例 1.0.0)'
+        required: true
+        default: '1.0.0'
+      version_code:
+        description: 'バージョンコード(整数。アップロードするたびに必ず +1)'
+        required: true
+        default: '1'
+      target_sdk:
+        description: 'targetSdkVersion(2026/8/31 以降は 36 以上が必須)'
+        required: true
+        default: '36'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Secrets が登録されているか確認
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          missing=""
+          [ -n "$KS_B64" ]   || missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ -n "$KS_PASS" ]  || missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          [ -n "$KS_ALIAS" ] || missing="$missing ANDROID_KEY_ALIAS"
+          if [ -n "$missing" ]; then
+            echo "::error::次の Secret が未登録です:$missing 。先に「1. 署名鍵をつくる」を実行してください。"
+            exit 1
+          fi
+
+      - name: Bubblewrap を用意
+        run: |
+          set -euo pipefail
+          npm install -g @bubblewrap/cli@1.24.1
+          npm install --no-save @bubblewrap/core@1.24.1
+          # 対話プロンプト(JDK/SDK を入れるか)を出させないため、
+          # ランナーに入っている JDK と Android SDK を先に指定しておく
+          mkdir -p ~/.bubblewrap
+          printf '{"jdkPath":"%s","androidSdkPath":"%s"}\n' \
+            "$JAVA_HOME" "${ANDROID_SDK_ROOT:-$ANDROID_HOME}" > ~/.bubblewrap/config.json
+          cat ~/.bubblewrap/config.json
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+
+      - name: プロジェクトを組み立てる
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          VERSION_NAME: ${{ inputs.version_name }}
+          VERSION_CODE: ${{ inputs.version_code }}
+        run: |
+          set -euo pipefail
+          mkdir -p android-build
+          cp store/android/twa-manifest.json android-build/
+          cp store/android/generate-project.cjs android-build/
+          echo "$KS_B64" | base64 -d > android-build/upload-keystore.jks
+
+          # 入力値(バージョン・署名鍵の場所)を twa-manifest.json に反映
+          node -e '
+            const fs = require("fs");
+            const f = "android-build/twa-manifest.json";
+            const m = JSON.parse(fs.readFileSync(f, "utf8"));
+            m.appVersion = process.env.VERSION_NAME;  // bubblewrap が読むキー名は appVersion(appVersionName ではない)
+            m.appVersionCode = Number(process.env.VERSION_CODE);
+            m.signingKey = { path: require("path").resolve("android-build/upload-keystore.jks"), alias: process.env.KS_ALIAS };
+            fs.writeFileSync(f, JSON.stringify(m, null, 2) + "\n");
+            console.log("version:", m.appVersion, m.appVersionCode);
+          '
+          cd android-build
+          NODE_PATH="$GITHUB_WORKSPACE/node_modules" node generate-project.cjs .
+
+      - name: targetSdkVersion を上書き
+        run: |
+          set -euo pipefail
+          GRADLE=android-build/app/build.gradle
+          echo "--- 変更前 ---"
+          grep -nE 'targetSdk|compileSdk' "$GRADLE" || true
+          sed -i -E "s/targetSdkVersion +[0-9]+/targetSdkVersion ${{ inputs.target_sdk }}/" "$GRADLE"
+          sed -i -E "s/compileSdkVersion +[0-9]+/compileSdkVersion ${{ inputs.target_sdk }}/" "$GRADLE"
+          sed -i -E "s/targetSdk += *[0-9]+/targetSdk = ${{ inputs.target_sdk }}/" "$GRADLE"
+          sed -i -E "s/compileSdk += *[0-9]+/compileSdk = ${{ inputs.target_sdk }}/" "$GRADLE"
+          echo "--- 変更後 ---"
+          grep -nE 'targetSdk|compileSdk' "$GRADLE" || true
+
+      - name: ビルド(AAB + APK)
+        working-directory: android-build
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: bubblewrap build
+
+      - name: 署名鍵の指紋を取り出す
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          SHA256=$(keytool -list -v -keystore android-build/upload-keystore.jks \
+            -alias "$KS_ALIAS" -storepass "$KS_PASS" \
+            | grep -m1 'SHA256:' | sed 's/.*SHA256: *//')
+          echo "UPLOAD_SHA256=$SHA256" >> "$GITHUB_ENV"
+
+      - name: 成果物をアップロード
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ inputs.version_name }}-${{ inputs.version_code }}
+          path: |
+            android-build/app-release-bundle.aab
+            android-build/app-release-signed.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: 次にやることを表示
+        run: |
+          {
+            echo "## ビルドできました (v${{ inputs.version_name }} / code ${{ inputs.version_code }})"
+            echo
+            echo "下の **Artifacts** から次の2つがダウンロードできます。"
+            echo
+            echo "| ファイル | 用途 |"
+            echo "|---|---|"
+            echo "| \`app-release-bundle.aab\` | Play Console にアップロードする本体 |"
+            echo "| \`app-release-signed.apk\` | 実機に直接入れて見た目を確認する用(課金は動きません) |"
+            echo
+            echo "### アップロード鍵の SHA-256 指紋"
+            echo '```'
+            echo "$UPLOAD_SHA256"
+            echo '```'
+            echo
+            echo "この指紋と、Play Console の **アプリ署名鍵** の指紋の両方を"
+            echo "\`.well-known/assetlinks.json\` に入れる必要があります。"
+            echo "**「3. assetlinks.json を更新」** ワークフローに Play 側の指紋を貼れば自動で書き込まれます。"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -7,6 +7,12 @@ Google Play 版の判定（`android-app://` referrer）と Digital Goods API に
 
 以下は「Play Console のアカウント登録が済んでいる」状態からの手順です。
 
+> ### 📱 PC を持っていない場合
+> **[PLAY_STORE_SMARTPHONE.md](PLAY_STORE_SMARTPHONE.md) を見てください。**
+> GitHub Actions がビルドを代行するので、スマホのブラウザだけで公開まで進められます。
+> このページの §1〜§3（ビルドと署名）は読み飛ばして構いません。
+> §4以降（Play Console の入力）と §5・§7・§8 は共通です。
+
 ---
 
 ## 準備済みのもの / これから必要なもの
@@ -21,6 +27,8 @@ Google Play 版の判定（`android-app://` referrer）と Digital Goods API に
 | `store/feature_graphic_1024x500.png` | フィーチャーグラフィック 1024×500 |
 | `store/screenshots/01〜07*.png` | スマートフォン用スクリーンショット 1080×1920（実機相当・実画面） |
 | `store/android/twa-manifest.json` | Bubblewrap 設定ファイル（署名鍵の項目だけ要記入） |
+| `store/android/generate-project.cjs` | Android プロジェクトを非対話で生成するスクリプト（CI 用） |
+| `.github/workflows/android-*.yml` | **スマホだけで署名鍵作成・AAB ビルド・assetlinks 更新ができる CI** |
 | `.well-known/assetlinks.json` | Digital Asset Links（指紋だけ要記入） |
 | `.nojekyll` | GitHub Pages で `.well-known/` を配信させるための必須ファイル |
 | `privacy.html` §3 | アカウント削除の手順と削除リクエスト窓口（Play の必須要件） |
@@ -106,6 +114,8 @@ bubblewrap init --manifest https://cookiestrateger.com/manifest.json
 | `orientation` | `portrait` | 縦持ち固定 |
 | `features.playBilling.enabled` | `true` | `ad_free` の Play 課金に必須 |
 | `alphaDependencies.enabled` | `true` | Play Billing 用の依存を有効化するために必要 |
+| `enableNotifications` | **`true`** | Play Billing 有効時は必須。`false` だとビルドがエラーで止まります |
+| `appVersion` | `"1.0.0"` | バージョン名のキーは `appVersion`。**`appVersionName` と書いても無視されます** |
 | `fallbackType` | `customtabs` | TWA 非対応端末で Custom Tabs にフォールバック |
 | `signingKey.path` / `alias` | **手元のキーストアに合わせる** | ここだけはこちらで埋められません |
 
