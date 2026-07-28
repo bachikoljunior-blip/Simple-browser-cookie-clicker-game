@@ -8214,10 +8214,27 @@ function msCpsAdd() { let a = 0; const b = state.msResearch || {}; for (const ms
 function msCritAdd() { let a = 0; const b = state.msResearch || {}; for (const ms of MILESTONE_RESEARCH) if (b[ms.id] && ms.fx.critAdd) a += ms.fx.critAdd; return a + skillGrowth().critAdd; }
 // ㉚コストのはしご(2026-07-25 sim msResearch.costTable同期): 実績研究の**生涯初**の取得だけ固定コスト表
 // (はしごの段)。再購入(毎周回)と表に無い研究は「毎秒生産×15秒」の安い量産価格(旧costSecの重税は廃止)。
-const MS_FIRST_COST_TABLE = { ms_taps_p1: 2500000000, ms_stage_s1: 19000000000, ms_kills_k1: 1100000000000, ms_golden_g1: 8400000000000, ms_eqmastery_t1: 64000000000000, ms_taps_p2: 3.75e+15, ms_kills_k2: 1.75e+18, ms_stage_s2: 1.05e+20, ms_golden_g2: 6.60e+21, ms_eqmastery_t2: 4.15e+23, ms_taps_p3: 2.65e+25, ms_kills_k3: 1.40e+28, ms_stage_s3: 9.85e+29, ms_golden_g3: 6.85e+31, ms_eqmastery_t3: 4.90e+33, ms_kills_k4: 3.10e+36, ms_taps_p4: 5.35e+41, ms_stage_s4: 1.40e+45, ms_kills_k5: 1.20e+47, ms_eqmastery_t4: 1.10e+48, ms_golden_g4: 1.05e+49, ms_kills_k6: 2.65e+53, ms_golden_g5: 2.60e+55, ms_prestige_r1: 2.55e+56, ms_kills_k7: 3.80e+60, ms_golden_g6: 4.15e+62, ms_prestige_r2: 4.35e+63, ms_eqmastery_t5: 9.75e+66, ms_kills_k8: 1.05e+68, ms_prestige_r3: 8.50e+70, ms_prestige_r4: 1.10e+75 };
+const MS_FIRST_COST_TABLE = { ms_taps_p1: 2500000000, ms_stage_s1: 19000000000, ms_kills_k1: 1100000000000, ms_golden_g1: 8400000000000, ms_eqmastery_t1: 64000000000000, ms_taps_p2: 3.75e+15, ms_stage_s2: 1.05e+20, ms_golden_g2: 6.60e+21, ms_eqmastery_t2: 4.15e+23, ms_taps_p3: 2.65e+25, ms_stage_s3: 9.85e+29, ms_golden_g3: 6.85e+31, ms_eqmastery_t3: 4.90e+33, ms_kills_k4: 3.10e+36, ms_taps_p4: 5.35e+41, ms_stage_s4: 1.40e+45, ms_eqmastery_t4: 1.10e+48, ms_golden_g4: 1.05e+49, ms_kills_k6: 2.65e+53, ms_golden_g5: 2.60e+55, ms_prestige_r1: 2.55e+56, ms_kills_k7: 3.80e+60, ms_golden_g6: 4.15e+62, ms_prestige_r2: 4.35e+63, ms_eqmastery_t5: 9.75e+66, ms_prestige_r3: 8.50e+70, ms_prestige_r4: 1.10e+75 };
+// 一覧#18(2026-07-28): 設備熟練は「ms_<設備ID>_t<段>」で16設備×4段=64件が生成されるのに、はしごの段は
+// ms_eqmastery_t1〜t5 という**実在しないID**で置かれていたため、64件すべてが表を素通りして
+// 「毎秒生産×15秒」の量産価格で買えていた(=固定コストのペーシングが効かない)。
+// 段番号でその段のはしごを引く。同じ段の16件は同額=同時に解放される(㉚の同額束ねと同じ扱い)。
+function msFirstCostOf(id) {
+  if (MS_FIRST_COST_TABLE[id] != null) return MS_FIRST_COST_TABLE[id];
+
+  const m = /^ms_[A-Za-z]+_t(\d+)$/.exec(id); // 設備熟練
+  if (m) {
+    const v = MS_FIRST_COST_TABLE["ms_eqmastery_t" + m[1]];
+    if (v != null) return v;
+  }
+
+  return null;
+}
+
 function msResearchCost(ms) {
   // 生涯初の取得=固定コスト表(コストのはしご)。everMs は転生を跨いで持ち越し(セーブ対象)。
-  if (MS_FIRST_COST_TABLE[ms.id] != null && !((state.everMs || {})[ms.id])) return MS_FIRST_COST_TABLE[ms.id];
+  const first = msFirstCostOf(ms.id);
+  if (first != null && !((state.everMs || {})[ms.id])) return first;
   // 再購入・表に無い研究=毎秒生産×15秒の量産価格(sim msCostOf rebuySec=15 と同式)
   return Math.max(100, Math.floor(currentCps() * 15));
 }
