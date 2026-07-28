@@ -18095,7 +18095,13 @@ function chooseReward(choice) {
   }
 
   if (choice.kind === "perk" && choice.id === "huntFocus") {
-    state.huntFocusLv = (state.huntFocusLv || 0) + gained;
+    // 一覧#6(2026-07-28): 以前は「今回ぶん(gained)だけ」を装填していたため、撃破/時間切れで
+    // huntFocusLv が0に戻る仕様と合わさって、何回取っても効果は毎回 ×(1+gained) の一発ぶんだけだった
+    // (積み上げた state.perks.huntFocus は効果側からどこからも読まれていない)。カード表示は累積Lv基準の
+    // 「+100×Lv%」を出すため、表示と実効果が最大11倍(＋%表記では21倍)乖離していた。
+    // 装填量を累積Lvそのものにして、表示どおり「次のモンスターへのダメージ ×(1+Lv)」にする。
+    // 「次の1体に賭ける」構造(撃破/時間切れで装填を消費し、成功で報酬Lv+1・失敗で次HP低下と報酬Lv-1)は不変。
+    state.huntFocusLv = Math.max(0, Math.floor(Number(state.perks.huntFocus) || 0));
   }
 
   state.rewardCategoryCounts = state.rewardCategoryCounts || {};
