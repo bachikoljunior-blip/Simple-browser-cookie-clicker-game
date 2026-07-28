@@ -8914,24 +8914,38 @@ function applyOrderReward(order) {
     if (workshopTabUnlocked()) {
       let granted = 0;
       const gifts = [];
-      for (const eq of EQUIPMENT) {
-        if (granted >= 4) break;
-        const lv = equipLv(eq.id);
-        if (lv >= equipMaxLv(eq.id)) continue;
-        const cost = equipmentCost(eq, lv);
-        let filledAny = false;
-        for (const matId in cost) {
+      // 一覧#17(2026-07-28): ここは廃止済みの旧装備(EQUIPMENT)のレシピを基準に配っていた。
+      // 旧装備は作成UIも呼び出し元も無く equipLv() が常に0なので、配る量が基本コスト(最大でも数個)に
+      // 固定され、現行装備(equip2)の必要量と無関係な序盤の端数配布に縮退していた。
+      // 現行の作成欄と同じ一覧(作成ティアが解放済みのequip2)から「あと少しで作れるもの」を選ぶ。
+      const candidates = equip2Items()
+        .filter(it => equip2CraftableNow(it) && !state.eq2Owned[it.id])
+        .filter(it => !it.prev || (state.eq2Owned[it.prev] || 0) >= 1) // 前ティア必須のレシピは所持済みのみ
+        .map(it => {
+          let kinds = 0, total = 0;
+          for (const k in it.cost) {
+            const d = Math.ceil(Number(it.cost[k]) || 0) - equip2HaveOf(k);
+            if (d > 0) { kinds++; total += d; }
+          }
+          return { it, kinds, total };
+        })
+        .filter(x => x.kinds > 0)
+        // 不足の種類が少ない=完成が近いものから。同数なら不足総量が少ない順
+        .sort((a, b) => (a.kinds - b.kinds) || (a.total - b.total) || (a.it.tier - b.it.tier));
+
+      const target = candidates[0];
+      if (target) {
+        for (const matId in target.it.cost) {
           if (granted >= 4) break;
-          if (matId === "bossCoreAny") continue; // 核は恒久シンク=注文では配らない
-          const deficit = Math.ceil(Number(cost[matId]) || 0) - materialCount(matId);
+          const deficit = Math.ceil(Number(target.it.cost[matId]) || 0) - equip2HaveOf(matId);
           if (deficit > 0) {
             const give = Math.ceil(deficit * 1.25);
             gainMaterial(matId, give);
             gifts.push(`${getMaterial(matId).name} +${give}`);
-            granted++; filledAny = true;
+            granted++;
           }
         }
-        if (filledAny) break; // 1装備ぶんを満たしたら終了
+        if (gifts.length) gifts.push(`(${target.it.name} 用)`);
       }
       if (gifts.length) {
         showMessage(`注文報酬：${gifts.join("、")}(作りたい装備の不足分)`);
