@@ -16665,6 +16665,7 @@ async function pullCloudSaveIfNewer() {
         try {
           state = cloudState;
           ensureState();
+          applyOfflineOnLoad(); // 一覧#9: ローカル読み込みと同じオフライン補正(ノルマ時計を止める+放置生産)
           saveGame();
           pushCloudSave(true); // 新形式(JSON文字列)でクラウドを更新し、時刻も揃える
           updateTopOnly();
@@ -16744,6 +16745,37 @@ function findSavedData() {
   return null;
 }
 
+// セーブを読み込んだ直後の共通補正(一覧#9): 「保存時刻から今まで」の実時間を
+// (a) ノルマ時計から除外し(quotaPausedMs へ加算)、(b) 放置生産として与える。
+// ローカル読み込み(loadGame)とクラウド復元(pullCloudSaveIfNewer)の両方から必ずこれを通す。
+// 以前はクラウド復元だけこの補正が無く、復元した瞬間に quotaElapsedSeconds() へ
+// 「別端末を閉じてからの実時間」がそのまま入って必ず「ノルマ終了」になっていた。
+function applyOfflineOnLoad() {
+  const now = Date.now();
+  const offlineMs = Math.max(0, now - state.lastSave);
+
+  if (state.quotaPauseStartedAt) {
+    state.quotaPausedMs += Math.max(0, state.lastSave - state.quotaPauseStartedAt);
+    state.quotaPauseStartedAt = 0;
+  }
+  state.quotaPausedMs += offlineMs;
+
+  if (!pausedForSkillChoice()) {
+    const baseLimit = OFFLINE_LIMIT_SECONDS;
+    const extraLimit = skillEffect("offlineHours") * 60 * 60;
+    // 終わらぬ焼窯: オフライン生産の時間上限なし
+    const seconds = hasSkillEffect("unlockSystem", "offlineInfinite")
+      ? offlineMs / 1000
+      : Math.min(offlineMs / 1000, baseLimit + extraLimit);
+    // 放置生産は Decimal で計算(seconds が巨大でも double の Infinity 化で取り逃さない)
+    const gained = earn(D(baseCps()).mul(seconds));
+
+    if (gained.gt(0)) showMessage(`放置 +${fmt(gained)}`);
+  }
+
+  return offlineMs;
+}
+
 function loadGame() {
   const raw = findSavedData();
 
@@ -16752,28 +16784,7 @@ function loadGame() {
   try {
     state = JSON.parse(raw);
     ensureState();
-
-    const now = Date.now();
-    const offlineMs = Math.max(0, now - state.lastSave);
-    if (state.quotaPauseStartedAt) {
-      state.quotaPausedMs += Math.max(0, state.lastSave - state.quotaPauseStartedAt);
-      state.quotaPauseStartedAt = 0;
-    }
-    state.quotaPausedMs += offlineMs;
-
-    if (!pausedForSkillChoice()) {
-      const baseLimit = OFFLINE_LIMIT_SECONDS;
-      const extraLimit = skillEffect("offlineHours") * 60 * 60;
-      // 終わらぬ焼窯: オフライン生産の時間上限なし
-      const seconds = hasSkillEffect("unlockSystem", "offlineInfinite")
-        ? offlineMs / 1000
-        : Math.min(offlineMs / 1000, baseLimit + extraLimit);
-      // 放置生産は Decimal で計算(seconds が巨大でも double の Infinity 化で取り逃さない)
-      const gained = earn(D(baseCps()).mul(seconds));
-
-      if (gained.gt(0)) showMessage(`放置 +${fmt(gained)}`);
-    }
-
+    applyOfflineOnLoad();
     saveGame();
   } catch (e) {
     state = freshState();
