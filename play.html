@@ -7110,6 +7110,19 @@ function ensureState() {
   state.prestigeBaseTotal = Math.floor(Number(state.prestigeBaseTotal) || Math.min(totalPrestigeFromCookies(state.totalCookies), state.prestigeTotal) || 0);
   state.endlessLv = Math.max(0, Math.floor(Number(state.endlessLv) || 0)); // 一覧#3: 無限研鑽の段数。旧セーブは0補完
   state.lastSaveServer = Math.max(0, Number(state.lastSaveServer) || 0); // 一覧#12: サーバー基準の保存時刻。旧セーブは0=未取得扱い
+  // 一覧#16: まとめ買い熱量は非有限・未来時刻を持ち込ませない(セーブ経由で NaN 化するのを防ぐ)
+  if (state.upSurge && typeof state.upSurge === "object") {
+    const nowMs = Date.now();
+    for (const k of Object.keys(state.upSurge)) {
+      const sg = state.upSurge[k];
+      if (!sg || typeof sg !== "object") { delete state.upSurge[k]; continue; }
+      sg.h = Number.isFinite(Number(sg.h)) ? Math.max(0, Number(sg.h)) : 0;
+      sg.t = Number.isFinite(Number(sg.t)) ? Math.min(nowMs, Number(sg.t)) : nowMs;
+      if (sg.peak != null && !Number.isFinite(Number(sg.peak))) delete sg.peak;
+    }
+  } else {
+    state.upSurge = {};
+  }
   // 一覧#10: セーブ固有ID。スナップショット(転生前/周回開始)が「このセーブのものか」を判定するために使う。
   // 旧セーブには無いので初回読み込み時に発行し、同時に所有者不明の旧スナップショットを破棄する。
   if (typeof state.saveId !== "string" || !state.saveId) {
@@ -10997,14 +11010,28 @@ function q5cost(v) { return Math.max(1, Math.floor(q5round(v))); }
 const SURGE_PER_BUY = 0; // まとめ買い割増は廃止(2026-07-13 ユーザー指示) // 0.25→0.45(第12次R)→0.5(R3)→0.9(R5・sim同期): 研究200本経済の再ペーシング(周回時間をT1帯へ)
 const SURGE_HALF_SEC = 120; // 75→120(同上)
 
+// 一覧#16(2026-07-28): 端末の時計が進んだ状態で購入すると sg.t に未来の時刻が入り、その後 時計が
+// 直ると (now - sg.t) が大きな負になって Math.pow(0.5, -1074以下) = Infinity → surgeHeat が Infinity、
+// surgeMultiplier が Math.pow(1, Infinity) = NaN になっていた。costOf が NaN になると
+// cookies.gte(NaN)=true / D(NaN) が Decimal 0 に潰れて spend が0円で成立=全設備が無料になる。
+// 経過時間は負になり得ない(未来の記録は「まだ減衰していない」)ので 0 で下限を取り、
+// 熱量も有限値だけを通す。SURGE_PER_BUY=0(まとめ買い割増は廃止済み)のときは計算自体を行わない。
 function surgeHeat(id) {
   const sg = state.upSurge && state.upSurge[id];
-  if (!sg || !(sg.h > 0)) return 0;
-  return sg.h * Math.pow(0.5, ((Date.now() - sg.t) / 1000) / SURGE_HALF_SEC);
+  if (!sg || !Number.isFinite(sg.h) || !(sg.h > 0)) return 0;
+
+  const t = Number.isFinite(sg.t) ? sg.t : Date.now();
+  const elapsedSec = Math.max(0, (Date.now() - t) / 1000); // 未来の記録でも負にしない
+  const heat = sg.h * Math.pow(0.5, elapsedSec / SURGE_HALF_SEC);
+
+  return Number.isFinite(heat) ? Math.max(0, heat) : 0;
 }
 
 function surgeMultiplier(id, extraHeat) {
-  return Math.pow(1 + SURGE_PER_BUY, surgeHeat(id) + Math.max(0, extraHeat || 0));
+  if (!(SURGE_PER_BUY > 0)) return 1; // 割増は廃止済み=常に1(NaNを生む Math.pow(1, x) を通さない)
+  const heat = surgeHeat(id) + Math.max(0, Number(extraHeat) || 0);
+  const m = Math.pow(1 + SURGE_PER_BUY, heat);
+  return Number.isFinite(m) ? m : 1;
 }
 
 function bumpSurge(id) {
