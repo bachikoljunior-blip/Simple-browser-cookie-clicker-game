@@ -6988,6 +6988,7 @@ function freshState() {
     // 次に周回スタートできる時刻(ミリ秒)。Google Play版のスタート間隔制限に使う。
     // 0 = 制限なし。初回転生後のスタートで初めてセットされる
     nextStartAt: 0,
+    startGateBypass: false,   // やり直しで戻った周回はスタート枠を消化済み(ゲートを通さない)
 
     prestige: 0,
     prestigeTotal: 0,
@@ -7104,6 +7105,7 @@ function ensureState() {
   state.totalClicks = Math.floor(Number(state.totalClicks) || 0);
 
   state.nextStartAt = Math.max(0, Math.floor(Number(state.nextStartAt) || 0));
+  state.startGateBypass = Boolean(state.startGateBypass);
 
   state.prestige = Math.floor(Number(state.prestige) || 0);
   state.prestigeTotal = Math.floor(Number(state.prestigeTotal ?? state.prestige) || 0);
@@ -14372,6 +14374,10 @@ addTap($("cancelRebirthBtn"), () => {
 
 // スキル選択(→方針→ステージ選択)を終えてから実際に周回を開始する処理
 function beginRunAfterSkills() {
+  // スタート制限はここで消費する。ゲート通過の時点で消費すると、方針選択・ステージ選択から
+  // 「スキル選択に戻る」を押しただけで、1周も遊べないまま5時間ぶんの権利を失う
+  markRunStarted();
+  state.startGateBypass = false;
   // 周回を開始したら転生は確定。以後は「転生前に戻る」できないようスナップショットを破棄する。
   clearPreRebirthSnapshot();
   state.awaitingSkillChoice = false;
@@ -14852,18 +14858,16 @@ addTap($("skillStartBtn"), () => {
   }
 
   // スタートの前にゲートを挟む。Web版は広告視聴、Google Play版は5時間の
-  // スタート制限(買い切りで解除可)。制限にかかっていなければそのまま通る
-  const startRun = () => {
-    markRunStarted();
-    proceedRunStartFlow();
-  };
+  // スタート制限(買い切りで解除可)。制限にかかっていなければそのまま通る。
+  // やり直し(redoCurrentRun)で戻ってきた場合はこの周回のスタート枠を消化済みなのでゲートを通さない
+  if (state.startGateBypass) { proceedRunStartFlow(); return; }
 
   if (adGateRequired()) {
-    openAdGate(startRun);
+    openAdGate(proceedRunStartFlow);
     return;
   }
 
-  startRun();
+  proceedRunStartFlow();
 });
 
 function upgradeArt(u) {
@@ -16282,8 +16286,16 @@ function redoCurrentRun() {
   if (!snap) return;
   if (!confirm("この周回を最初からやり直す？\n集めた素材・装備・クッキー・進行は周回開始時点に戻ります(転生PT・スキルは保持、選び直し可)。")) return;
 
+  // スナップショットは prestigeReset の時点、つまりスタート制限を消費する前に保存されている。
+  // そのまま戻すと nextStartAt が消費前の値に巻き戻り、やり直しを繰り返すだけで制限を無限に回避できる
+  const keepNextStartAt = Math.max(0, Math.floor(Number(state.nextStartAt) || 0));
+
   state = snap;
   ensureState();
+  state.nextStartAt = Math.max(keepNextStartAt, Math.floor(Number(state.nextStartAt) || 0));
+  // この周回のスタート枠は消化済み。やり直し直後のスタートでゲートに掛けると、
+  // スキル選択画面から出られないまま最大5時間待たされる
+  state.startGateBypass = true;
 
   // 実行中の一時オブジェクト・タイマーを片付ける(prestigeReset と同様)
   clearGoldenBoosts();
