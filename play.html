@@ -6993,6 +6993,7 @@ function freshState() {
     prestigeTotal: 0,
     prestigeBaseTotal: 0,
     endlessLv: 0,              // 一覧#3: 無限研鑽の段数(転生を跨いで永続)
+    saveId: "",                // 一覧#10: セーブ固有ID(スナップショットの所有者判定)。ensureState で発行
     quotaBonusTotal: 0,
     prestigeRuns: 0,
     runStart: Date.now(),
@@ -7108,6 +7109,12 @@ function ensureState() {
   state.prestigeTotal = Math.floor(Number(state.prestigeTotal ?? state.prestige) || 0);
   state.prestigeBaseTotal = Math.floor(Number(state.prestigeBaseTotal) || Math.min(totalPrestigeFromCookies(state.totalCookies), state.prestigeTotal) || 0);
   state.endlessLv = Math.max(0, Math.floor(Number(state.endlessLv) || 0)); // 一覧#3: 無限研鑽の段数。旧セーブは0補完
+  // 一覧#10: セーブ固有ID。スナップショット(転生前/周回開始)が「このセーブのものか」を判定するために使う。
+  // 旧セーブには無いので初回読み込み時に発行し、同時に所有者不明の旧スナップショットを破棄する。
+  if (typeof state.saveId !== "string" || !state.saveId) {
+    state.saveId = "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    clearRunSnapshots();
+  }
   state.quotaBonusTotal = Math.floor(Number(state.quotaBonusTotal) || Math.max(0, state.prestigeTotal - state.prestigeBaseTotal) || 0);
   state.quotaActive = state.quotaActive !== false;
   state.quotaFailed = Boolean(state.quotaFailed);
@@ -16034,8 +16041,46 @@ if ($("playFullscreenBtn")) addTap($("playFullscreenBtn"), togglePlayFullscreen)
 // (周回を開始した時点で確定=スナップショットを破棄する)
 const PREREBIRTH_KEY = saveKey + "_prerebirth";
 
+// ==== スナップショットの所有者検証(一覧#10・2026-07-28) ====
+// 転生前(PREREBIRTH_KEY)/周回開始(RUN_START_KEY)のスナップショットは「素の state」をそのまま
+// localStorage に置いており、誰のどの時点のものかを持っていなかった。そのため
+//   ・クラウド復元で state を丸ごと差し替えても、別セーブのスナップショットが残ったまま
+//   ・転生を取り消しても、転生直後に書いた周回開始スナップショットが残ったまま
+// になり、「この周回を最初からやり直す」で数周回ぶん巻き戻り、直後の saveGame と
+// 自動クラウド同期でその巻き戻りが確定していた。
+// 対策: セーブ固有のID(state.saveId)を刻んで保存し、読むときに現在のセーブと一致するものだけ使う。
+// さらに state を丸ごと差し替える経路では明示的に両方を破棄する。
+function writeSnapshot(key, snapState) {
+  try {
+    localStorage.setItem(key, JSON.stringify({
+      v: 1, saveId: state.saveId, savedAt: Date.now(),
+      prestigeRuns: Math.max(0, Math.floor(Number(state.prestigeRuns) || 0)),
+      state: snapState
+    }));
+  } catch (e) {}
+}
+
+function readSnapshot(key) {
+  let raw;
+  try { raw = localStorage.getItem(key); } catch (e) { return null; }
+  if (!raw) return null;
+
+  let o;
+  try { o = JSON.parse(raw); } catch (e) { return null; }
+  // 旧形式(素のstate)は所有者が分からないので使わない。新形式でもIDが今のセーブと違えば使わない。
+  if (!o || typeof o !== "object" || o.v !== 1 || !o.state) return null;
+  if (!o.saveId || o.saveId !== state.saveId) return null;
+
+  return o.state;
+}
+
+function clearRunSnapshots() {
+  try { localStorage.removeItem(RUN_START_KEY); } catch (e) {}
+  try { localStorage.removeItem(PREREBIRTH_KEY); } catch (e) {}
+}
+
 function preRebirthSnapshotAvailable() {
-  try { return !!localStorage.getItem(PREREBIRTH_KEY); } catch (e) { return false; }
+  return !!readSnapshot(PREREBIRTH_KEY);
 }
 
 function clearPreRebirthSnapshot() {
@@ -16044,14 +16089,13 @@ function clearPreRebirthSnapshot() {
 
 // スキル画面から転生を取り消して、転生前(周回途中)の状態に戻す
 function cancelRebirth() {
-  let snap;
-  try { snap = localStorage.getItem(PREREBIRTH_KEY); } catch (e) { snap = null; }
+  const snap = readSnapshot(PREREBIRTH_KEY);
   if (!snap) return;
-  try {
-    state = JSON.parse(snap);
-  } catch (e) { return; }
+  state = snap;
   ensureState();
-  clearPreRebirthSnapshot();
+  // 一覧#10: 取り消した転生の直後に書かれた周回開始スナップショットは、この state と対応しないので捨てる
+  // (残すと「この周回を最初からやり直す」で取り消したはずの転生が再適用される)
+  clearRunSnapshots();
 
   skillViewMode = false;
   state.awaitingSkillChoice = false;
@@ -16072,7 +16116,7 @@ function cancelRebirth() {
 const RUN_START_KEY = saveKey + "_runstart";
 
 function runStartSnapshotAvailable() {
-  try { return !!localStorage.getItem(RUN_START_KEY); } catch (e) { return false; }
+  return !!readSnapshot(RUN_START_KEY);
 }
 
 // この機能を追加する前に転生済み(周回途中)のプレイヤーには周回開始スナップショットが無い。
@@ -16091,6 +16135,7 @@ function buildRunStartFromCurrent() {
   s.prestigeTotal = cur.prestigeTotal;
   s.prestigeBaseTotal = cur.prestigeBaseTotal;
   s.endlessLv = Math.max(0, Math.floor(Number(cur.endlessLv) || 0)); // 一覧#3: 無限研鑽は生涯記録
+  s.saveId = cur.saveId; // 一覧#10: 同じセーブのスナップショットであることを示す
   s.quotaBonusTotal = 0;
   s.prestigeRuns = cur.prestigeRuns;
   s.quotaActive = true;
@@ -16130,18 +16175,17 @@ function ensureRunStartSnapshot() {
     if (runStartSnapshotAvailable()) return;
     if (!(Number(state.prestigeRuns) >= 1)) return; // 初転生前は対象外
     if (pausedForSkillChoice()) return;             // スキル選択中は prestigeReset 側で保存済み
-    localStorage.setItem(RUN_START_KEY, JSON.stringify(buildRunStartFromCurrent()));
+    writeSnapshot(RUN_START_KEY, buildRunStartFromCurrent());
   } catch (e) {}
 }
 
 function redoCurrentRun() {
   if (pausedForSkillChoice()) return; // すでにスキル選択中(周回開始前)なら不要
-  let snap;
-  try { snap = localStorage.getItem(RUN_START_KEY); } catch (e) { snap = null; }
+  const snap = readSnapshot(RUN_START_KEY);
   if (!snap) return;
   if (!confirm("この周回を最初からやり直す？\n集めた素材・装備・クッキー・進行は周回開始時点に戻ります(転生PT・スキルは保持、選び直し可)。")) return;
 
-  try { state = JSON.parse(snap); } catch (e) { return; }
+  state = snap;
   ensureState();
 
   // 実行中の一時オブジェクト・タイマーを片付ける(prestigeReset と同様)
@@ -16177,7 +16221,7 @@ function prestigeReset() {
   if (state.cookies.lt(prestigeCookieCost())) return;
 
   // 転生前の状態を保存(スキル画面から取り消せるように)。周回開始で破棄する。
-  try { localStorage.setItem(PREREBIRTH_KEY, JSON.stringify(state)); } catch (e) {}
+  writeSnapshot(PREREBIRTH_KEY, state);
 
   state.cookies = state.cookies.sub(prestigeCookieCost());
   const keepLastPrestigeCps = Number(currentCps()) || 0; // 次回コストの基準=この瞬間の毎秒生産
@@ -16185,6 +16229,7 @@ function prestigeReset() {
   const keepTotal = state.totalCookies;
   const keepClicks = state.totalClicks;
   const baseGain = prestigeBaseGain();
+  const keepSaveId = state.saveId; // 一覧#10: 転生してもセーブは同じ(スナップショットの所有者判定用)
   const keepEndlessLv = Math.max(0, Math.floor(Number(state.endlessLv) || 0)); // 一覧#3: 無限研鑽は転生で消えない
   const keepPrestige = state.prestige + gain;
   const keepPrestigeTotal = state.prestigeTotal + gain;
@@ -16245,6 +16290,7 @@ function prestigeReset() {
   state.prestigeTotal = keepPrestigeTotal;
   state.prestigeBaseTotal = keepPrestigeBaseTotal;
   state.endlessLv = keepEndlessLv;
+  state.saveId = keepSaveId;
   state.quotaBonusTotal = keepQuotaBonusTotal;
   state.prestigeRuns = keepPrestigeRuns;
   state.nextStartAt = keepNextStartAt;
@@ -16318,7 +16364,7 @@ function prestigeReset() {
   showMessage(`転生ポイント +${fmt(gain)}`);
   saveGame();
   // 「この周回をやり直す」用に、周回開始(転生直後)時点のスナップショットを保存
-  try { localStorage.setItem(RUN_START_KEY, JSON.stringify(state)); } catch (e) {}
+  writeSnapshot(RUN_START_KEY, state);
   updateTopOnly();
   renderAllTabs();
   openSkillChoiceScreen();
@@ -16329,6 +16375,7 @@ function completeReset() {
 
   localStorage.removeItem(saveKey);
   oldSaveKeys.forEach(key => localStorage.removeItem(key));
+  clearRunSnapshots(); // 一覧#10: 完全リセットでスナップショットも消す(残すと消したはずの進行へ戻せてしまう)
 
   state = freshState();
   // freshStateに無いフィールド(eq2Seen/eq2Owned/eq2Equipped/msResearch/questKills等)も
@@ -16665,6 +16712,7 @@ async function pullCloudSaveIfNewer() {
         try {
           state = cloudState;
           ensureState();
+          clearRunSnapshots(); // 一覧#10: この端末のスナップショットは別セーブのものなので捨てる
           applyOfflineOnLoad(); // 一覧#9: ローカル読み込みと同じオフライン補正(ノルマ時計を止める+放置生産)
           saveGame();
           pushCloudSave(true); // 新形式(JSON文字列)でクラウドを更新し、時刻も揃える
