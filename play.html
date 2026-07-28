@@ -9206,6 +9206,18 @@ function galaxyAssemblyMultiplier() {
 }
 
 // 銀河分業 段階2: 編成ボーナス(全生産)。バランス係数 = 所持数の幾何平均 / 算術平均
+// 銀河分業 段階2: 編成ボーナス(全生産)。バランス係数=所持数の幾何平均/算術平均。
+// 一覧#4(2026-07-28): ゲーム側だけ「銀河工場数を指数にする」式(stageExpGrowth(台数, 0.027×balance))
+// になっており、台数264〜479台で ×9.9e2〜×2.7e5(貪欲購入なら×4e6〜×6e10)と、価格の上にある研究
+// (1e58〜1e90 で ×1.8〜×6)を桁で追い越していた。台数が上限なく指数へ入るのが原因。
+// 経済のはしごを設計した sim(sim.js「銀河分業 段階2」)の式は台数で**飽和**する加算ボーナスなので、
+// そちらへ揃える(sim: galaxyBonusCoef 0.05 / galaxySat 120 / galaxyStageCoef 0.0008)。
+//   ボーナス = 0.05 × 所持種類数 × balance × (1 - e^(-銀河工場数/120))  → 上限 ×1.78 前後
+// これで 2.60e54 の1枚が上位研究を追い越さなくなり、価格順=強さ順が回復する。
+const GALAXY_BONUS_COEF = 0.05;   // sim P.res2.galaxyBonusCoef
+const GALAXY_SAT = 120;           // sim P.res2.galaxySat(飽和台数)
+const GALAXY_STAGE_COEF = 0.0008; // sim P.res2.galaxyStageCoef(段階3)
+
 function galaxyDivisionBonus() {
   if (!state.research.galaxyAssembly || !resStage2("galaxyAssembly")) return 1;
   const counts = [];
@@ -9215,10 +9227,11 @@ function galaxyDivisionBonus() {
   for (const c of counts) { logSum += Math.log(c); sum += c; }
   const balance = Math.exp(logSum / counts.length) / (sum / counts.length);
   const galaxy = state.upgrades.galaxyFactory || 0;
-  // 編成ボーナス: 銀河工場数が全生産の指数、バランス係数が実効レートに掛かる
-  let rate = 0.027 * balance;
-  if (resStage3("galaxyAssembly")) rate *= 1 + 0.0008 * maxQuotaStage();
-  return stageExpGrowth(galaxy, rate);
+
+  let bonus = GALAXY_BONUS_COEF * counts.length * balance * (1 - Math.exp(-galaxy / GALAXY_SAT));
+  if (resStage3("galaxyAssembly")) bonus *= 1 + GALAXY_STAGE_COEF * maxQuotaStage();
+
+  return 1 + bonus;
 }
 
 function blackHoleQuotaCompressionMultiplier() {
