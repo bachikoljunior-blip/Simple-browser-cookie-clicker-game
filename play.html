@@ -11313,7 +11313,13 @@ function equip2Items() {
           cost[m1] = (cost[m1] || 0) + (1 + ((v * t) % 5)) * (v % 4 === 3 ? bulk : 1); // 大口素材は品による(上限なし)
           if (v >= 4 && t >= 3) { const m2 = PAL[(v + t + 2) % span]; if (m2 !== m1) cost[m2] = (cost[m2] || 0) + 1 + ((v + t) % 3); }
           if (v >= 7 && t >= 3) { const m3 = v % 2 === 0 ? smatA : smatB; cost[m3] = (cost[m3] || 0) + 2; }
-          if (v === 9 && t >= 5) cost[t === 6 ? "voidSugar" : "bossCore"] = 1 + (t === 6 ? 1 : 0);
+          // 一覧#8(2026-07-28): t5 は存在しない素材ID "bossCore" を要求しており、9カテゴリの最上位v9が
+          // 永久に作成不可だった(実在するのは bossCore1〜bossCore5 と deepCore)。その装備自身のステージの
+          // ボス核を要求するように直す(ステージ素材を要求する既存の作りと揃う。個数は従来どおり1個)。
+          if (v === 9 && t >= 5) {
+            if (t === 6) cost.voidSugar = 2;
+            else { const bc = "bossCore" + Math.min(5, Math.max(1, st1)); cost[bc] = (cost[bc] || 0) + 1; }
+          }
         }
         { // 強さ順コスト係数(sim同期): 弱×0.35 … 強×3.0
           const cm = 0.35 + 0.33 * costRank[cat][v];
