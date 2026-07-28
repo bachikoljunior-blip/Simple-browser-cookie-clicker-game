@@ -12557,10 +12557,14 @@ document.addEventListener("visibilitychange", () => {
   // タブ非表示(=ゲームを閉じている/ロック中)の切り替わりでノルマ時計を止める/戻す
   updateQuotaPauseState();
   if (document.hidden) {
+    hiddenSinceAt = Date.now(); // 一覧#11: 非表示の実時間を測る
+    hiddenTickMs = 0;
     saveGame();
   } else {
+    catchUpFromHidden(); // 一覧#11: 閉じずに放置したぶんの生産とバフ残り時間を清算する
     resumeAudioIfNeeded();
     updateTopOnly();
+    saveGame();
   }
 });
 window.addEventListener("pagehide", () => {
@@ -16923,6 +16927,75 @@ function updateSpawnTimerPauseState() {
 
 // 報酬選択中・図鑑/設定中は「クッキー生産とプレイ時間以外の時間」を止める。
 // バフ/ブーストの残り時間・金クッキー/モンスターの滞在時間を凍結し、閉じたら残り時間から再開する。
+// バフ・ブースト・注文の「残り時間」をまとめて delta ぶん前へずらす(=その間は消化されない)。
+// 図鑑/報酬モーダル中の凍結(updateGameClockFreeze)と、アプリを閉じずに放置して戻ったとき
+// (一覧#11 の追いつき)の両方から使う。
+// validAfter: 「この時刻に生きていたものを対象にする」基準。既定は now(凍結中の毎tick前送り)。
+// 非表示からの復帰では「非表示になった時刻」を渡す=閉じている間に切れたはずのバフが残り時間ごと戻る。
+function shiftGameClocks(delta, nowMs, validAfter) {
+  const now = nowMs || Date.now();
+  const ref = validAfter || now;
+  if (!(delta > 0)) return;
+
+  // 終了時刻(未来)系: 基準時刻に有効だったものだけ前へずらす(それ以前に切れたものは復活させない)
+  const shiftUntil = (v) => (v && v > ref) ? v + delta : v;
+  state.spiceBoostUntil = shiftUntil(state.spiceBoostUntil);
+  state.spiceAromaUntil = shiftUntil(state.spiceAromaUntil);
+  state.bhBoostUntil = shiftUntil(state.bhBoostUntil);
+  state.portalHuntUntil = shiftUntil(state.portalHuntUntil);
+  state.bakeStateUntil = shiftUntil(state.bakeStateUntil);
+  state.orderTempCpsUntil = shiftUntil(state.orderTempCpsUntil);
+  state.orderTempResearchUntil = shiftUntil(state.orderTempResearchUntil);
+  state.orderTempSpiceUntil = shiftUntil(state.orderTempSpiceUntil);
+  state.nextOrderAt = shiftUntil(state.nextOrderAt);
+  // 基準時刻(過去)系: 経過を止めるため常に前へずらす
+  if (state.bhFullSince) state.bhFullSince += delta;
+  if (state.lastCritAt) state.lastCritAt += delta;
+  if (state.lastGoldenAt) state.lastGoldenAt += delta;
+  // 金ブースト・余熱(配列)
+  if (Array.isArray(activeGoldenBoosts)) activeGoldenBoosts.forEach(b => { if (b && b.until > ref) b.until += delta; });
+  if (Array.isArray(activeGoldenAfterheats)) activeGoldenAfterheats.forEach(b => { if (b && b.until > ref) b.until += delta; });
+  if (Array.isArray(activeGoldenBoosts)) boostUntil = activeGoldenBoosts.reduce((m, b) => Math.max(m, (b && b.until) || 0), 0);
+  // 料理バフ
+  if (Array.isArray(state.activeDishes)) state.activeDishes.forEach(d => { if (d && d.until > ref) d.until += delta; });
+  // 注文の期限(進捗が進まない間は締め切りも進めない)
+  if (state.activeOrder && state.activeOrder.expiresAt > ref) state.activeOrder.expiresAt += delta;
+}
+
+// ==== 非表示(バックグラウンド)の追いつき(一覧#11・2026-07-28) ====
+// アプリを終了せずホーム/画面ロックへ置くと loadGame が走らないため放置生産が一切入らず、
+// 一方でバフ・注文は Date.now 基準なので消化され続けていた(=数分離れるだけでブーストを捨て、
+// 注文は進捗ゼロで期限切れ)。非表示の実時間を測り、戻ったときに
+//   (a) バフ・注文の残り時間を非表示ぶん前へずらす
+//   (b) tick が計上できなかった時間ぶんの生産を、オフラインと同じ上限・スキルで与える
+// を行う。(b) は非表示中に throttle された tick が実際に計上した時間を差し引くので二重計上しない。
+let hiddenSinceAt = 0;
+let hiddenTickMs = 0;
+
+function catchUpFromHidden() {
+  if (!hiddenSinceAt) return;
+
+  const now = Date.now();
+  const hiddenSince = hiddenSinceAt;
+  const hiddenMs = Math.max(0, now - hiddenSinceAt);
+  const uncreditedMs = Math.max(0, hiddenMs - hiddenTickMs);
+  hiddenSinceAt = 0;
+  hiddenTickMs = 0;
+  if (hiddenMs <= 0) return;
+
+  shiftGameClocks(hiddenMs, now, hiddenSince); // 非表示になった時点で生きていたバフ・注文を残り時間ごと戻す
+
+  if (uncreditedMs > 0 && !pausedForSkillChoice()) {
+    const baseLimit = OFFLINE_LIMIT_SECONDS;
+    const extraLimit = skillEffect("offlineHours") * 60 * 60;
+    const seconds = hasSkillEffect("unlockSystem", "offlineInfinite")
+      ? uncreditedMs / 1000
+      : Math.min(uncreditedMs / 1000, baseLimit + extraLimit);
+    const gained = earn(D(baseCps()).mul(seconds));
+    if (gained.gt(0)) showMessage(`放置 +${fmt(gained)}`);
+  }
+}
+
 function updateGameClockFreeze() {
   const now = Date.now();
   const buffFrozen = rewardModalOpen() || overlayFreezesGame();
@@ -16931,30 +17004,7 @@ function updateGameClockFreeze() {
 
   // (A) バフ・ブースト等の残り時間: 停止が続く間は毎フレーム前方へずらして凍結する
   if (buffFrozen && lastGameFreezeAt) {
-    const delta = now - lastGameFreezeAt;
-    if (delta > 0) {
-      // 終了時刻(未来)系: まだ有効なものだけ前へずらす(期限切れを復活させない)
-      const shiftUntil = (v) => (v && v > now) ? v + delta : v;
-      state.spiceBoostUntil = shiftUntil(state.spiceBoostUntil);
-      state.spiceAromaUntil = shiftUntil(state.spiceAromaUntil);
-      state.bhBoostUntil = shiftUntil(state.bhBoostUntil);
-      state.portalHuntUntil = shiftUntil(state.portalHuntUntil);
-      state.bakeStateUntil = shiftUntil(state.bakeStateUntil);
-      state.orderTempCpsUntil = shiftUntil(state.orderTempCpsUntil);
-      state.orderTempResearchUntil = shiftUntil(state.orderTempResearchUntil);
-      state.orderTempSpiceUntil = shiftUntil(state.orderTempSpiceUntil);
-      state.nextOrderAt = shiftUntil(state.nextOrderAt);
-      // 基準時刻(過去)系: 経過を止めるため常に前へずらす
-      if (state.bhFullSince) state.bhFullSince += delta;
-      if (state.lastCritAt) state.lastCritAt += delta;
-      if (state.lastGoldenAt) state.lastGoldenAt += delta;
-      // 金ブースト・余熱(配列)
-      if (Array.isArray(activeGoldenBoosts)) activeGoldenBoosts.forEach(b => { if (b && b.until > now) b.until += delta; });
-      if (Array.isArray(activeGoldenAfterheats)) activeGoldenAfterheats.forEach(b => { if (b && b.until > now) b.until += delta; });
-      if (Array.isArray(activeGoldenBoosts)) boostUntil = activeGoldenBoosts.reduce((m, b) => Math.max(m, (b && b.until) || 0), 0);
-      // 料理バフ
-      if (Array.isArray(state.activeDishes)) state.activeDishes.forEach(d => { if (d && d.until > now) d.until += delta; });
-    }
+    shiftGameClocks(now - lastGameFreezeAt, now);
   }
   lastGameFreezeAt = buffFrozen ? now : 0;
 
@@ -18453,6 +18503,7 @@ setInterval(() => {
     // ノルマ・注文・出現・各種ボーナスなど、その他の進行は従来どおりオーバーレイ中は止める。
     const overlayOpen = overlayFreezesGame();
     state.totalPlaySec = (state.totalPlaySec || 0) + 0.05; // v4: 総プレイ秒(転生持ち越し)
+    if (hiddenSinceAt) hiddenTickMs += 50; // 一覧#11: 非表示中に tick が計上できた時間(戻ったとき二重計上しないため)
     earn((currentCps() + directIncomeTotalCps()) / 20);
     if (orderCookieActive()) earn((currentCps() + directIncomeTotalCps()) / 20 * ORDER_COOKIE_MUL); // 注文報酬cookie=時間窓の上乗せ(sim同期)
     // 直近稼ぎ率EMA(時定数90秒・sim同期2026-07-11): 毎秒1回、runCookiesの増分から更新
