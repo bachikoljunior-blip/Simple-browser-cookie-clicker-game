@@ -10357,6 +10357,8 @@ function buyEndlessMastery() {
   updateTopOnly();
 }
 
+// 全生産(all)スキルの合計。表示専用(一覧#5): 生産計算では clickSkillMultiplier/cpsSkillMultiplier の
+// 中に既に all が入っているため、ここを生産へ**再度**掛けてはいけない(掛けると all が実質2乗になる)。
 function prestigeMultiplier() {
   return 1 + skillEffect("all");
 }
@@ -11089,8 +11091,7 @@ function baseClickPower() {
   });
 
   v *= bankClickMultiplier();
-  v *= clickSkillMultiplier();
-  v *= prestigeMultiplier();
+  v *= clickSkillMultiplier(); // 一覧#5: all はこの中に入っている(prestigeMultiplier の再乗算を廃止)
   v *= endlessMultiplier(); // 一覧#3: ツリー完成後のPT還元(恒久)
   v *= globalResearchMultiplier();
   v *= runRewardAllMultiplier();
@@ -11129,8 +11130,7 @@ function baseCps() {
 
   v += msCpsAdd(); // 効果多様化: 加算(+N/秒・研究解放で)
 
-  v *= cpsSkillMultiplier();
-  v *= prestigeMultiplier();
+  v *= cpsSkillMultiplier(); // 一覧#5: all はこの中に入っている(prestigeMultiplier の再乗算を廃止)
   v *= endlessMultiplier(); // 一覧#3: ツリー完成後のPT還元(恒久)
   v *= globalResearchMultiplier();
   v *= runRewardAllMultiplier();
@@ -15491,8 +15491,7 @@ function upgradeEffectiveContributionAtCount(u, count, includeResearch = true) {
     v *= includeResearch ? bankClickMultiplier() : 1;
   }
 
-  v *= u.type === "click" ? clickSkillMultiplier() : cpsSkillMultiplier();
-  v *= prestigeMultiplier();
+  v *= u.type === "click" ? clickSkillMultiplier() : cpsSkillMultiplier(); // 一覧#5: all はこの中に入っている
   v *= endlessMultiplier(); // 一覧#3: 一覧の寄与表示も本体と同じ倍率で揃える
   v *= includeResearch ? globalResearchMultiplier() : 1;
   v *= challengeMultiplier();
@@ -15636,7 +15635,7 @@ function renderInfo() {
       <h3>現在の倍率・状態</h3>
       ${runPolicyUnlocked() ? `<div class="infoRow">周回方針：${runPolicyName()}${workshopTabUnlocked() ? `<div class="desc">${policyBiasText(RUN_POLICIES.find(p => p.id === state.runPolicy))}</div>` : ""}</div>` : ""}
       <div class="infoRow">報酬系統：金${fmt((state.rewardCategoryCounts||{}).golden||0)} / 狩猟${fmt((state.rewardCategoryCounts||{}).hunt||0)} / 設備${fmt((state.rewardCategoryCounts||{}).equipment||0)} / 危険${fmt((state.rewardCategoryCounts||{}).risk||0)}</div>
-      <div class="infoRow">スキル全体倍率：x${prestigeMultiplier().toFixed(3)}</div>
+      <div class="infoRow">全生産スキルの合計：x${prestigeMultiplier().toFixed(3)}(下の2つに内包)</div>
       <div class="infoRow">スキルタップ倍率：x${clickSkillMultiplier().toFixed(3)}</div>
       <div class="infoRow">スキル毎秒倍率：x${cpsSkillMultiplier().toFixed(3)}</div>
       <div class="infoRow">金クッキー倍率：x${goldenMultiplier().toFixed(3)}</div>
