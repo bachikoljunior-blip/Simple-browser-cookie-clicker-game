@@ -9809,11 +9809,15 @@ function grantMonsterDrops(typeId, level, overkill, colorTier) {
     // 制限時間なし・内容固定・周回を跨いで累積。進捗は注文ボードに常設表示。
     questProgressOnKill(stageNo, count);
     // 色素材(2026-07-13 新装備): ノルマ層の帯の色素材を討伐ごとにドロップ(工房スキル不要=最初から)
-    // 希少化(2026-07-15): 素の5% × 強さ × レア度。装備の色素材ボーナス(oreAdd)は投資ぶんとして上乗せ。ドロップは報酬後回収(addDrop)。
+    // 希少化(2026-07-15): 素の5% × 強さ × レア度。ドロップは報酬後回収(addDrop)。
+    // 一覧#2(2026-07-28): 装備の色素材ボーナス(oreAdd)は式の**外**への生加算だったため、レア度も強さも
+    // 通らず「+3個/体」が素(c帯0.25/r帯0.087個)を18〜376倍に膨らませ、しかも希少なr帯ほど恩恵倍率が
+    // 大きい逆転が起きていた(t1の靴1個でore_t6の34時間が41分に潰れる)。式の**中**の倍率へ移し、
+    // レア度・強さを通す=どの色でも同じ倍率(×(1+oreAdd))になり、上位色の希少性が保たれる。
     {
       const ct = Math.max(1, Math.min(EQUIP2_CFG.tiers || 6, colorTier || layerOreTier())); // そのモンスターの色の素材(2026-07-15)
       const oreId = "ore_t" + ct;
-      const oreExp = (MAT_DROP_BASE * monsterDropStrength(typeId) * matRarityDrop(oreId) + equip2Fx().oreAdd) * count;
+      const oreExp = MAT_DROP_BASE * monsterDropStrength(typeId) * matRarityDrop(oreId) * (1 + equip2Fx().oreAdd) * count;
       // ステージ署名色(2026-07-17 sim同期・ユーザー指示「色違いにもステージごとの特色を」):
       // ドロップの35%は今いるステージの署名色(S1=白銀〜S6=紅)。量はその色のレア度準拠=高色は署名でも希少。
       // 色の入手が「層を進める(帯色)」と「そのステージへ行く(署名色)」の二軸になる。
@@ -9822,7 +9826,7 @@ function grantMonsterDrops(typeId, level, overkill, colorTier) {
       if (sigT !== ct) {
         addDrop(oreId, rollDropQty(oreExp * (1 - sigFrac)));
         const sigId = "ore_t" + sigT;
-        const sigExp = (MAT_DROP_BASE * monsterDropStrength(typeId) * matRarityDrop(sigId) + equip2Fx().oreAdd) * count;
+        const sigExp = MAT_DROP_BASE * monsterDropStrength(typeId) * matRarityDrop(sigId) * (1 + equip2Fx().oreAdd) * count;
         addDrop(sigId, rollDropQty(sigExp * sigFrac));
       } else {
         addDrop(oreId, rollDropQty(oreExp)); // 新装備: 色素材系
@@ -11205,7 +11209,7 @@ function equip2CondOn(cond) {
     default: return true;
   }
 }
-const EQUIP2_FX_LABEL = { clickMul: "タップ生産", cpsMul: "毎秒生産", allMul: "全生産", dmgMul: "討伐ダメージ", killValMul: "討伐報酬", spawnMul: "モンスター出現短縮", stayMul: "モンスター滞在", goldenAmtMul: "金クッキー獲得", goldenRateMul: "金クッキー出現短縮", goldenBoostMul: "金ブースト", holdBonus: "ノルマ維持中 全生産", quotaSlow: "ノルマ進行減速", upDisc: "設備費割引", resDisc: "研究費割引", dropMul: "素材ドロップ", oreAdd: "色素材+n/体", rewardLvAdd: "報酬レベル+n", critAdd: "会心率+n", critValMul: "会心の威力", dropRateAdd: "素材ドロップ率+", dropLuck: "確率で素材+1個" };
+const EQUIP2_FX_LABEL = { clickMul: "タップ生産", cpsMul: "毎秒生産", allMul: "全生産", dmgMul: "討伐ダメージ", killValMul: "討伐報酬", spawnMul: "モンスター出現短縮", stayMul: "モンスター滞在", goldenAmtMul: "金クッキー獲得", goldenRateMul: "金クッキー出現短縮", goldenBoostMul: "金ブースト", holdBonus: "ノルマ維持中 全生産", quotaSlow: "ノルマ進行減速", upDisc: "設備費割引", resDisc: "研究費割引", dropMul: "素材ドロップ", oreAdd: "色素材ドロップ", rewardLvAdd: "報酬レベル+n", critAdd: "会心率+n", critValMul: "会心の威力", dropRateAdd: "素材ドロップ率+", dropLuck: "確率で素材+1個" };
 let EQUIP2_ITEMS_CACHE = null;
 function equip2Items() {
   if (EQUIP2_ITEMS_CACHE) return EQUIP2_ITEMS_CACHE;
@@ -11264,7 +11268,7 @@ function equip2Items() {
         const fmtF = x => x >= 100 ? fmt(x) : String(Math.round(x * 100) / 100); // 倍率表示は小数を保つ(fmtは0.9を0に丸める)
         const upText = k => {
           const val = (k[1]) * scale;
-          if (k[0] === "oreAdd" || k[0] === "rewardLvAdd") return EQUIP2_FX_LABEL[k[0]].replace("+n", "+" + fmtF(Math.floor(val) || val));
+          if (k[0] === "rewardLvAdd") return EQUIP2_FX_LABEL[k[0]].replace("+n", "+" + fmtF(Math.floor(val) || val)); // oreAdd は倍率化(一覧#2)で汎用の「×N」表記へ
           if (k[0] === "critAdd") return "会心率+" + Math.round(Math.min(EQUIP2_FLATCAP.critAdd, val) * 100) + "%";
           if (k[0] === "upDisc" || k[0] === "resDisc") return EQUIP2_FX_LABEL[k[0]] + " " + Math.round(Math.min(0.5, val) * 100) + "%";
           if (k[0] === "dropRateAdd") return "素材ドロップ率 +" + Math.round(val * 100) + "%";
