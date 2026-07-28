@@ -6992,6 +6992,7 @@ function freshState() {
     prestige: 0,
     prestigeTotal: 0,
     prestigeBaseTotal: 0,
+    endlessLv: 0,              // 一覧#3: 無限研鑽の段数(転生を跨いで永続)
     quotaBonusTotal: 0,
     prestigeRuns: 0,
     runStart: Date.now(),
@@ -7106,6 +7107,7 @@ function ensureState() {
   state.prestige = Math.floor(Number(state.prestige) || 0);
   state.prestigeTotal = Math.floor(Number(state.prestigeTotal ?? state.prestige) || 0);
   state.prestigeBaseTotal = Math.floor(Number(state.prestigeBaseTotal) || Math.min(totalPrestigeFromCookies(state.totalCookies), state.prestigeTotal) || 0);
+  state.endlessLv = Math.max(0, Math.floor(Number(state.endlessLv) || 0)); // 一覧#3: 無限研鑽の段数。旧セーブは0補完
   state.quotaBonusTotal = Math.floor(Number(state.quotaBonusTotal) || Math.max(0, state.prestigeTotal - state.prestigeBaseTotal) || 0);
   state.quotaActive = state.quotaActive !== false;
   state.quotaFailed = Boolean(state.quotaFailed);
@@ -10309,6 +10311,39 @@ function visibleUpgrades() {
   return UPGRADES.filter((u, i) => i <= limit && upgradeUnlocked(u) && revealOk("up:" + u.id));
 }
 
+// ==== 無限研鑽(一覧#3・2026-07-28) ====
+// 転生PTの sink はスキル71ノード(合計 1,555,826,482 PT)だけで、転生97回目でツリーが完成する。
+// 一方 PT の供給は 14×(総生産/1e4)^0.085 で、終盤はコスト表が1周2桁伸びるため 1周あたり×1.479 で
+// 増え続ける(116周目の累積は sink の1733倍)。完成後の転生は「クッキーを消費して使い道の無い数値を
+// 受け取るだけ」になり、周回リセットが純粋な損失になっていた。
+// 直し方: 供給が無限なら sink も無限にするのが原因側の修正。ツリー完成後に解放される反復購入枠を置く。
+//   費用 = ENDLESS_BASE_COST × ENDLESS_COST_GROWTH^Lv、効果 = 全生産 ×(1+ENDLESS_MUL_PER_LV)^Lv。
+// 費用の伸び(1.5)を PT 供給の伸び(1.479/周回)に合わせてあるので、完成後はおおむね「1周回=1段」で
+// 頭打ちにならない。効果は 1段 +25%(=0.097桁)で、経済の伸び(2.3桁/周回)に対して支配的にならない。
+const ENDLESS_BASE_COST = 5.00e+8;   // 1段目=ツリー完成直後の1周のPT(実測 5.14e8)相当
+const ENDLESS_COST_GROWTH = 1.5;     // PT供給の伸び(×1.479/周回)に追随
+const ENDLESS_MUL_PER_LV = 0.25;     // 1段ごとに全生産 +25%(恒久)
+
+function endlessLv() { return Math.max(0, Math.floor(Number(state.endlessLv) || 0)); }
+function endlessUnlocked() { return SKILLS.every(s => hasSkill(s.id)); } // スキルツリー完成が解放条件
+function endlessCost() { return Math.ceil(ENDLESS_BASE_COST * Math.pow(ENDLESS_COST_GROWTH, endlessLv())); }
+function endlessMultiplier() { return Math.pow(1 + ENDLESS_MUL_PER_LV, endlessLv()); }
+
+function buyEndlessMastery() {
+  if (!endlessUnlocked()) return;
+  const cost = endlessCost();
+  if (!(state.prestige >= cost)) return;
+
+  state.prestige -= cost;
+  state.endlessLv = endlessLv() + 1;
+
+  playSound("skill");
+  showMessage(`無限研鑽 Lv${state.endlessLv}：全生産 ×${endlessMultiplier().toFixed(2)}`);
+  saveGame();
+  renderActiveTab();
+  updateTopOnly();
+}
+
 function prestigeMultiplier() {
   return 1 + skillEffect("all");
 }
@@ -11043,6 +11078,7 @@ function baseClickPower() {
   v *= bankClickMultiplier();
   v *= clickSkillMultiplier();
   v *= prestigeMultiplier();
+  v *= endlessMultiplier(); // 一覧#3: ツリー完成後のPT還元(恒久)
   v *= globalResearchMultiplier();
   v *= runRewardAllMultiplier();
   v *= dishProductionMultiplier();
@@ -11082,6 +11118,7 @@ function baseCps() {
 
   v *= cpsSkillMultiplier();
   v *= prestigeMultiplier();
+  v *= endlessMultiplier(); // 一覧#3: ツリー完成後のPT還元(恒久)
   v *= globalResearchMultiplier();
   v *= runRewardAllMultiplier();
   v *= runRewardCpsMultiplier();
@@ -15387,6 +15424,16 @@ function renderPrestige() {
 
     ${policyBox}
 
+    ${endlessUnlocked() ? `
+    <div class="infoBox">
+      <h3>無限研鑽</h3>
+      <div class="desc">スキルツリーは完成しました。以後の転生PTはここで恒久的な生産力に変えられます(転生でも消えません)。</div>
+      <div class="infoRow">現在：Lv${fmt(endlessLv())} ／ 全生産 ×${endlessMultiplier().toFixed(3)}</div>
+      <div class="infoRow">次の1段：PT ${fmt(endlessCost())}(所持PT ${fmt(Math.floor(state.prestige))})</div>
+      <button id="endlessBtn" class="item ${state.prestige >= endlessCost() ? "canBuy" : "locked"}">${state.prestige >= endlessCost() ? `PT ${fmt(endlessCost())} を使って1段のばす` : `PT ${fmt(endlessCost())} が必要`}</button>
+    </div>
+    ` : ""}
+
     <div class="infoBox">
       <h3>転生</h3>
       <div class="infoRow">今回の総クッキー：${fmt(state.runCookies)}</div>
@@ -15403,6 +15450,9 @@ function renderPrestige() {
 
   const redoRunBtn = $("redoRunBtn");
   if (redoRunBtn) addTap(redoRunBtn, redoCurrentRun);
+
+  const endlessBtn = $("endlessBtn");
+  if (endlessBtn) addTap(endlessBtn, buyEndlessMastery);
 
   const prestigeBtn = $("prestigeBtn");
   if (prestigeBtn) addTap(prestigeBtn, prestigeReset);
@@ -15430,6 +15480,7 @@ function upgradeEffectiveContributionAtCount(u, count, includeResearch = true) {
 
   v *= u.type === "click" ? clickSkillMultiplier() : cpsSkillMultiplier();
   v *= prestigeMultiplier();
+  v *= endlessMultiplier(); // 一覧#3: 一覧の寄与表示も本体と同じ倍率で揃える
   v *= includeResearch ? globalResearchMultiplier() : 1;
   v *= challengeMultiplier();
 
@@ -16015,6 +16066,7 @@ function buildRunStartFromCurrent() {
   s.prestige = cur.prestige;
   s.prestigeTotal = cur.prestigeTotal;
   s.prestigeBaseTotal = cur.prestigeBaseTotal;
+  s.endlessLv = Math.max(0, Math.floor(Number(cur.endlessLv) || 0)); // 一覧#3: 無限研鑽は生涯記録
   s.quotaBonusTotal = 0;
   s.prestigeRuns = cur.prestigeRuns;
   s.quotaActive = true;
@@ -16109,6 +16161,7 @@ function prestigeReset() {
   const keepTotal = state.totalCookies;
   const keepClicks = state.totalClicks;
   const baseGain = prestigeBaseGain();
+  const keepEndlessLv = Math.max(0, Math.floor(Number(state.endlessLv) || 0)); // 一覧#3: 無限研鑽は転生で消えない
   const keepPrestige = state.prestige + gain;
   const keepPrestigeTotal = state.prestigeTotal + gain;
   const keepPrestigeBaseTotal = state.prestigeBaseTotal + baseGain;
@@ -16167,6 +16220,7 @@ function prestigeReset() {
   state.prestige = keepPrestige;
   state.prestigeTotal = keepPrestigeTotal;
   state.prestigeBaseTotal = keepPrestigeBaseTotal;
+  state.endlessLv = keepEndlessLv;
   state.quotaBonusTotal = keepQuotaBonusTotal;
   state.prestigeRuns = keepPrestigeRuns;
   state.nextStartAt = keepNextStartAt;
