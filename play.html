@@ -7109,6 +7109,7 @@ function ensureState() {
   state.prestigeTotal = Math.floor(Number(state.prestigeTotal ?? state.prestige) || 0);
   state.prestigeBaseTotal = Math.floor(Number(state.prestigeBaseTotal) || Math.min(totalPrestigeFromCookies(state.totalCookies), state.prestigeTotal) || 0);
   state.endlessLv = Math.max(0, Math.floor(Number(state.endlessLv) || 0)); // 一覧#3: 無限研鑽の段数。旧セーブは0補完
+  state.lastSaveServer = Math.max(0, Number(state.lastSaveServer) || 0); // 一覧#12: サーバー基準の保存時刻。旧セーブは0=未取得扱い
   // 一覧#10: セーブ固有ID。スナップショット(転生前/周回開始)が「このセーブのものか」を判定するために使う。
   // 旧セーブには無いので初回読み込み時に発行し、同時に所有者不明の旧スナップショットを破棄する。
   if (typeof state.saveId !== "string" || !state.saveId) {
@@ -14325,7 +14326,7 @@ function beginRunAfterSkills() {
 //  ・購入直後も listPurchases で本当に付与されたか確認してから解放する(端末側応答の偽装対策)
 //  ・購入状態と付与関数はこのクロージャ内に閉じ、コンソールから直接呼べる形では公開しない
 //  (サーバーを持たないため完全ではない。厳密にやる場合はバックエンド+Play Developer APIでの検証が必要)
-const { adGateRequired, openAdGate, markRunStarted } = (() => {
+const { adGateRequired, openAdGate, markRunStarted, serverNow, serverTimeVerified } = (() => {
   const STORAGE_KEY = "cookie_game_unlimited_start";
   const PRODUCT_ID = "unlimited_start"; // Google Play Consoleで作成するアプリ内アイテムのID
   const BILLING_METHOD = "https://play.google.com/billing";
@@ -14701,6 +14702,9 @@ const { adGateRequired, openAdGate, markRunStarted } = (() => {
   });
 
   return {
+    // 一覧#12: オフライン生産の経過時間もサーバー基準で測るため、時刻の取得口を公開する
+    serverNow: now,
+    serverTimeVerified: timeVerified,
     adGateRequired: () => {
       // Play版: 24時間のスタート制限にかかっている間だけゲートを出す
       if (isPlayStoreVersion()) {
@@ -16430,6 +16434,8 @@ function saveGame() {
     state.quotaPauseStartedAt = now;
   }
   state.lastSave = now;
+  // 一覧#12: 端末時計とは別に、サーバー基準の保存時刻も残す(取得できているときだけ更新)
+  if (serverTimeVerified()) state.lastSaveServer = serverNow();
   localStorage.setItem(saveKey, JSON.stringify(state));
 }
 
@@ -16804,7 +16810,15 @@ function findSavedData() {
 // 「別端末を閉じてからの実時間」がそのまま入って必ず「ノルマ終了」になっていた。
 function applyOfflineOnLoad() {
   const now = Date.now();
-  const offlineMs = Math.max(0, now - state.lastSave);
+  // 一覧#12: 端末時計そのままだと「時計を8時間進めて起動」を繰り返すだけで放置生産を取り直せる。
+  // 24時間のスタート制限と同じサーバー基準の時刻(HEADのDateヘッダ)で測り、取れているときはそちらを使う。
+  // 取得できない(オフライン等)ときだけ従来どおり端末時計にフォールバックする=正直な放置は損しない。
+  const serverDeltaMs = (serverTimeVerified() && state.lastSaveServer > 0)
+    ? Math.max(0, serverNow() - state.lastSaveServer)
+    : null;
+  const offlineMs = serverDeltaMs !== null
+    ? Math.min(serverDeltaMs, Math.max(0, now - state.lastSave))
+    : Math.max(0, now - state.lastSave);
 
   if (state.quotaPauseStartedAt) {
     state.quotaPausedMs += Math.max(0, state.lastSave - state.quotaPauseStartedAt);
