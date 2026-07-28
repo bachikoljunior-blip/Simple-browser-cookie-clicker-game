@@ -16159,6 +16159,7 @@ function buildRunStartFromCurrent() {
   s.skills = cur.skills;
   s.materials = { ...(cur.materials || {}) };
   s.materialsSeen = { ...(cur.materialsSeen || {}) };
+  s.codex = JSON.parse(JSON.stringify(cur.codex || {})); // 一覧#15: 図鑑は生涯記録
   s.equipment = { ...(cur.equipment || {}) };
   s.equipmentAscend = { ...(cur.equipmentAscend || {}) };
   s.killRecords = { ...(cur.killRecords || {}) };
@@ -16259,6 +16260,9 @@ function prestigeReset() {
   // (料理バフ・現在ステージ・段階購入(researchStages)は持ち越さない=freshStateの初期値に戻る)
   const keepMaterials = { ...(state.materials || {}) };
   const keepMaterialsSeen = { ...(state.materialsSeen || {}) };
+  // 一覧#15(2026-07-28): 図鑑(codex)は収集記録なので転生で消さない。materialsSeen / eq2Seen / killRecords /
+  // everFeatures / lifeRewardCat と同じ生涯記録の仲間だが、keep から漏れていて毎転生で「？？？」に戻っていた。
+  const keepCodex = JSON.parse(JSON.stringify(state.codex || {}));
   const keepPresenceBonus = { ...(state.presenceBonus || {}) };
   const keepEquipment = { ...(state.equipment || {}) };
   const keepEquipmentAscend = { ...(state.equipmentAscend || {}) };
@@ -16315,6 +16319,7 @@ function prestigeReset() {
   state.skills = keepSkills;
   state.materials = keepMaterials;
   state.materialsSeen = keepMaterialsSeen;
+  state.codex = keepCodex;
   state.presenceBonus = keepPresenceBonus;
   state.equipment = keepEquipment;
   state.equipmentAscend = keepEquipmentAscend;
