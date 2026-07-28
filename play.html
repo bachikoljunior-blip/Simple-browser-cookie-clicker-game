@@ -18201,13 +18201,25 @@ function showRewardChoices(level, dropMaterials) {
 }
 
 // 「報酬を手に入れた」画面でOKを押すと、遅延なしで報酬選択に移る
+// 一覧#13(2026-07-28): OKを押した瞬間に選択肢が上へ詰まり、1枚目のカードが直前までOKボタンが
+// あった座標を覆うため、連打の勢いで2回目のタップがそのまま「1番目の報酬を確定」になっていた。
+// rewardLockUntil は 0 を代入されるだけで常に0=時間ガードが死んでいたのが原因。
+// 選択肢を出した直後だけ短くロックし、その間のタップは無視する(押し直せばすぐ選べる長さ)。
+const REWARD_REVEAL_LOCK_MS = 400;
+
 function revealRewardChoices() {
   const modal = $("rewardModal");
   const notice = $("rewardLockNotice");
   if (!modal || !modal.classList.contains("rewardLocked")) return;
   modal.classList.remove("rewardLocked");
-  document.querySelectorAll("#rewardChoices .rewardBtn").forEach(btn => { btn.disabled = false; });
-  if (notice) notice.textContent = "報酬を選択";
+  rewardLockUntil = Date.now() + REWARD_REVEAL_LOCK_MS;
+  clearTimeout(rewardLockTimer);
+  // ロックが明けた時点でボタンを有効化する(ロック中は disabled のまま=誤タップも押下扱いにしない)
+  rewardLockTimer = setTimeout(() => {
+    document.querySelectorAll("#rewardChoices .rewardBtn").forEach(btn => { btn.disabled = false; });
+    if (notice) notice.textContent = "報酬を選択";
+  }, REWARD_REVEAL_LOCK_MS);
+  if (notice) notice.textContent = "報酬を選択(まもなく選べます)";
 }
 
 function chooseReward(choice) {
@@ -18215,6 +18227,11 @@ function chooseReward(choice) {
     showMessage("報酬を確認中");
     return;
   }
+  // 一覧#13: 2本指で別々のカードを同時に叩くと1体の討伐から報酬が二重に入るため、
+  // 選択が成立したらこの周の選択肢を閉じる(pendingRewardChoices を空にする)。
+  if (!pendingRewardChoices || pendingRewardChoices.length === 0) return;
+  if (!pendingRewardChoices.includes(choice)) return;
+  pendingRewardChoices = [];
 
   const category = choice.category || (choice.kind === "perk" ? rewardCategoryOf(choice.id) : "equipment");
   // 相性(倒した種類×カテゴリ)を掛けた実際の増分
