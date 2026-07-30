@@ -22,6 +22,15 @@ on:
         description: 'targetSdkVersion(2026/8/31 以降は 36 以上が必須)'
         required: true
         default: '36'
+      upload_to_play:
+        description: 'Play の内部テストへ自動アップロードする(Secret PLAY_SERVICE_ACCOUNT_JSON が必要)'
+        type: boolean
+        required: false
+        default: false
+      release_notes:
+        description: 'リリースノート(日本語)。自動アップロード時のみ使用'
+        required: false
+        default: '不具合の修正と調整'
 
 permissions:
   contents: read
@@ -160,6 +169,25 @@ jobs:
             android-build/app-release-signed.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Play にアップロード
+        if: ${{ inputs.upload_to_play }}
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          AAB_PATH: android-build/app-release-bundle.aab
+          PACKAGE_NAME: com.cookiestrateger.game
+          TRACK: internal
+          RELEASE_NAME: ${{ inputs.version_name }} (${{ inputs.version_code }})
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+          RELEASE_STATUS: completed
+        run: |
+          set -euo pipefail
+          if [ -z "${PLAY_SERVICE_ACCOUNT_JSON:-}" ]; then
+            echo "::error::Secret PLAY_SERVICE_ACCOUNT_JSON が未登録です。手順は PLAY_STORE.md を見てください。"
+            exit 1
+          fi
+          npm install --no-save googleapis@144 > /dev/null
+          node store/android/upload-to-play.cjs
 
       - name: 次にやることを表示
         run: |

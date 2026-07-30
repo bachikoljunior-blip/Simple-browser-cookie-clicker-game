@@ -270,6 +270,28 @@ curl -i https://cookiestrateger.com/.well-known/assetlinks.json
 課金テストは Play Console → 設定 → ライセンステスト にアカウントを登録すると
 実際の課金なしでテストできます。
 
+### AAB のアップロードを自動化する（任意）
+
+「ビルド → Artifacts の zip をダウンロード → 展開 → Console で選択」を毎回やらずに済みます。
+一度設定すれば、ワークフローの `upload_to_play` にチェックを入れるだけで内部テストまで届きます。
+
+1. [Google Cloud Console](https://console.cloud.google.com/) でプロジェクトを作り、
+   **Google Play Android Developer API** を有効化する
+2. サービスアカウントを作り、**JSON 形式の鍵**をダウンロードする
+3. Play Console →「ユーザーと権限」→ そのサービスアカウントのメールアドレスを招待し、
+   対象アプリに「リリースを作成して製品版にデプロイ」相当の権限を与える
+4. GitHub の `Settings → Secrets and variables → Actions` で
+   **`PLAY_SERVICE_ACCOUNT_JSON`** を作り、鍵ファイルの中身をそのまま貼る
+
+**このリポジトリは公開です。鍵ファイルは絶対にコミットしないこと。**
+必ず Secret に入れてください。ワークフローもスクリプトも鍵の中身をログへ出しません。
+
+権限の反映に最大24時間かかることがあります。それまでは 403 で弾かれます。
+
+なお **「アプリのコンテンツ」の各申告（プライバシーポリシー・広告・レーティング・
+ターゲットユーザー・データセーフティなど）には API がありません。** ここは Console で
+手作業で埋めるしかないので、自動化の対象外です。
+
 ---
 
 ## 7. 製品版に出すまで（個人アカウントは最低14日）
