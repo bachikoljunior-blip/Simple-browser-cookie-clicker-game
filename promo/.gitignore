@@ -1,0 +1,9 @@
+# 中間生成物(素材フレーム・合成フレーム・BGM の元 WAV)は重いのでコミットしない。
+# 完成品は promo/out/ に置く。
+build/
+
+# フォントは build.sh が Google Fonts から取得する(SIL Open Font License 1.1)
+fonts/*.ttf
+
+# 無音版はサイズが大きく、build.sh でいつでも作り直せるのでコミットしない
+out/*_silent.mp4
