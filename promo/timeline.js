@@ -18,7 +18,8 @@ const CLIP_DIR = "build/frames";
 const SECTIONS = [
   { id: "hook",   t0:  0.0, t1:  3.0, clip: "tap",       at: 0.0 },
   { id: "intro",  t0:  3.0, t1:  6.0, clip: "tap",       at: 3.0 },
-  { id: "shop",   t0:  6.0, t1: 14.0, clip: "shop",      at: 0.4 },
+  // 設備: 冒頭に全画面の切り替わりが一瞬映るので、その後から使う
+  { id: "shop",   t0:  6.0, t1: 14.0, clip: "shop",      at: (u) => 1.25 + u * 0.88 },
   { id: "res",    t0: 14.0, t1: 20.0, clip: "research",  at: 0.4 },
   // 討伐は殴っている所を少しだけスローにして、倒したあとで巻き取る
   { id: "mon",    t0: 20.0, t1: 28.0, clip: "monster",
@@ -33,17 +34,14 @@ const SECTIONS = [
 const DURATION = SECTIONS[SECTIONS.length - 1].t1;
 const CUTS = [6.0, 14.0, 20.0, 28.0, 38.0];
 
-// テロップの縦位置。
-// ①〜④の解説パートでは、ゲーム画面を上から押し下げて空けた「帯」の中だけに置く。
-// こうするとテロップがゲーム画面に一切かからず、どこを触っているかが最後まで見える。
-const BAND_H = 344;                       // 帯の高さ
-const GAME_TOP = BAND_H;                  // 画面の上端
-const GAME_SCALE = (1920 - BAND_H) / 1920; // 縦に収まる倍率(=横も同じだけ縮む)
-const Y_HOOK = 1250;                      // つかみは全画面なので従来どおり下寄せ
-const Y_CHAP = 118;
-const Y_CAP = 112;
-/** 解説パート(画面を丸ごと見せる区間) */
-const FRAMED = new Set(["shop", "res", "mon", "skill"]);
+// ゲーム画面は 1080x1920 に等倍で置く。素材はスマホ画面(540x960)を 2 倍で撮って
+// いるので、これがちょうど「実機で見たときと同じ大きさ」= 一番大きく、かつどこも
+// 切り落とさない状態になる。寄せも縮めもしない。
+const Y_HOOK = 1250;
+// テロップは、分割表示のときに何も乗っていない帯(クッキーの下・タブ見出しの上)へ置く。
+// 章タグとひとことは時間をずらして出すので、同じ場所を使い回す。
+const Y_CHAP = 636;
+const Y_CAP = 632;
 
 // ── イージング ────────────────────────────────────────────────────────
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -67,7 +65,7 @@ function noise(seed) {
 // ── DOM ───────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 const el = {};
-["gameA", "gameBg", "band", "flash", "hitFx", "scrim", "hook1", "hook2", "chap", "chapNum", "chapTtl", "chapBar",
+["gameA", "flash", "hitFx", "scrim", "hook1", "hook2", "chap", "chapNum", "chapTtl", "chapBar",
  "cap", "spot", "cta", "ctaBg", "ctaLogo", "ctaBadge", "ctaHead", "ctaSub", "ctaPanel",
  "ctaArrow", "ctaFoot"].forEach((k) => (el[k] = $(k)));
 
@@ -107,7 +105,6 @@ function clipTimeAt(sec, local) {
 function setGame(src) {
   if (src === lastSrc) return Promise.resolve();
   lastSrc = src;
-  el.gameBg.src = src;   // 余白に敷くぼかし背景も同じ絵で
   return new Promise((resolve) => {
     el.gameA.onload = () => resolve();
     el.gameA.onerror = () => resolve();
@@ -126,9 +123,8 @@ const camTopAt = (scale, cx, dx = 0, dy = 0) => camAt(scale, cx, 960 / scale, dx
 /** 上端合わせ → 中央合わせの補間 */
 const camTopToCenter = (scale, p, cx = 540) =>
   camAt(scale, lerp(cx, 540, clamp01(p)), lerp(960 / scale, 960, clamp01(p)));
-/** 画面を丸ごと、帯の下にぴたりと収める(どこも切り落とさない) */
-const camFramed = (dx = 0, dy = 0) =>
-  camAt(GAME_SCALE, 540, (960 - GAME_TOP) / GAME_SCALE, dx, dy);
+/** 等倍。画面がそのまま 1080x1920 に収まる */
+const camFull = (scale = 1, dx = 0, dy = 0) => camAt(scale, 540, 960, dx, dy);
 
 function camTransform(c) {
   const tx = (540 - c.cx) * c.scale + c.dx;
@@ -146,23 +142,24 @@ function toScreen(c, x, y) {
 function cameraFor(sec, t) {
   const p = span(t, sec.t0, sec.t1);
   switch (sec.id) {
-    // つかみ: クッキーに寄り切った状態から、少しずつ引く
-    case "hook":  return camTop(lerp(1.96, 1.72, easeOut(p)));
-    case "intro": return camTop(lerp(1.72, 1.26, easeInOut(p)));
-    // ①〜④の解説パートは、どこも切らずに画面を丸ごと見せる。
-    // 寄って一部を隠すより、何をタップしているかが分かることを優先する。
+    // つかみ: ほんの少しだけ寄って始め、すぐ等倍に落ち着く
+    case "hook":  return camTop(lerp(1.12, 1.05, easeOut(p)));
+    case "intro": return camTop(lerp(1.05, 1.00, easeInOut(p)));
+    // ①〜④の解説パートは等倍のまま。寄せも縮めもしないので、
+    // 画面はいちばん大きく、かつどこも切れない。
     case "shop":
     case "res":
     case "skill":
-      return camFramed();
-    // 討伐だけは、殴っている間ほんの少し揺らして手応えを出す(拡大はしない)
+      return camFull();
+    // 討伐だけは、殴っている間ほんの少し揺らす。
+    // 揺らすと端が出るので、揺れ幅ぶんだけ(1.03 倍)余裕を持たせる。
     case "mon": {
       const hit = t < sec.t0 + 3.4 ? Math.max(0, 1 - ((t * 1000) % 300) / 95) : 0;
-      return camFramed(hit * noise(Math.floor(t * 3.3)) * 9, hit * noise(Math.floor(t * 3.3) + 99) * 7);
+      return camFull(1.03, hit * noise(Math.floor(t * 3.3)) * 9, hit * noise(Math.floor(t * 3.3) + 99) * 7);
     }
     // しめ: タイトル画面をゆっくり押していく
     case "outro":
-    case "cta": return camAt(lerp(1.04, 1.18, easeInOut(span(t, 38.0, 50.0))), 540, 900);
+    case "cta": return camFull(lerp(1.00, 1.08, easeInOut(span(t, 38.0, 50.0))));
   }
   return camAt(1, 540, 960);
 }
@@ -284,12 +281,6 @@ async function seek(t) {
   // スキルツリーの画面はもともと暗い。スマホで見たときにノードが沈まないよう少し持ち上げる
   el.gameA.style.filter = sec.id === "skill" ? "brightness(1.24) saturate(1.14) contrast(1.04)" : "none";
 
-  // 解説パートだけ「帯 + 画面まるごと」のレイアウトにする
-  const framed = FRAMED.has(sec.id);
-  el.gameA.classList.toggle("framed", framed);
-  el.gameBg.style.opacity = framed ? "1" : "0";
-  el.band.style.opacity = framed ? "1" : "0";
-  el.band.style.height = (BAND_H + 90) + "px";
 
   // カット頭のフラッシュ
   let fl = 0;
@@ -310,7 +301,7 @@ async function seek(t) {
   // ── ① 設備(章タグ → ひとこと の順に、帯の中で入れ替える)
   styleChapter(t, 6.20, 9.30, "1", "設備でクッキーを増やす");
   styleCaption(t, 9.50, 13.70, 'まとめ買いで <b>毎秒の生産</b> がケタごと跳ねる');
-  styleSpot(t, 6.60, 9.20, camera, 540, 122, 330, 92);
+  styleSpot(t, 6.40, 9.10, camera, 540, 122, 330, 92);
 
   // ── ② 研究
   styleChapter(t, 14.20, 17.00, "2", "研究で設備を強化");

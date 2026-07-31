@@ -17,16 +17,6 @@
   /* ── ゲーム映像レイヤー ───────────────────────────────── */
   #gameWrap { position: absolute; inset: 0; overflow: hidden; }
   #gameWrap img { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; will-change: transform; }
-  /* 枠に収めたときの余白用。同じ絵をぼかして敷くと、黒一色より画がつながる。
-     等倍でぼかすと 1 枚あたりが重いので、小さく描いてから引き伸ばす */
-  #gameBg { opacity: 0; width: 270px; height: 480px; transform-origin: 0 0;
-            transform: translate(-81px, -144px) scale(4.6);
-            filter: blur(11px) brightness(.42) saturate(1.15); }
-  /* 画面を丸ごと見せるモード。角丸と縁で「端末の画面」に見せる */
-  #gameA.framed { border-radius: 30px; box-shadow: 0 -8px 60px rgba(0,0,0,.75), 0 0 0 3px rgba(255,196,102,.30); }
-  /* テロップ帯。ゲーム画面には一切かからない */
-  #band { position: absolute; left: 0; right: 0; top: 0; pointer-events: none; opacity: 0;
-          background: linear-gradient(180deg, rgba(8,4,2,.94) 0%, rgba(8,4,2,.88) 62%, rgba(8,4,2,0) 100%); }
 
   /* ── 画づくり(周辺減光・上下の締め) ───────────────────── */
   #vignette {
@@ -59,27 +49,28 @@
   /* 章タグ: 左から差し込む数字バッジ + 見出し */
   .chapter { position: absolute; left: 62px; display: flex; align-items: center; gap: 22px; }
   .chapter .num {
-    width: 96px; height: 96px; border-radius: 24px; flex: none;
+    width: 100px; height: 100px; border-radius: 25px; flex: none;
     display: flex; align-items: center; justify-content: center;
-    font-weight: 900; font-size: 54px; color: #2a1503;
+    font-weight: 900; font-size: 56px; color: #2a1503;
     background: linear-gradient(160deg, #FFE9A8, #F2A93B 62%, #C97A16);
     box-shadow: 0 12px 34px rgba(0,0,0,.6), inset 0 3px 0 rgba(255,255,255,.65);
   }
   .chapter .txt { display: flex; flex-direction: column; gap: 10px; }
   .chapter .ttl {
-    font-weight: 900; font-size: 58px; color: #fff; letter-spacing: .005em; white-space: nowrap;
+    font-weight: 900; font-size: 60px; color: #fff; letter-spacing: .005em; white-space: nowrap;
     text-shadow: 0 5px 0 rgba(50,18,0,.5), 0 10px 34px rgba(0,0,0,.85);
   }
   .chapter .bar { height: 9px; border-radius: 9px; background: linear-gradient(90deg, #FFD46B, #FF8A3D); transform-origin: left center; box-shadow: 0 0 22px rgba(255,170,60,.85); }
 
   /* 下段のひとこと */
   .caption {
-    position: absolute; left: 62px; right: 62px;
-    padding: 22px 30px; border-radius: 24px;
-    background: linear-gradient(180deg, rgba(18,9,4,.80), rgba(18,9,4,.62));
-    border: 3px solid rgba(255,196,102,.42);
+    position: absolute; left: 56px; right: 56px;
+    padding: 24px 30px; border-radius: 24px;
+    /* ゲーム画面の上に乗るので、下の絵が透けすぎないよう少し濃いめにする */
+    background: linear-gradient(180deg, rgba(16,8,3,.90), rgba(16,8,3,.80));
+    border: 3px solid rgba(255,196,102,.50);
     box-shadow: 0 18px 48px rgba(0,0,0,.6);
-    font-weight: 700; font-size: 43px; line-height: 1.36; color: #FFF3DD; text-align: center;
+    font-weight: 700; font-size: 44px; line-height: 1.36; color: #FFF3DD; text-align: center;
   }
   .caption b { color: #FFD46B; font-weight: 900; }
 
@@ -132,14 +123,12 @@
 <body>
 <div id="stage">
   <div id="gameWrap">
-    <img id="gameBg" alt="">
     <img id="gameA" alt="">
   </div>
   <div id="grade"></div>
   <div id="vignette"></div>
 
   <div class="layer" id="fx"></div>
-  <div id="band"></div>
   <div id="hitFx"></div>
   <div id="scrim"></div>
 
