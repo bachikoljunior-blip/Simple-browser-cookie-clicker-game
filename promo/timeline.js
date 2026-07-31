@@ -24,17 +24,26 @@ const SECTIONS = [
   { id: "mon",    t0: 20.0, t1: 28.0, clip: "monster",
     at: (u) => (u < 3.0 ? 0.2 + u * 0.80 : 2.6 + (u - 3.0) * 1.14) },
   // スキルツリーは頭の静止を削り、引きの動きから入る
-  { id: "skill",  t0: 28.0, t1: 38.0, clip: "skilltree", at: (u) => 2.6 + u * 0.74 },
+  // スキルツリー: 引きの途中から入り、全体が見えた所でひと呼吸置いて、取得へ
+  { id: "skill",  t0: 28.0, t1: 38.0, clip: "skilltree",
+    at: (u) => (u < 3.5 ? 3.3 + u * 0.486 : u < 6.0 ? 5.0 + (u - 3.5) * 0.52 : 6.3 + (u - 6.0) * 0.925) },
   { id: "outro",  t0: 38.0, t1: 42.0, clip: "title",     at: 0.6 },
   { id: "cta",    t0: 42.0, t1: 50.0, clip: "title",     at: 4.6 },
 ];
 const DURATION = SECTIONS[SECTIONS.length - 1].t1;
 const CUTS = [6.0, 14.0, 20.0, 28.0, 38.0];
 
-// テロップの縦位置(1080×1920 の中で、上下の UI に隠れにくい帯に収める)
-const Y_HOOK = 1250;
-const Y_CHAP = 980;
-const Y_CAP = 1210;
+// テロップの縦位置。
+// ①〜④の解説パートでは、ゲーム画面を上から押し下げて空けた「帯」の中だけに置く。
+// こうするとテロップがゲーム画面に一切かからず、どこを触っているかが最後まで見える。
+const BAND_H = 344;                       // 帯の高さ
+const GAME_TOP = BAND_H;                  // 画面の上端
+const GAME_SCALE = (1920 - BAND_H) / 1920; // 縦に収まる倍率(=横も同じだけ縮む)
+const Y_HOOK = 1250;                      // つかみは全画面なので従来どおり下寄せ
+const Y_CHAP = 118;
+const Y_CAP = 112;
+/** 解説パート(画面を丸ごと見せる区間) */
+const FRAMED = new Set(["shop", "res", "mon", "skill"]);
 
 // ── イージング ────────────────────────────────────────────────────────
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -58,7 +67,7 @@ function noise(seed) {
 // ── DOM ───────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 const el = {};
-["gameA", "flash", "hitFx", "scrim", "hook1", "hook2", "chap", "chapNum", "chapTtl", "chapBar",
+["gameA", "gameBg", "band", "flash", "hitFx", "scrim", "hook1", "hook2", "chap", "chapNum", "chapTtl", "chapBar",
  "cap", "spot", "cta", "ctaBg", "ctaLogo", "ctaBadge", "ctaHead", "ctaSub", "ctaPanel",
  "ctaArrow", "ctaFoot"].forEach((k) => (el[k] = $(k)));
 
@@ -98,6 +107,7 @@ function clipTimeAt(sec, local) {
 function setGame(src) {
   if (src === lastSrc) return Promise.resolve();
   lastSrc = src;
+  el.gameBg.src = src;   // 余白に敷くぼかし背景も同じ絵で
   return new Promise((resolve) => {
     el.gameA.onload = () => resolve();
     el.gameA.onerror = () => resolve();
@@ -116,6 +126,9 @@ const camTopAt = (scale, cx, dx = 0, dy = 0) => camAt(scale, cx, 960 / scale, dx
 /** 上端合わせ → 中央合わせの補間 */
 const camTopToCenter = (scale, p, cx = 540) =>
   camAt(scale, lerp(cx, 540, clamp01(p)), lerp(960 / scale, 960, clamp01(p)));
+/** 画面を丸ごと、帯の下にぴたりと収める(どこも切り落とさない) */
+const camFramed = (dx = 0, dy = 0) =>
+  camAt(GAME_SCALE, 540, (960 - GAME_TOP) / GAME_SCALE, dx, dy);
 
 function camTransform(c) {
   const tx = (540 - c.cx) * c.scale + c.dx;
@@ -136,37 +149,16 @@ function cameraFor(sec, t) {
     // つかみ: クッキーに寄り切った状態から、少しずつ引く
     case "hook":  return camTop(lerp(1.96, 1.72, easeOut(p)));
     case "intro": return camTop(lerp(1.72, 1.26, easeInOut(p)));
-    // 設備: 前半は上の「毎秒」が見える寄り、後半は全画面リストを引きで
-    case "shop": {
-      const q = span(t, sec.t0, sec.t0 + 3.6);
-      const r = span(t, sec.t0 + 3.6, sec.t0 + 4.8);
-      return r > 0
-        ? camTopToCenter(lerp(1.30, 1.02, easeInOut(r)), easeInOut(r))
-        : camTop(lerp(1.36, 1.30, easeOut(q)));
-    }
-    case "res": {
-      const q = span(t, sec.t0, sec.t0 + 3.0);
-      const r = span(t, sec.t0 + 3.0, sec.t0 + 4.2);
-      return r > 0
-        ? camTopToCenter(lerp(1.30, 1.02, easeInOut(r)), easeInOut(r))
-        : camTop(lerp(1.38, 1.30, easeOut(q)));
-    }
-    // 討伐: 殴っている間は寄り + 手ブレ、報酬が出たら引く
+    // ①〜④の解説パートは、どこも切らずに画面を丸ごと見せる。
+    // 寄って一部を隠すより、何をタップしているかが分かることを優先する。
+    case "shop":
+    case "res":
+    case "skill":
+      return camFramed();
+    // 討伐だけは、殴っている間ほんの少し揺らして手応えを出す(拡大はしない)
     case "mon": {
-      // モンスターは画面の左寄りに出るので、寄るときは見る位置も左へ振る
-      const fight = span(t, sec.t0, sec.t0 + 3.3);
-      const pull = span(t, sec.t0 + 3.3, sec.t0 + 4.5);
       const hit = t < sec.t0 + 3.4 ? Math.max(0, 1 - ((t * 1000) % 300) / 95) : 0;
-      const sx = hit * noise(Math.floor(t * 3.3)) * 13;
-      const sy = hit * noise(Math.floor(t * 3.3) + 99) * 10;
-      return pull > 0
-        ? camTopToCenter(lerp(1.52, 1.03, easeInOut(pull)), easeInOut(pull), 430)
-        : camTopAt(lerp(1.58, 1.52, easeOut(fight)), 430, sx, sy);
-    }
-    // スキルツリー: ほぼ等倍。最後の取得だけ少し寄る
-    case "skill": {
-      const r = span(t, sec.t1 - 3.4, sec.t1);
-      return camAt(lerp(1.05, 1.14, easeInOut(r)), 540, lerp(960, 740, easeInOut(r)));
+      return camFramed(hit * noise(Math.floor(t * 3.3)) * 9, hit * noise(Math.floor(t * 3.3) + 99) * 7);
     }
     // しめ: タイトル画面をゆっくり押していく
     case "outro":
@@ -292,6 +284,13 @@ async function seek(t) {
   // スキルツリーの画面はもともと暗い。スマホで見たときにノードが沈まないよう少し持ち上げる
   el.gameA.style.filter = sec.id === "skill" ? "brightness(1.24) saturate(1.14) contrast(1.04)" : "none";
 
+  // 解説パートだけ「帯 + 画面まるごと」のレイアウトにする
+  const framed = FRAMED.has(sec.id);
+  el.gameA.classList.toggle("framed", framed);
+  el.gameBg.style.opacity = framed ? "1" : "0";
+  el.band.style.opacity = framed ? "1" : "0";
+  el.band.style.height = (BAND_H + 90) + "px";
+
   // カット頭のフラッシュ
   let fl = 0;
   CUTS.forEach((c) => { if (t >= c && t < c + 0.15) fl = Math.max(fl, 1 - (t - c) / 0.15); });
@@ -308,26 +307,23 @@ async function seek(t) {
   styleLine(el.hook1, 'タップして、<em>焼く</em>。', t, 0.30, 2.60, Y_HOOK, 100);
   styleLine(el.hook2, '…のはずが、<br><em>数字が止まらない</em>。', t, 2.75, 5.80, Y_HOOK - 60, 84);
 
-  // ── ① 設備
-  styleChapter(t, 6.20, 9.40, "1", "設備でクッキーを増やす");
-  styleCaption(t, 7.70, 13.60, 'まとめ買いで <b>毎秒の生産</b> がケタごと跳ねる');
-  styleSpot(t, 6.60, 9.30, camera, 540, 120, 330, 92);
+  // ── ① 設備(章タグ → ひとこと の順に、帯の中で入れ替える)
+  styleChapter(t, 6.20, 9.30, "1", "設備でクッキーを増やす");
+  styleCaption(t, 9.50, 13.70, 'まとめ買いで <b>毎秒の生産</b> がケタごと跳ねる');
+  styleSpot(t, 6.60, 9.20, camera, 540, 122, 330, 92);
 
   // ── ② 研究
-  styleChapter(t, 14.20, 17.40, "2", "研究で設備を強化");
-  styleCaption(t, 15.70, 19.60, '<b>生産の式そのもの</b>を書き換える研究が並ぶ');
+  styleChapter(t, 14.20, 17.00, "2", "研究で設備を強化");
+  styleCaption(t, 17.20, 19.70, '<b>生産の式そのもの</b>を書き換える研究が並ぶ');
 
   // ── ③ 討伐
-  styleChapter(t, 20.20, 23.20, "3", "モンスター撃破で報酬");
-  styleCaption(t, 21.30, 23.80, '連打で削る。<b>ボスほど報酬が重い</b>');
-  styleCaption(t, 24.60, 27.70, '報酬は毎回 <b>自分で選ぶ</b>');
+  styleChapter(t, 20.20, 22.60, "3", "モンスター撃破で報酬");
+  styleCaption(t, 22.80, 25.10, '連打で削る。<b>ボスほど報酬が重い</b>');
+  styleCaption(t, 25.40, 27.70, '報酬は毎回 <b>自分で選ぶ</b>');
 
   // ── ④ スキルツリー
-  styleChapter(t, 28.20, 31.40, "4", "転生スキルツリー");
-  styleCaption(t, 30.90, 37.60, '<b>71ノード</b>。取る順番で<br>次の周回の速さが変わる');
-
-  // ── しめ
-  styleLine(el.hook1, 'ブラウザで、<em>いますぐ</em>。', t, 38.40, 41.50, Y_HOOK, 96);
+  styleChapter(t, 28.20, 31.00, "4", "転生スキルツリー");
+  styleCaption(t, 31.20, 37.70, '<b>71ノード</b>。取る順番で次の周回の速さが変わる');
 
   // 大きな一行テロップの下だけ静かに沈めて、文字を確実に読ませる
   el.scrim.style.opacity = (scrimNeed * 0.92).toFixed(3);

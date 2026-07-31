@@ -32,6 +32,8 @@ const H = 1920;
 const sleep = (page, ms) => page.waitForTimeout(ms);
 
 async function tap(page, x, y, wait = 90) {
+  // 触った場所に波紋を出してから押す(映像だけで操作が追えるように)
+  await page.evaluate(([px, py]) => { try { window.__promoTouch(px, py); } catch (_) {} }, [x, y]);
   await page.mouse.click(x, y);
   if (wait) await sleep(page, wait);
 }
@@ -93,6 +95,7 @@ async function main() {
   await G.startRun(page);
   const seeded = await G.seedProgress(page, SEED);
   console.log("  seeded:", JSON.stringify(seeded));
+  await G.installTouchFx(page);
 
   await page.evaluate(() => {
     try { closeTabPageFullscreen(); } catch (_) {}

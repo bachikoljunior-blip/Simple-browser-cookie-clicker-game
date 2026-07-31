@@ -15,6 +15,9 @@ async function launchGame(chromium, { url, mute = true } = {}) {
     executablePath: CHROME,
     args: [
       "--autoplay-policy=no-user-gesture-required",
+      // CDP のスクリーンキャストは CSS ピクセルのまま返してくるので、
+      // これを付けて描画面そのものを 2 倍にする(= 1080x1920 の等倍素材が撮れる)
+      "--force-device-scale-factor=2",
       "--font-render-hinting=none",
       "--disable-lcd-text",
       "--hide-scrollbars",
@@ -121,6 +124,53 @@ async function seedProgress(page, opts = {}) {
   }, opts);
 }
 
+/**
+ * 「今どこを触っているか」を画面に出すための指マーク。
+ * 収録映像だけを見た人にも操作が追えるように、タップのたびに波紋を出す。
+ * ゲーム本体には触らず、収録用のオーバーレイを足すだけ。
+ */
+async function installTouchFx(page) {
+  await page.evaluate(() => {
+    if (window.__promoTouch) return;
+    const style = document.createElement("style");
+    // 明るい背景でも暗い背景でも読めるよう、白い芯 + 濃い縁取り + 金色の輪で作る
+    style.textContent = `
+      #promoTouchLayer { position: fixed; inset: 0; pointer-events: none; z-index: 2147483647; }
+      .promoTouchDot {
+        position: absolute; width: 46px; height: 46px; margin: -23px 0 0 -23px;
+        border-radius: 50%; background: #fff; border: 5px solid rgba(60,26,0,.9);
+        box-shadow: 0 0 0 4px rgba(255,214,110,.95), 0 0 30px 10px rgba(255,170,40,.7);
+        animation: promoTouchDot .40s ease-out forwards;
+      }
+      .promoTouchRing {
+        position: absolute; width: 56px; height: 56px; margin: -28px 0 0 -28px;
+        border-radius: 50%; border: 7px solid rgba(255,222,140,.98);
+        outline: 3px solid rgba(60,26,0,.75); outline-offset: -10px;
+        box-shadow: 0 0 26px rgba(255,180,50,.95), inset 0 0 18px rgba(255,190,70,.6);
+        animation: promoTouchRing .60s cubic-bezier(.16,.72,.3,1) forwards;
+      }
+      @keyframes promoTouchDot { 0% { transform: scale(.35); opacity: 1 } 45% { transform: scale(1) } 100% { transform: scale(1.1); opacity: 0 } }
+      @keyframes promoTouchRing { from { transform: scale(.4); opacity: 1 } to { transform: scale(2.9); opacity: 0 } }
+    `;
+    document.head.appendChild(style);
+
+    const layer = document.createElement("div");
+    layer.id = "promoTouchLayer";
+    document.body.appendChild(layer);
+
+    window.__promoTouch = (x, y) => {
+      ["promoTouchDot", "promoTouchRing"].forEach((cls) => {
+        const n = document.createElement("div");
+        n.className = cls;
+        n.style.left = x + "px";
+        n.style.top = y + "px";
+        layer.appendChild(n);
+        setTimeout(() => n.remove(), 700);
+      });
+    };
+  });
+}
+
 /** 素の cookies をゲーム内関数で足す(演出中に息切れしないように) */
 async function topUp(page, amount) {
   await page.evaluate((a) => { try { earn(D(a)); } catch (_) {} }, amount);
@@ -131,4 +181,4 @@ async function switchTab(page, tabId) {
   await page.waitForTimeout(500);
 }
 
-module.exports = { launchGame, startRun, seedProgress, topUp, switchTab, VIEWPORT, CHROME };
+module.exports = { launchGame, startRun, seedProgress, installTouchFx, topUp, switchTab, VIEWPORT, CHROME };
