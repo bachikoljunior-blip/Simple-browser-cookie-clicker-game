@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "check:kit": "node .kit/tools/bootstrap.mjs --target=. --check"
+  },
   "devDependencies": {
     "playwright-core": "^1.61.1"
   }
