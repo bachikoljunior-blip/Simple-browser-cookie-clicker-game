@@ -1,0 +1,8 @@
+# Render scratch: frame grid, captured audio, narration, timing log.
+video/
+trim.json
+framescan/
+# Review stills written by `node director.mjs shots`.
+beat_*.png
+# Which cuts have been posted, when analytics is unavailable. Machine-local.
+youtube/posted.json

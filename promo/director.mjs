@@ -4,6 +4,11 @@
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import { startCapture } from './screencap.mjs';
+import { VARIANTS, byId } from './variants.mjs';
+
+// Which cut to render. Every cut shares the body of the video and differs in the
+// opening screen and claim — see variants.mjs.
+const VARIANT = byId(process.env.PROMO_VARIANT || 'unit') || VARIANTS[0];
 
 const SHOTS = process.argv[2] === 'shots';
 const SAFE = process.argv[3] === 'safe';   // overlay the Shorts chrome zones
@@ -304,6 +309,46 @@ await setLateGame();
 await hideRewardModal();
 await showTab('shopTab', false);
 await setPlayFullscreen(true);
+
+// Whatever the cut opens on is built here, while the cover is still down, so the
+// first frame is already the finished picture however long it took to arrange.
+const hookScreen = {
+  play: async () => {},
+  quota: async () => { await setMidGame(); },
+  hunt: async () => {
+    await ev(() => {
+      try { showMonster('swarm'); showMonster('boss'); } catch (e) {}
+      state.huntFocusLv = 20;
+    });
+  },
+  craft: async () => {
+    await setPlayFullscreen(false);
+    await showTab('workshopTab', true);
+    await waitForImages('workshopTab');
+  },
+  info: async () => {
+    await setPlayFullscreen(false);
+    await showTab('infoTab', true);
+    await waitForImages('infoTab');
+    await scrollToHeading('infoTab', '現在の倍率・状態');
+  },
+  tree: async () => {
+    await setPlayFullscreen(false);
+    await ev(() => { try { closeTabPageFullscreen(); openSkillTreeView(); } catch (e) {} });
+    await page.waitForTimeout(700);
+    await tapEl('#skillTreeOnlyBtn');
+    await page.waitForTimeout(600);
+    await ev(() => window.__mount('#skillChoiceScreen'));
+    await ev(() => {
+      setSkillMapZoom(0.45, false);
+      const f = document.querySelector('.skillMapFrame');
+      f.scrollLeft = (f.scrollWidth - f.clientWidth) / 2;
+      f.scrollTop = (f.scrollHeight - f.clientHeight) * 0.35;
+    });
+    await page.waitForTimeout(400);
+  },
+};
+await (hookScreen[VARIANT.hook.screen] || hookScreen.play)();
 await page.waitForTimeout(400);
 // Lift the music bed well above the game's own ceiling. Without it the take is
 // mostly silence with occasional spikes: quiet enough that YouTube's loudness
@@ -313,8 +358,8 @@ await ev(() => {
   settings.seVolume = 100;
   try { if (bgmGainNode) bgmGainNode.gain.value = 0.42; } catch (e) {}
 });
-await top('“正”って単位、知ってます?');
-await cap(['所持クッキー <em>100正</em>', '= 10の<em>42</em>乗']);
+await top(VARIANT.hook.banner);
+await cap(VARIANT.hook.caption);
 await page.waitForTimeout(350);   // let the text animate in behind the cover
 await ev(() => window.__cover(false));
 // The grid holds whatever frame was last captured, and the screencast only
@@ -325,13 +370,14 @@ await ev(() => new Promise(r => requestAnimationFrame(() => requestAnimationFram
 await page.waitForTimeout(90);
 coverOffAt = Date.now();
 if (capture) capture.arm(coverOffAt);
+console.log(`  cut: ${VARIANT.id}`);
 console.log('  audio:', await ev(() => window.__startRec()));
 await shot('hook');
 // Pre-setting the text means the opening frames would otherwise be motionless.
 // Tapping the cookie gives the hook real movement — floating numbers and the
 // game's own click — instead of a still frame with a caption on it.
-await tapBurst('#cookie', 4, 340);
-await wait(1100);
+if (VARIANT.hook.taps) await tapBurst('#cookie', 4, 340);
+await wait(VARIANT.hook.taps ? 1100 : 2300);
 
 // =============================================================== SCENE 2 — rewind
 // Hold the same full-bleed framing the hook used, so the two states can be read
@@ -342,6 +388,10 @@ await wait(1100);
 await flash();
 await cap([]);
 await top('⏪ 最初はこう');
+// Put the board back however the hook left it, then rewind.
+await ev(() => { try { closeSkillChoiceScreen(); } catch (e) {} window.__mount(); });
+await showTab('shopTab', false);
+await setPlayFullscreen(true);
 await setFresh();
 await page.waitForTimeout(200);
 await cap(['スタートは<em>クッキー25枚</em>']);
@@ -596,7 +646,7 @@ if (!SHOTS) {
   if (audioB64) fs.writeFileSync(audioFile, Buffer.from(audioB64, 'base64'));
   fs.writeFileSync('trim.json', JSON.stringify({
     frames: rec.dir, fps: rec.fps, frameCount: rec.frames,
-    audio: audioB64 ? audioFile : null, takeSec, flashLog, markLog,
+    audio: audioB64 ? audioFile : null, takeSec, flashLog, markLog, variant: VARIANT.id,
   }, null, 2));
   console.log(`frames ${rec.frames} @${rec.fps}fps (${(rec.frames / rec.fps).toFixed(2)}s)`,
     `| take ${takeSec.toFixed(2)}s`,

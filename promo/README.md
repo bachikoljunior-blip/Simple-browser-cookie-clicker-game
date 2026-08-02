@@ -6,6 +6,27 @@
 どちらも 1080×1920 / 20fps / 約44秒。
 
 カット構成の意図・台本・タイトル案・説明欄・テスター募集文は [`script_ja.md`](script_ja.md) にあります。
+毎日1本を自動で作って投稿する仕組みは [`youtube/`](youtube/) にあります。
+
+## 切り口（バリアント）
+
+同じ動画を毎日出すのは再アップロードで、YouTube も近似重複として扱います。
+[`variants.mjs`](variants.mjs) に6つの切り口があり、**冒頭の画面・掴みの文言・
+タイトル・説明文**が入れ替わります。本編（巻き戻し→ノルマ→討伐→工房→研究/一覧→
+転生→CTA）は共通です。調整済みなのは本編で、試す価値があるのは掴みだからです。
+
+| id | 冒頭 | 掴み |
+|---|---|---|
+| `unit` | 終盤のプレイ画面 | 「“正”って単位、知ってます?」 |
+| `idle-trap` | 中盤のプレイ画面 | 「放置だけだと伸びない放置ゲー」 |
+| `recipes` | 工房の作成一覧 | 「装備のレシピが486種類」 |
+| `boss` | 群れ＋ボスが出た盤面 | 「ボスが出てきます」 |
+| `tree` | スキルツリー | 「ノードは71個」 |
+| `numbers` | 一覧画面の倍率 | 「効いてる倍率が全部見られる」 |
+
+```sh
+PROMO_VARIANT=boss node director.mjs   # 切り口を指定して撮る
+```
 
 ## 作り直す
 
@@ -16,7 +37,7 @@ python3 -m http.server 8765
 # 2) 別のターミナルで録画 → エンコード
 cd promo
 npm install playwright-core          # 未インストールの場合
-node director.mjs                    # フレーム列・ゲーム音・trim.json を出力
+node director.mjs                    # フレーム列・ゲーム音・trim.json を出力（PROMO_VARIANT で切り口を指定）
 node narrate.mjs                     # ナレーションを合成（open_jtalk が必要）
 node encode.mjs                      # mp4 と webm を出力
 ```

@@ -15,6 +15,7 @@
 // its own offset — encode.mjs ducks the game audio under it.
 import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import { byId, VARIANTS } from './variants.mjs';
 
 const DIC = '/var/lib/mecab/dic/open-jtalk/naist-jdic';
 const VOICE = '/usr/share/hts-voice/nitech-jp-atr503-m001/nitech_jp_atr503_m001.htsvoice';
@@ -30,7 +31,8 @@ const SR = 48000;
 // variable amount of time, and a guessed offset put lines over screens that had
 // not caught up yet. Readings the analyser gets wrong are written in kana.
 const CUES = [
-  { scene: 1, at: 0.30, text: 'しょうって単位、知ってます?' },
+  // scene 1's line comes from the cut being rendered; the rest are shared.
+  { scene: 1, at: 0.30, text: null },
   { scene: 2, at: 0.25, text: '最初はクッキー25枚。' },
   { mark: 'buyResult', at: 0.15, text: 'ここまでは普通です。' },
   { scene: 3, at: 0.30, text: '生産ペースにノルマがあって、放置だけだと伸びません。' },
@@ -72,6 +74,8 @@ function reading(trace) {
 
 // ---------------------------------------------------------------- check mode
 if (process.argv[2] === 'check') {
+  const cut = byId(process.env.PROMO_VARIANT || 'unit') || VARIANTS[0];
+  CUES.filter(c => c.text === null).forEach(c => { c.text = cut.hook.narration; });
   fs.rmSync(TMP, { recursive: true, force: true });
   fs.mkdirSync(TMP, { recursive: true });
   CUES.forEach((c, i) => {
@@ -85,7 +89,9 @@ if (process.argv[2] === 'check') {
 }
 
 // ---------------------------------------------------------------- build mode
-const { fps, frameCount, flashLog, markLog } = JSON.parse(fs.readFileSync('trim.json', 'utf8'));
+const { fps, frameCount, flashLog, markLog, variant } = JSON.parse(fs.readFileSync('trim.json', 'utf8'));
+const CUT = byId(variant || process.env.PROMO_VARIANT || 'unit') || VARIANTS[0];
+CUES.filter(c => c.text === null).forEach(c => { c.text = CUT.hook.narration; });
 const total = frameCount / fps;
 // Scenes 2..8 each open on a cut, so the flash log is their start times; scene 1
 // starts at zero and scene 9 (the end card) starts where scene 8 was marked done.
