@@ -39,9 +39,15 @@ page.on('pageerror', e => console.log('[pageerror]', String(e).slice(0, 200)));
 // Chromium's headless screencast is capped near 19.5fps whatever the page or the
 // resolution, so the grid runs at 20: close enough that slots rarely have to
 // repeat a frame, which keeps the cadence even.
+//
+// The screencast also only ever hands back frames at the CSS viewport size, and
+// the game caps its board at 900px wide, so 900x1600 is the ceiling and the
+// deliverable is upscaled from it. That makes the JPEG quality the real limit on
+// how the small text in the 研究 and 一覧 panels survives — those beats exist to
+// be read — so it is set high rather than economical.
 const FPS = 20;
 const capture = SHOTS ? null : await startCapture(await ctx.newCDPSession(page),
-  { dir: `${OUT}/frames`, fps: FPS, quality: 82, width: W, height: H });
+  { dir: `${OUT}/frames`, fps: FPS, quality: 95, width: W, height: H });
 
 let shotN = 0;
 let coverOffAt = 0;
@@ -214,6 +220,21 @@ const setPlayFullscreen = on => ev(want => {
   if (isOn !== want) { try { togglePlayFullscreen(); } catch (e) { return String(e); } }
 }, on);
 
+// Panel art is lazy-loaded, so switching to a tab and captioning it immediately
+// put the line over a half-drawn list — and on the cooking beat the art is the
+// whole point of the shot.
+const waitForImages = tabId => ev(async id => {
+  const page = document.getElementById(id);
+  if (!page) return 0;
+  const imgs = [...page.querySelectorAll('img')];
+  imgs.forEach(im => { im.loading = 'eager'; });
+  await Promise.race([
+    Promise.all(imgs.map(im => (im.complete ? null : im.decode().catch(() => {})))),
+    new Promise(r => setTimeout(r, 1600)),
+  ]);
+  return imgs.length;
+}, tabId);
+
 const toPlayScreen = () => ev(() => {
   try { closeSkillChoiceScreen(); } catch (e) {}
   try { closeTabPageFullscreen(); } catch (e) {}
@@ -334,15 +355,21 @@ await tapBurst('#cookie', 10, 60);
 await shot('taps');
 await wait(400);
 
+// Cause then effect. The old order put "設備を買うと毎秒が増える" on screen while
+// the shop still read 所持 0 / 毎秒 0, so the claim arrived before anything backed
+// it up. Buy first, then say what happened.
 await grant('120000');
-await cap(['設備を買うと<em>毎秒</em>が増える', 'ここまでは<b>ふつうの放置ゲー</b>']);
-await wait(300);
+await cap(['貯めて<em>設備</em>を買う']);
+await wait(350);
 for (const nth of [0, 1, 2]) {
   await tapEl(`#shop .item >> nth=${nth}`);
   await wait(200);
 }
+await wait(250);
+await cap(['<em>毎秒</em>が増えた', 'ここまでは<b>ふつうの放置ゲー</b>']);
+mark('buyResult');   // the narration line for this beat is anchored to it
 await shot('buy');
-await wait(400);
+await wait(1750);   // room for the summary line, and to read 毎秒 9
 mark('scene2');
 
 // =============================================================== SCENE 3 — ノルマ
@@ -358,9 +385,9 @@ await top('ここからが本題');
 await cap(['生産ペースに<em>ノルマ</em>があります', '遅れると<b>その周回はモンスターが出なくなる</b>']);
 await shot('quota');
 await wait(2200);
-await cap(['置いておくだけでも増える', 'でも<em>ただ放置だと伸び切らない</em>']);
+await cap(['置いておくだけでも増える', 'でも<em>放置だけだと伸びない</em>']);
 await shot('quota2');
-await wait(1600);
+await wait(1800);
 mark('scene3');
 
 // =============================================================== SCENE 4 — 討伐
@@ -383,10 +410,10 @@ await ev(() => {
     btn.style.top = Math.round(host.clientHeight * 0.22) + 'px';
   }
 });
-await wait(1500);
+await wait(1250);
 await tapEl('#goldenCookie');
 await shot('golden');
-await wait(1300);   // let the buff visibly take hold before cutting away
+await wait(1000);   // let the buff visibly take hold before cutting away
 
 await cap(['<em>モンスター</em>を殴ると素材が出る', '群れも<b>ボス</b>も来ます'], 'high');
 await ev(() => {
@@ -412,13 +439,16 @@ await ev(() => { state.huntFocusLv = 0; });
 await flash();
 await setPlayFullscreen(false);
 await setLateGame();
+// The caption goes up before the art is waited on. Waiting first left the panel
+// on screen with nothing on it for over a second, three times in the video.
 await showTab('workshopTab', true);
-await wait(600);
 await top('素材の使い道', 'hi');
 await cap(['集めた素材で<em>装備</em>を作る', 'レシピは<em>486種類</em>']);
+await waitForImages('workshopTab');
+await wait(400);
 const craftPan = autoScroll('workshopTab', 0.30, 1900);
 await shot('craft');
-await wait(1900);
+await wait(1800);
 await craftPan;
 
 // Scrolling moved the 作成 / 料理 buttons out of the frame, so put the page back
@@ -432,39 +462,47 @@ await ev(() => {
 });
 await wait(250);
 await tapEl('#workshopPanel >> text=料理');
-await wait(700);
 await top(null);
 await cap(['<em>料理</em>で<b>ノルマをゆるめられる</b>', '金のクッキーを出やすくする一皿も']);
+await waitForImages('workshopTab');
+await wait(500);
 const cookPan = autoScroll('workshopTab', 0.22, 2200);
 await shot('cook');
-await wait(2200);
+await wait(1900);
 await cookPan;
 mark('scene5');
 
 // =============================================================== SCENE 6 — 研究 / 一覧
 await flash();
 await showTab('researchTab', true);
-await wait(600);
 await cap(['<em>研究</em>を買うと<b>生産の計算式</b>が変わる']);
+await waitForImages('researchTab');
+await wait(400);
 const researchPan = autoScroll('researchTab', 0.32, 1600);
 await shot('research');
-await wait(1600);
+await wait(1350);
 await researchPan;
 
 await showTab('infoTab', true);
-await wait(500);
-console.log('  info scroll:', await scrollToHeading('infoTab', '現在の倍率・状態'));
-await wait(400);
 await cap(['効いている倍率は<em>全部この画面で見られる</em>']);
+await waitForImages('infoTab');
+console.log('  info scroll:', await scrollToHeading('infoTab', '現在の倍率・状態'));
+await wait(500);
 const infoPan = autoScroll('infoTab', { by: 0.34 }, 2100);
 await shot('info');
-await wait(2100);
+await wait(1800);
 await infoPan;
 mark('scene6');
 
 // =============================================================== SCENE 7 — 転生スキルツリー
 await flash();
 await top(null);
+// The tree screen takes about 1.8s to open, zoom and settle, and the game plays
+// its own fade on the way in. The caption goes up first so that stretch is not a
+// blank screen, and the narration is anchored to the moment the tree is actually
+// there — announcing "71 nodes" over a black frame wasted the best shot in the
+// video.
+await cap(['転生すると<em>スキルツリー</em>', 'ノードは<em>71個</em>']);
 await ev(() => { try { closeTabPageFullscreen(); openSkillTreeView(); } catch (e) { return String(e); } });
 await wait(700);
 await tapEl('#skillTreeOnlyBtn');
@@ -478,12 +516,14 @@ await ev(() => {
   f.scrollLeft = (f.scrollWidth - f.clientWidth) / 2;
   f.scrollTop = 0;
 });
-await wait(300);
-await cap(['転生すると<em>スキルツリー</em>', 'ノードは<em>71個</em>']);
+// The game runs its own 0.72s fade when the tree goes fullscreen; wait it out so
+// the mark lands on the settled map rather than mid-wash.
+await wait(800);
+mark('treeReady');
 const pan = ev(async () => {
   const f = document.querySelector('.skillMapFrame');
   const max = f.scrollHeight - f.clientHeight;
-  const t0 = performance.now(), dur = 3900;
+  const t0 = performance.now(), dur = 3200;
   await new Promise(res => {
     const step = () => {
       const k = Math.min(1, (performance.now() - t0) / dur);
@@ -494,12 +534,12 @@ const pan = ev(async () => {
   });
 });
 await shot('tree');
-await wait(1900);
+await wait(1700);
 // 「転生」はジャンル外の人には"進行が消える"と読まれる。得られるもの(次の周回が
 // 速くなる)を先に言わないと、リセットの罰にしか見えない。
 await cap(['次の周回は<b>確実に速くなる</b>', '取り方は何度でも組み直せます']);
 await shot('tree2');
-await wait(1900);
+await wait(1700);
 await pan;
 mark('scene7');
 
@@ -519,7 +559,7 @@ await flash('stamp');
 await top('で、さっきの数字に戻ります');
 await cap(['<em>100正</em> ＝ 10の<em>42</em>乗']);
 await shot('payoff');
-await wait(2200);
+await wait(1950);
 mark('scene8');
 
 // =============================================================== SCENE 9 — CTA
@@ -534,7 +574,7 @@ await ev(() => window.__end(
   '基本プレイ無料・<u>Android</u>版<br>公開に必要なテスターを募集しています<br>やることは 14日間 入れたままにするだけ',
   '応募方法は<em>チャンネル概要欄</em>に'));
 await shot('cta');
-await wait(3600);
+await wait(3900);   // a beat after the last word, so the loop does not cut it off
 mark('scene9 / total');
 
 // Close on the same hard-edged cover that opened the take. Both edges are exact

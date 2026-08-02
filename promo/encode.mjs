@@ -25,6 +25,7 @@ const OUT = process.argv[2] || 'cookie_strateger_short.webm';
 const MID = 'video/_video_only.webm';
 const NARRATION = 'video/narration.wav';
 const MP4 = OUT.replace(/\.webm$/, '.mp4');
+const MIXED = 'video/_mixed.webm';
 
 // --- encode the frame grid ----------------------------------------------------
 const files = fs.readdirSync(DIR).filter(n => n.endsWith('.jpg')).sort();
@@ -68,16 +69,37 @@ if (AUDIO && fs.existsSync(AUDIO)) {
       'highpass=f=100,acompressor=threshold=0.06:ratio=4:attack=5:release=200,volume=3.2,asplit=2[voc1][voc2];' +
       '[1:a][voc1]sidechaincompress=threshold=0.02:ratio=9:attack=25:release=380[duck];' +
       '[duck][voc2]amix=inputs=2:duration=first:normalize=0[mix];' +
-      '[mix]alimiter=limit=0.97,loudnorm=I=-14:TP=-1.5:LRA=11[aout]',
+      '[mix]alimiter=limit=0.97[aout]',
       '-map', '0:v:0', '-map', '[aout]');
   } else {
     args.push('-map', '0:v:0', '-map', '1:a:0');
   }
   args.push('-c:v', 'copy', '-c:a', FULL ? 'libopus' : 'copy');
   if (FULL) args.push('-b:a', '128k');
-  args.push('-shortest', OUT);
+  args.push('-shortest', FULL ? MIXED : OUT);
   execFileSync(FF, args, { stdio: 'inherit' });
   console.log(hasVoice ? 'mixed: game audio ducked under narration' : 'game audio only');
+
+  // Loudness in two passes. Single-pass loudnorm is a dynamic normaliser: it
+  // rides the level continuously, which is what flattened the mix to an LRA of
+  // 1.6 LU. Measuring first, then applying the correction with linear=true,
+  // makes it a fixed gain, so the transition hits and the quiet stretches keep
+  // their shape.
+  if (FULL) {
+    const probe = spawnSync(FF, ['-hide_banner', '-i', MIXED,
+      '-af', 'loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json', '-f', 'null', '-'],
+      { encoding: 'utf8' }).stderr;
+    const j = probe.match(/\{[\s\S]*\}/);
+    const st = j ? JSON.parse(j[0]) : null;
+    const af = st
+      ? `loudnorm=I=-14:TP=-1.5:LRA=11:measured_I=${st.input_i}:measured_TP=${st.input_tp}`
+        + `:measured_LRA=${st.input_lra}:measured_thresh=${st.input_thresh}:linear=true`
+      : 'loudnorm=I=-14:TP=-1.5:LRA=11';
+    execFileSync(FF, ['-y', '-hide_banner', '-loglevel', 'error', '-i', MIXED,
+      '-map', '0:v:0', '-map', '0:a:0', '-c:v', 'copy',
+      '-af', af, '-c:a', 'libopus', '-b:a', '128k', OUT], { stdio: 'inherit' });
+    fs.rmSync(MIXED, { force: true });
+  }
 } else {
   console.log('!! no audio track captured — writing silent video');
   fs.copyFileSync(MID, OUT);

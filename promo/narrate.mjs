@@ -24,12 +24,15 @@ const RATE_BASE = 1.2;      // brisker than the default; Shorts narration is qui
 const RATE_MAX = 1.55;      // beyond this it stops sounding like speech
 const SR = 48000;
 
-// `scene` names the beat the line belongs to, `at` is seconds after that beat
-// starts. Readings that the analyser gets wrong are written in kana.
+// `scene` names the beat the line belongs to, or `mark` names a moment the
+// director logged; `at` is seconds after that. Anchoring to a logged moment
+// beats guessing an offset — the beats that build something on screen take a
+// variable amount of time, and a guessed offset put lines over screens that had
+// not caught up yet. Readings the analyser gets wrong are written in kana.
 const CUES = [
   { scene: 1, at: 0.30, text: 'しょうって単位、知ってます?' },
   { scene: 2, at: 0.25, text: '最初はクッキー25枚。' },
-  { scene: 2, at: 2.40, text: 'ここまでは普通の放置ゲーです。' },
+  { mark: 'buyResult', at: 0.15, text: 'ここまでは普通です。' },
   { scene: 3, at: 0.30, text: '生産ペースにノルマがあって、放置だけだと伸びません。' },
   { scene: 4, at: 0.30, text: '金のクッキーで生産が跳ねる。' },
   { scene: 4, at: 2.70, text: '殴ると素材が出ます。ボスも来ます。' },
@@ -37,8 +40,8 @@ const CUES = [
   { scene: 5, at: 3.30, text: '料理でノルマをゆるめられます。' },
   { scene: 6, at: 0.30, text: '研究で計算式が変わる。' },
   { scene: 6, at: 2.70, text: '倍率は全部この画面で見られます。' },
-  { scene: 7, at: 0.50, text: '転生。ノードは71個。' },
-  { scene: 7, at: 3.40, text: '次の周回は確実に速くなります。' },
+  { mark: 'treeReady', at: 0.10, text: '転生。ノードは71個。' },
+  { mark: 'treeReady', at: 2.50, text: '周回ごとに速くなる。' },
   { scene: 8, at: 0.35, text: 'さっきの数字に戻ります。' },
   { scene: 9, at: 0.35, text: 'テスター募集中。詳しくは概要欄へ。' },
 ];
@@ -93,8 +96,9 @@ starts[9] = (markLog && markLog.scene8) ?? (flashLog[6] + 2.4);
 fs.rmSync(TMP, { recursive: true, force: true });
 fs.mkdirSync(TMP, { recursive: true });
 
+const anchor = c => (c.mark ? markLog[c.mark] : starts[c.scene]);
 const placed = CUES
-  .map(c => ({ ...c, start: starts[c.scene] + c.at }))
+  .map(c => ({ ...c, start: anchor(c) + c.at }))
   .filter(c => Number.isFinite(c.start))
   .sort((a, b) => a.start - b.start);
 

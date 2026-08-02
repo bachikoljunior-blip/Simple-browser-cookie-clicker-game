@@ -24,12 +24,15 @@ window.__installAudioTap = function () {
     // hotter and much more even. The gain is deliberately modest and the
     // compressor does the work as a limiter — a 4ms attack let the transition
     // hits punch straight through and clip, so it grabs almost instantly.
+    // Ratio 14 from -10dB flattened everything it touched, which is most of the
+    // take. It only needs to catch peaks so nothing clips on the way to Opus;
+    // the shaping happens later, on stems, where it can be undone.
     makeup.gain.value = 1.9;
-    comp.threshold.value = -10;
-    comp.ratio.value = 14;
-    comp.knee.value = 3;
-    comp.attack.value = 0.001;
-    comp.release.value = 0.14;
+    comp.threshold.value = -6;
+    comp.ratio.value = 4;
+    comp.knee.value = 6;
+    comp.attack.value = 0.002;
+    comp.release.value = 0.18;
 
     // Nothing here can be listened to, so the bus is metered instead: peak tells
     // us whether the take clipped, RMS whether it is loud enough to survive a
