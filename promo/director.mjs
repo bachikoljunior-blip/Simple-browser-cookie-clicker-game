@@ -314,10 +314,13 @@ await setMidGame();
 await toPlayScreen();
 await setPlayFullscreen(true);
 await top('ここからが本題');
-await cap(['<em>「モンスター生成ノルマ」</em>があります', '生産が遅れると<b>モンスターが来なくなる</b>']);
+// 「放置したら終わる」と書いていたが、実際に終わるのは その周回のモンスター出現
+// だけで、生産は続くしオフラインでも貯まる(ゲーム内FAQと放置上限スキルが根拠)。
+// 放置ゲーを探している層に「放置できない」と伝わるのは、事実と違ううえに逆効果。
+await cap(['生産ペースに<em>ノルマ</em>があります', '遅れると<b>その周回はモンスターが出なくなる</b>']);
 await shot('quota');
 await wait(2200);
-await cap(['<em>放置ゲーなのに、放置したら終わる</em>']);
+await cap(['置いておくだけでも増える', 'でも<em>ただ放置だと伸び切らない</em>']);
 await shot('quota2');
 await wait(1600);
 mark('scene3');
@@ -373,7 +376,7 @@ await wait(250);
 await tapEl('#workshopPanel >> text=料理');
 await wait(700);
 await top(null);
-await cap(['<em>料理</em>は<b>ノルマの進行を遅くする</b>', '金のクッキーを出やすくする一皿も']);
+await cap(['<em>料理</em>で<b>ノルマをゆるめられる</b>', '金のクッキーを出やすくする一皿も']);
 const cookPan = autoScroll('workshopTab', 0.22, 2200);
 await shot('cook');
 await wait(2200);
@@ -384,7 +387,7 @@ mark('scene5');
 await flash();
 await showTab('researchTab', true);
 await wait(600);
-await cap(['<em>研究</em>で<b>生産の計算式</b>を書き換えて']);
+await cap(['<em>研究</em>を買うと<b>生産の計算式</b>が変わる']);
 const researchPan = autoScroll('researchTab', 0.32, 1600);
 await shot('research');
 await wait(1600);
@@ -434,7 +437,9 @@ const pan = ev(async () => {
 });
 await shot('tree');
 await wait(1900);
-await cap(['取る順番で<b>次の周回が別ゲー</b>に', '何度でも組み直せます']);
+// 「転生」はジャンル外の人には"進行が消える"と読まれる。得られるもの(次の周回が
+// 速くなる)を先に言わないと、リセットの罰にしか見えない。
+await cap(['次の周回は<b>確実に速くなる</b>', '取り方は何度でも組み直せます']);
 await shot('tree2');
 await wait(1900);
 await pan;
@@ -462,10 +467,13 @@ mark('scene8');
 // =============================================================== SCENE 9 — CTA
 await top(null);
 await cap([]);
+// 「クローズドテスト中」は"未完成でまだ遊べない"、「テスター募集」は"報告作業が
+// ある"と読まれやすい。募集の理由(公開に必要)と、実際にやること(入れたままに
+// するだけ)と、対象(Android)を先に出して、行動だけを赤枠に残す。
 await ev(() => window.__end(
   'クッキーストラテジャー',
-  'Google Play <u>クローズドテスト中</u><br>基本プレイ無料・広告なし',
-  '<em>テスターを募集しています</em><br>応募方法はチャンネル概要欄に'));
+  '<u>Android</u>版の公開に必要な<br>テスターを募集しています<br>14日間 入れたままにするだけ・基本プレイ無料',
+  '応募方法は<em>チャンネル概要欄</em>に'));
 await shot('cta');
 await wait(3600);
 mark('scene9 / total');
