@@ -46,7 +46,14 @@ const capture = SHOTS ? null : await startCapture(await ctx.newCDPSession(page),
 let shotN = 0;
 let coverOffAt = 0;
 const shot = async (tag) => { if (SHOTS) await page.screenshot({ path: `beat_${String(++shotN).padStart(2, '0')}_${tag}.png` }); };
-const mark = tag => console.log(`  ${((Date.now() - (coverOffAt || recStart)) / 1000).toFixed(1)}s  ${tag}`);
+// Scene boundaries are needed later to place the narration, so they are recorded
+// as well as printed. Each mark is the moment its scene finished.
+const markLog = {};
+const mark = tag => {
+  const t = (Date.now() - coverOffAt) / 1000;
+  markLog[tag.split(' ')[0]] = t;
+  console.log(`  ${t.toFixed(1)}s  ${tag}`);
+};
 // In shots mode every wait collapses so a full pass takes seconds instead of a minute.
 const wait = ms => page.waitForTimeout(SHOTS ? Math.min(ms, 200) : ms);
 const ev = (fn, arg) => page.evaluate(fn, arg);
@@ -289,6 +296,12 @@ await top('“正”って単位、知ってます?');
 await cap(['所持クッキー <em>100正</em>', '= 10の<em>42</em>乗']);
 await page.waitForTimeout(350);   // let the text animate in behind the cover
 await ev(() => window.__cover(false));
+// The grid holds whatever frame was last captured, and the screencast only
+// samples about every 50ms — arming the instant the cover lifts can leave slot
+// zero holding the cover itself, opening the Short on a black frame. Wait for
+// the uncovered screen to paint and then to be sampled before starting.
+await ev(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+await page.waitForTimeout(90);
 coverOffAt = Date.now();
 if (capture) capture.arm(coverOffAt);
 console.log('  audio:', await ev(() => window.__startRec()));
@@ -543,7 +556,7 @@ if (!SHOTS) {
   if (audioB64) fs.writeFileSync(audioFile, Buffer.from(audioB64, 'base64'));
   fs.writeFileSync('trim.json', JSON.stringify({
     frames: rec.dir, fps: rec.fps, frameCount: rec.frames,
-    audio: audioB64 ? audioFile : null, takeSec, flashLog,
+    audio: audioB64 ? audioFile : null, takeSec, flashLog, markLog,
   }, null, 2));
   console.log(`frames ${rec.frames} @${rec.fps}fps (${(rec.frames / rec.fps).toFixed(2)}s)`,
     `| take ${takeSec.toFixed(2)}s`,

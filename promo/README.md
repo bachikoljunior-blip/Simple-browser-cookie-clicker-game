@@ -1,8 +1,9 @@
 # promo — YouTube Shorts プロモ動画の生成
 
 `play.html` を実際に自動プレイして録画し、テロップを焼き込んだ縦型動画を作ります。
-音声もゲーム自身が鳴らしているものを録ります。
-出力は `cookie_strateger_short.webm`（1080×1920 / 20fps / 約42秒 / 音声あり）。
+音声はゲーム自身が鳴らしているものを録り、日本語のナレーションを合成して重ねます。
+出力は `cookie_strateger_short.mp4`（H.264/AAC）と `cookie_strateger_short.webm`（VP8/Opus）。
+どちらも 1080×1920 / 20fps / 約42秒。
 
 カット構成の意図・台本・タイトル案・説明欄・テスター募集文は [`script_ja.md`](script_ja.md) にあります。
 
@@ -15,8 +16,9 @@ python3 -m http.server 8765
 # 2) 別のターミナルで録画 → エンコード
 cd promo
 npm install playwright-core          # 未インストールの場合
-node director.mjs                    # video/*.webm と trim.json を出力
-node encode.mjs                      # cookie_strateger_short.webm を出力
+node director.mjs                    # フレーム列・ゲーム音・trim.json を出力
+node narrate.mjs                     # ナレーションを合成（open_jtalk が必要）
+node encode.mjs                      # mp4 と webm を出力
 ```
 
 構成を確認したいだけなら、録画せずに各カットの静止画だけ書き出せます：
@@ -34,7 +36,8 @@ node director.mjs shots              # beat_01_*.png ... を出力
 | `audiotap.js` | ゲームの音を横取りして録音するレイヤー。同じく録画時だけ注入される |
 | `screencap.mjs` | フレームを実時間のグリッドに並べて取り込む |
 | `framestats.mjs` | 出来上がった動画のフレーム明度を読み、音と絵のズレを測る |
-| `encode.mjs` | フレーム列を 1080×1920 に書き出し、音を多重化して、ズレを検算する |
+| `narrate.mjs` | 台本を音声合成してナレーション音声を作る。`node narrate.mjs check` で各行の読み（カタカナ）と長さを確認できる |
+| `encode.mjs` | フレーム列を 1080×1920 に書き出し、ゲーム音をナレーションの下に潜らせて混ぜ、mp4 と webm を書き出して、ズレを検算する |
 
 ## 実装メモ
 
@@ -46,4 +49,6 @@ node director.mjs shots              # beat_01_*.png ... を出力
 - **カットの効果音**：音は要求した瞬間に鳴るが、絵は次の描画まで出ない。場面転換の直後は DOM を組み直すので描画が数百ミリ秒止まり、音だけ先に鳴る。フラッシュが実際に画面に出るまで待ってから次の処理に進むことで揃えている。書き出しの最後に、白フレームの位置と効果音の時刻を突き合わせてズレを表示する。
 - **スキルツリー**：全画面表示は `requestFullscreen()` を使うので、その間だけテロップのレイヤーを `#skillChoiceScreen` の中へ移している（外側の要素は描画されないため）。
 - **見せる状態**：素材を持っていないと工房が灰色のボタンの壁になるため、収録用の状態には素材も入れている。一覧画面は倍率の並ぶ節を見出しから探して先頭に送っている（解放量で位置が変わるため、割合指定では狙えない）。
-- **エンコーダ**：同梱の ffmpeg は VP8/WebM のみ。H.264/MP4 が必要なら別途 ffmpeg が要る（YouTube は WebM をそのまま受け付けます）。
+- **ナレーション**：`open_jtalk` で合成している（`apt install open-jtalk open-jtalk-mecab-naist-jdic hts-voice-nitech-jp-atr503-m001`）。耳で確かめられないので、読みは解析結果のカタカナで検算している —— 「100正」が ヒャク・セー と読まれていたのはこれで見つけた（正しくは ショー なので台本側をかなで書いている）。各行は次の行までの隙間に収まるよう、長さを測って話速を自動調整する。収まらない行は警告が出るので台本を短くする。
+- **音の混ぜ方**：ゲーム音とナレーションは別トラックのまま、`sidechaincompress` でしゃべっている間だけゲーム音を約8dB下げている。全体は `loudnorm` で −14 LUFS（YouTube の基準）に合わせる。
+- **エンコーダ**：同梱の ffmpeg は VP8 のみで音声コーデックを1つも持たない。システムに ffmpeg があればそちらを使い、mp4（H.264/AAC）も書き出す（`apt install ffmpeg`）。無い場合は WebM のみになる。
