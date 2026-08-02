@@ -93,6 +93,8 @@ const setLateGame = () => ev(() => {
   UPGRADES.forEach(u => { state.upgrades[u.id] = 180; });
   RESEARCH.forEach(r => { state.research[r.id] = true; });
   SKILLS.forEach(s => { state.skills[s.id] = true; });
+  // Without materials the workshop is a wall of greyed-out buttons.
+  MATERIALS.forEach(m => { state.materials[m.id] = 999; state.materialsSeen[m.id] = true; });
   state.prestigeRuns = 14;
   state.prestigeTotal = 9200;
   state.prestigePoints = 640;
@@ -149,18 +151,39 @@ const toPlayScreen = () => ev(() => {
   if (rm) rm.style.display = 'none';
 });
 
+// A kill can queue the reward popup on top of whatever is being shown.
+const hideRewardModal = () => ev(() => {
+  const rm = document.getElementById('rewardModal');
+  if (rm) rm.style.display = 'none';
+});
+
+// Scrolls a tab page so the section with the given heading is at the top. The
+// part of 一覧 worth showing (the wall of live multipliers) sits well below the
+// fold, and its offset moves with how much content is unlocked.
+const scrollToHeading = (tabId, text) => ev(([id, t]) => {
+  const page = document.getElementById(id);
+  if (!page) return 'no page';
+  const box = [...page.querySelectorAll('*')].find(el => el.scrollHeight > el.clientHeight + 40);
+  const head = [...page.querySelectorAll('h1,h2,h3,h4,b,strong,div,span')]
+    .find(el => el.textContent.trim() === t);
+  if (!box || !head) return `box=${!!box} head=${!!head}`;
+  box.scrollTop += head.getBoundingClientRect().top - box.getBoundingClientRect().top;
+  return 'ok';
+}, [tabId, text]);
+
 // =============================================================== SCENE 1 — hook
+// The number itself is the hook: the counter runs off the end of the units most
+// people know, so lead with "do you know this unit?" rather than "big number".
 await setLateGame();
 await showTab('shopTab', false);
 await page.waitForTimeout(400);
 await ev(() => window.__cover(false));
 coverOffAt = Date.now();
 await page.waitForTimeout(200);
-await top('放置ゲーの数字、壊れてます');
-await cap(['所持クッキー <em>100正</em>', 'ぜんぶ<em>ブラウザ</em>だけで来ました']);
+await top('“正”って単位、知ってます?');
+await cap(['所持クッキー <em>100正</em>', '= 10の<em>42</em>乗']);
 await shot('hook');
-await wait(2300);
-mark('scene1');
+await wait(2400);
 
 // =============================================================== SCENE 2 — rewind
 await flash();
@@ -170,76 +193,100 @@ await setFresh();
 await page.waitForTimeout(200);
 await cap(['スタートは<em>クッキー25枚</em>']);
 await shot('rewind');
-await wait(1300);
+await wait(1200);
 
 await top(null);
-await cap(['タップ = 1クッキー。それだけ']);
+await cap(['タップ1回 = <em>1クッキー</em>']);
 await tapBurst('#cookie', 10, 60);
 await shot('taps');
 await wait(400);
 
-// buy the first buildings for real, so the shop rows show owned counts going up
 await grant('120000');
-await cap(['貯めて<em>設備</em>を買う', '→ <em>毎秒</em>が勝手に増える']);
-await wait(400);
+await cap(['設備を買うと<em>毎秒</em>が増える', 'ここまでは<b>ふつうの放置ゲー</b>']);
+await wait(300);
 for (const nth of [0, 1, 2]) {
   await tapEl(`#shop .item >> nth=${nth}`);
   await wait(200);
 }
 await shot('buy');
-await wait(600);
+await wait(400);
 mark('scene2');
 
 // =============================================================== SCENE 3 — ノルマ
+// The one mechanic no other idle clicker has. Stated as a consequence, not a rule.
 await flash();
 await setMidGame();
 await toPlayScreen();
-await top('本体はここから');
-await cap(['<em>「モンスター生成ノルマ」</em>がある', 'ペースを落とすと<b>強化が止まる</b>']);
+await top('ここからが本題');
+await cap(['<em>「モンスター生成ノルマ」</em>があります', '生産が遅れると<b>モンスターが来なくなる</b>']);
 await shot('quota');
-await wait(1900);
-await cap(['つまり<em>放置しっぱなしは負け</em>']);
+await wait(2200);
+await cap(['<em>放置ゲーなのに、放置したら終わる</em>']);
 await shot('quota2');
-await wait(1700);
+await wait(1600);
 mark('scene3');
 
-// =============================================================== SCENE 4 — 金 / モンスター
+// =============================================================== SCENE 4 — 討伐
+// Golden cookie first (the field cookie visibly swells), then a swarm and a boss
+// on screen together — the busiest, most alive frame in the game.
 await flash();
 await top(null);
-await cap(['<em>金のクッキー</em>で生産が跳ねる']);
+await cap(['<em>金のクッキー</em>で生産が跳ねて']);
 await ev(() => { try { showGoldenCookie(); } catch (e) { return String(e); } });
 await wait(1300);
 await tapEl('#goldenCookie');
 await shot('golden');
-await wait(1100);
+await wait(1000);
 
-await cap(['<em>クッキーモンスター</em>を倒すと', '素材がドロップ']);
-// Forced spawn: the unforced path is gated on quota state and can silently no-op.
-await ev(() => { try { showMonster('normal'); } catch (e) { return String(e); } });
-await wait(700);
-await tapBurst('.monsterInstance', 12, 55);
+await cap(['<em>モンスター</em>を殴ると素材が出る', '群れも<b>ボス</b>も来ます']);
+await ev(() => {
+  try { showMonster('swarm'); showMonster('boss'); } catch (e) { return String(e); }
+});
+await wait(1100);
 await shot('monster');
-await wait(800);
+await tapBurst('.monsterInstance', 6, 90);
+await wait(700);
+await hideRewardModal();
 mark('scene4');
 
-// =============================================================== SCENE 5 — 研究 / 工房
+// =============================================================== SCENE 5 — 工房
+// 486 recipes is a genuinely surprising number for a clicker, and the cooking
+// list pays off the ノルマ beat: one dish slows the quota clock down.
 await flash();
 await setLateGame();
-await showTab('researchTab', true);
-await wait(500);
-await top('伸ばす手段が多すぎる', 'hi');
-await cap(['<em>研究</em>で<b>計算式そのもの</b>を書き換える']);
-await shot('research');
-await wait(2000);
-
 await showTab('workshopTab', true);
-await wait(500);
-await cap(['<em>工房</em>で装備を作り、料理を仕込む']);
-await shot('workshop');
+await wait(600);
+await top('素材の使い道', 'hi');
+await cap(['集めた素材で<em>装備</em>を作る', 'レシピは<em>486種類</em>']);
+await shot('craft');
 await wait(1900);
+
+await tapEl('#workshopPanel >> text=料理');
+await wait(700);
+await top(null);
+await cap(['<em>料理</em>は<b>ノルマの進行を遅くする</b>', '金のクッキーを出やすくする一皿も']);
+await shot('cook');
+await wait(2200);
 mark('scene5');
 
-// =============================================================== SCENE 6 — 転生スキルツリー
+// =============================================================== SCENE 6 — 研究 / 一覧
+await flash();
+await showTab('researchTab', true);
+await wait(600);
+await cap(['<em>研究</em>で<b>生産の計算式</b>を書き換えて']);
+await shot('research');
+await wait(1600);
+
+await showTab('infoTab', true);
+await wait(500);
+console.log('  info scroll:', await scrollToHeading('infoTab', '現在の倍率・状態'));
+await wait(400);
+await cap(['効いている倍率は<em>全部この画面で見られる</em>']);
+await shot('info');
+await wait(2100);
+mark('scene6');
+
+// =============================================================== SCENE 7 — 転生スキルツリー
 await flash();
 await top(null);
 await ev(() => { try { closeTabPageFullscreen(); openSkillTreeView(); } catch (e) { return String(e); } });
@@ -256,11 +303,11 @@ await ev(() => {
   f.scrollTop = 0;
 });
 await wait(300);
-await cap(['そして<em>転生</em>。', '<em>70以上</em>のノードのスキルツリー']);
+await cap(['転生すると<em>スキルツリー</em>', 'ノードは<em>71個</em>']);
 const pan = ev(async () => {
   const f = document.querySelector('.skillMapFrame');
   const max = f.scrollHeight - f.clientHeight;
-  const t0 = performance.now(), dur = 4200;
+  const t0 = performance.now(), dur = 3900;
   await new Promise(res => {
     const step = () => {
       const k = Math.min(1, (performance.now() - t0) / dur);
@@ -271,14 +318,14 @@ const pan = ev(async () => {
   });
 });
 await shot('tree');
-await wait(2100);
+await wait(1900);
 await cap(['取る順番で<b>次の周回が別ゲー</b>に', '何度でも組み直せます']);
 await shot('tree2');
-await wait(2100);
+await wait(1900);
 await pan;
-mark('scene6');
+mark('scene7');
 
-// =============================================================== SCENE 7 — payoff
+// =============================================================== SCENE 8 — payoff
 // Tear the tree screen down and restore the play screen in one step, so no
 // half-dressed frame (stale caption, leftover panel) ever reaches the video.
 await cap([]);
@@ -292,19 +339,19 @@ await setLateGame();
 await flash();
 await top('で、さっきの数字に戻ります');
 await shot('payoff');
-await wait(2600);
-mark('scene7');
+await wait(2200);
+mark('scene8');
 
-// =============================================================== SCENE 8 — CTA
+// =============================================================== SCENE 9 — CTA
 await top(null);
 await cap([]);
 await ev(() => window.__end(
   'クッキーストラテジャー',
-  'ブラウザで即プレイ・<u>無料</u>・登録不要<br>cookiestrateger.com',
-  'Android版の<em>テスター募集中</em><br>応募方法はチャンネル概要欄に'));
+  'Google Play <u>クローズドテスト中</u><br>基本プレイ無料・広告なし',
+  '<em>テスターを募集しています</em><br>応募方法はチャンネル概要欄に'));
 await shot('cta');
-await wait(3800);
-mark('scene8 / total');
+await wait(3600);
+mark('scene9 / total');
 
 await page.waitForTimeout(200);
 const trimSec = (coverOffAt - recStart) / 1000;
