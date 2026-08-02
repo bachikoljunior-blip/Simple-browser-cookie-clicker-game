@@ -5,11 +5,14 @@ window.__promoInstall = function () {
   const css = `
   #pfxRoot{position:fixed;inset:0;z-index:99999;pointer-events:none;
     font-family:"IPAPGothic","IPAGothic",sans-serif}
-  #pfxCover{position:absolute;inset:0;background:#0b0705;opacity:1;transition:opacity .35s ease}
+  #pfxCover{position:absolute;inset:0;background:#000;opacity:1}
   #pfxCover.off{opacity:0}
   #pfxFlash{position:absolute;inset:0;background:#fff;opacity:0}
-  #pfxFlash.go{animation:pfxFlash .3s ease-out}
-  @keyframes pfxFlash{0%{opacity:.9}100%{opacity:0}}
+  #pfxFlash.go{animation:pfxFlash .36s linear}
+  /* Holds briefly at full strength: the capture only samples ~19.5 times a
+     second, and this frame is the timing mark the soundtrack is checked against,
+     so it has to survive being sampled. */
+  @keyframes pfxFlash{0%{opacity:.94}28%{opacity:.9}100%{opacity:0}}
 
   /* --- banner: sits on the seam between play area and panel --- */
   #pfxTop{position:absolute;left:2.5%;right:2.5%;top:37.5%;display:flex;justify-content:center;opacity:0}
@@ -26,7 +29,9 @@ window.__promoInstall = function () {
   /* --- caption stack, anchored so it can never run off frame --- */
   #pfxCap{position:absolute;left:2.5%;right:2.5%;bottom:11%;text-align:center;opacity:0}
   #pfxCap.on{opacity:1}
-  #pfxCap.high{bottom:auto;top:5%}
+  /* For full-bleed play scenes: sits in the empty sky under the quota gauge,
+     clear of the cookie and of whatever has spawned around it. */
+  #pfxCap.high{bottom:auto;top:14%}
   #pfxCap.mid{bottom:auto;top:41%}
   #pfxCap .line{
     display:block;margin:0 auto 1.389vw;width:fit-content;max-width:100%;
@@ -91,6 +96,9 @@ window.__promoInstall = function () {
 
   const $$ = id => document.getElementById(id);
 
+  // Switched with no transition on purpose: the frame where the cover appears or
+  // disappears is the timing anchor the encoder aligns the soundtrack to, so it
+  // has to be a hard edge rather than a fade.
   window.__cover = on => $$('pfxCover').classList.toggle('off', !on);
 
   window.__flash = () => {

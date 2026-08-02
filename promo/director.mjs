@@ -3,6 +3,7 @@
 //   node director.mjs shots   -> no video, one screenshot per beat for review
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
+import { startCapture } from './screencap.mjs';
 
 const SHOTS = process.argv[2] === 'shots';
 // Falls back to whatever playwright-core resolves on its own when this path
@@ -11,6 +12,7 @@ const CHROME = process.env.PROMO_CHROME || '/opt/pw-browsers/chromium-1194/chrom
 const URL = 'http://localhost:8765/play.html';
 const OUT = 'video';
 const overlaySrc = fs.readFileSync('overlay.js', 'utf8');
+const audioTapSrc = fs.readFileSync('audiotap.js', 'utf8');
 
 // The game scales its board to the viewport width but caps it at 900px, so
 // capture 9:16 at exactly 900 wide to fill the frame with no letterboxing.
@@ -26,13 +28,19 @@ const ctx = await browser.newContext({
   deviceScaleFactor: DSF,
   isMobile: true,
   hasTouch: true,
-  ...(SHOTS ? {} : { recordVideo: { dir: OUT, size: { width: W, height: H } } }),
 });
-// Recording starts the moment the page exists, so everything before the cover
-// lifts is dead footage that gets trimmed off afterwards.
-const recStart = Date.now();
+await ctx.addInitScript({ content: audioTapSrc + '\nwindow.__installAudioTap();' });
 const page = await ctx.newPage();
 page.on('pageerror', e => console.log('[pageerror]', String(e).slice(0, 200)));
+
+// Frames are laid onto a fixed real-time grid rather than written by Playwright,
+// so the soundtrack recorded alongside them lines up exactly. See screencap.mjs.
+// Chromium's headless screencast is capped near 19.5fps whatever the page or the
+// resolution, so the grid runs at 20: close enough that slots rarely have to
+// repeat a frame, which keeps the cadence even.
+const FPS = 20;
+const capture = SHOTS ? null : await startCapture(await ctx.newCDPSession(page),
+  { dir: `${OUT}/frames`, fps: FPS, quality: 82, width: W, height: H });
 
 let shotN = 0;
 let coverOffAt = 0;
@@ -44,7 +52,23 @@ const ev = (fn, arg) => page.evaluate(fn, arg);
 
 const cap = (lines, pos) => ev(([l, p]) => window.__cap(l, p), [lines, pos || null]);
 const top = (html, pos) => ev(([h, p]) => window.__top(h, p), [html, pos || null]);
-const flash = () => ev(() => window.__flash());
+// Every flash is also a sync mark: the white frame and the transition sound are
+// fired together, so their wall times let the encoder line the two tracks up.
+//
+// The sound starts the instant it is asked for, but the white frame only appears
+// at the next paint — and the scene changes that follow a cut rebuild enough DOM
+// to block painting for a few hundred milliseconds. Waiting for the flash to
+// actually reach the screen before returning keeps the two together, and means
+// the rebuild happens behind the white instead of in front of it.
+const flashLog = [];
+const flash = async (kind) => {
+  await ev(k => {
+    window.__flash();
+    window.__hit(k);
+    return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  }, kind || 'cut');
+  flashLog.push((Date.now() - coverOffAt) / 1000);
+};
 
 async function tapAt(x, y) {
   await ev(([px, py]) => window.__ring(px, py), [x, y]);
@@ -105,7 +129,7 @@ const setLateGame = () => ev(() => {
   state.totalClicks = 38400;
   state.runStart = Date.now() - 26 * 60 * 1000;
   state.quotaFailed = false;
-  try { renderAllTabs(); } catch (e) {}
+  try { renderActiveTab(); } catch (e) {}
 });
 
 const setFresh = () => ev(() => {
@@ -115,7 +139,7 @@ const setFresh = () => ev(() => {
   state.runCookies = D(25);
   state.totalCookies = D(25);
   state.totalClicks = 25;
-  try { renderAllTabs(); } catch (e) {}
+  try { renderActiveTab(); } catch (e) {}
 });
 
 const setMidGame = () => ev(() => {
@@ -125,14 +149,14 @@ const setMidGame = () => ev(() => {
   state.totalCookies = D('3.1e9');
   state.runStart = Date.now() - 9 * 60 * 1000;
   state.quotaFailed = false;
-  try { renderAllTabs(); } catch (e) {}
+  try { renderActiveTab(); } catch (e) {}
 });
 
 const grant = amt => ev(a => {
   state.cookies = D(a);
   state.runCookies = state.runCookies.add(D(a));
   state.totalCookies = state.totalCookies.add(D(a));
-  try { renderAllTabs(); } catch (e) {}
+  try { renderActiveTab(); } catch (e) {}
 }, amt);
 
 // Play screen = panel at half height. Fullscreen = the tab page fills the frame.
@@ -141,6 +165,15 @@ const showTab = (id, full) => ev(([tabId, f]) => {
   if (f) toggleTabPageFullscreen(tabId);
   else closeTabPageFullscreen();
 }, [id, !!full]);
+
+// The play area either shares the frame with a tab panel or takes the whole of
+// it. Anything whose subject lives on the play field — the quota gauge, the
+// golden cookie, the monsters — reads far better with the panel out of the way,
+// so those scenes claim the frame instead of sitting in the top third of it.
+const setPlayFullscreen = on => ev(want => {
+  const isOn = document.body.classList.contains('playFullscreenMode');
+  if (isOn !== want) { try { togglePlayFullscreen(); } catch (e) { return String(e); } }
+}, on);
 
 const toPlayScreen = () => ev(() => {
   try { closeSkillChoiceScreen(); } catch (e) {}
@@ -174,21 +207,38 @@ const scrollToHeading = (tabId, text) => ev(([id, t]) => {
 // =============================================================== SCENE 1 — hook
 // The number itself is the hook: the counter runs off the end of the units most
 // people know, so lead with "do you know this unit?" rather than "big number".
+//
+// Two things matter more here than anywhere else. The play area goes full-bleed
+// so the counter and the cookie own the frame instead of sharing it with a list
+// of shop rows, and the text is already on screen when the cover lifts — a Short
+// that opens on half a second of untitled gameplay has lost the scroll already.
 await setLateGame();
 await showTab('shopTab', false);
+await setPlayFullscreen(true);
 await page.waitForTimeout(400);
-await ev(() => window.__cover(false));
-coverOffAt = Date.now();
-await page.waitForTimeout(200);
+// Lift the music bed well above the game's own ceiling. Without it the take is
+// mostly silence with occasional spikes: quiet enough that YouTube's loudness
+// normalisation turns it up, which only makes the spikes worse.
+await ev(() => {
+  settings.bgmVolume = 100;
+  settings.seVolume = 100;
+  try { if (bgmGainNode) bgmGainNode.gain.value = 0.42; } catch (e) {}
+});
 await top('“正”って単位、知ってます?');
 await cap(['所持クッキー <em>100正</em>', '= 10の<em>42</em>乗']);
+await page.waitForTimeout(350);   // let the text animate in behind the cover
+await ev(() => window.__cover(false));
+coverOffAt = Date.now();
+if (capture) capture.arm(coverOffAt);
+console.log('  audio:', await ev(() => window.__startRec()));
 await shot('hook');
 await wait(2400);
 
 // =============================================================== SCENE 2 — rewind
 await flash();
 await cap([]);
-await top('⏪ 3分前', 'hi');
+await top('⏪ 最初はこう', 'hi');
+await setPlayFullscreen(false);
 await setFresh();
 await page.waitForTimeout(200);
 await cap(['スタートは<em>クッキー25枚</em>']);
@@ -217,6 +267,7 @@ mark('scene2');
 await flash();
 await setMidGame();
 await toPlayScreen();
+await setPlayFullscreen(true);
 await top('ここからが本題');
 await cap(['<em>「モンスター生成ノルマ」</em>があります', '生産が遅れると<b>モンスターが来なくなる</b>']);
 await shot('quota');
@@ -231,14 +282,14 @@ mark('scene3');
 // on screen together — the busiest, most alive frame in the game.
 await flash();
 await top(null);
-await cap(['<em>金のクッキー</em>で生産が跳ねて']);
+await cap(['<em>金のクッキー</em>で生産が跳ねて'], 'high');
 await ev(() => { try { showGoldenCookie(); } catch (e) { return String(e); } });
 await wait(1300);
 await tapEl('#goldenCookie');
 await shot('golden');
 await wait(1000);
 
-await cap(['<em>モンスター</em>を殴ると素材が出る', '群れも<b>ボス</b>も来ます']);
+await cap(['<em>モンスター</em>を殴ると素材が出る', '群れも<b>ボス</b>も来ます'], 'high');
 await ev(() => {
   try { showMonster('swarm'); showMonster('boss'); } catch (e) { return String(e); }
 });
@@ -253,6 +304,7 @@ mark('scene4');
 // 486 recipes is a genuinely surprising number for a clicker, and the cooking
 // list pays off the ノルマ beat: one dish slows the quota clock down.
 await flash();
+await setPlayFullscreen(false);
 await setLateGame();
 await showTab('workshopTab', true);
 await wait(600);
@@ -336,8 +388,10 @@ await ev(() => {
 await wait(250);
 await toPlayScreen();
 await setLateGame();
-await flash();
+await setPlayFullscreen(true);
+await flash('stamp');
 await top('で、さっきの数字に戻ります');
+await cap(['<em>100正</em> ＝ 10の<em>42</em>乗']);
 await shot('payoff');
 await wait(2200);
 mark('scene8');
@@ -353,15 +407,35 @@ await shot('cta');
 await wait(3600);
 mark('scene9 / total');
 
-await page.waitForTimeout(200);
-const trimSec = (coverOffAt - recStart) / 1000;
+// Close on the same hard-edged cover that opened the take. Both edges are exact
+// frames in the capture and exact instants on the wall clock, which is how the
+// encoder maps one timeline onto the other.
+await ev(() => window.__cover(true));
+const coverOnAt = Date.now();
+if (capture) capture.end(coverOnAt);
+await page.waitForTimeout(1400);
+const levels = await ev(() => window.__levels());
+const audioB64 = await ev(() => window.__stopRec());
+const rec = capture ? await capture.finish() : null;
+const takeSec = (coverOnAt - coverOffAt) / 1000;
 await ctx.close();
 await browser.close();
 
 if (!SHOTS) {
-  const f = fs.readdirSync(OUT).filter(n => n.endsWith('.webm'))[0];
-  fs.writeFileSync('trim.json', JSON.stringify({ file: `${OUT}/${f}`, trimSec }, null, 2));
-  console.log('raw:', `${OUT}/${f}`, (fs.statSync(`${OUT}/${f}`).size / 1e6).toFixed(1) + 'MB', 'head-trim', trimSec.toFixed(2) + 's');
+  const audioFile = `${OUT}/audio.webm`;
+  if (audioB64) fs.writeFileSync(audioFile, Buffer.from(audioB64, 'base64'));
+  fs.writeFileSync('trim.json', JSON.stringify({
+    frames: rec.dir, fps: rec.fps, frameCount: rec.frames,
+    audio: audioB64 ? audioFile : null, takeSec, flashLog,
+  }, null, 2));
+  console.log(`frames ${rec.frames} @${rec.fps}fps (${(rec.frames / rec.fps).toFixed(2)}s)`,
+    `| take ${takeSec.toFixed(2)}s`,
+    `| audio ${audioB64 ? (fs.statSync(audioFile).size / 1e6).toFixed(2) + 'MB' : 'MISSING'}`,
+    rec.dropped ? `| ${rec.dropped} empty slots` : '');
+  if (levels) {
+    console.log(`audio level: peak ${levels.peakDb.toFixed(1)}dBFS, rms ${levels.rmsDb.toFixed(1)}dBFS` +
+      (levels.clippedFrames ? `, CLIPPED in ${levels.clippedFrames}/${levels.samples} windows` : ', no clipping'));
+  }
 } else {
   console.log('shots:', shotN);
 }
