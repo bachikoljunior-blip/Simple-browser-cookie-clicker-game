@@ -18,10 +18,10 @@ YT_REFRESH_TOKEN
 ## 1. Google Cloud 側の準備
 
 1. [Google Cloud Console](https://console.cloud.google.com/) で**新しいプロジェクト**を作る（名前は何でも可）
-2. 「APIとサービス」→「ライブラリ」で、次の**2つ**を有効にする
-   - **YouTube Data API v3** … 投稿に使う
-   - **YouTube Analytics API** … 再生回数などの読み取りに使う
-3. 「APIとサービス」→「OAuth同意画面」
+2. 次の**2つ**を有効にする（リンクから直接飛べます）
+   - [**YouTube Data API v3** を有効にする](https://console.cloud.google.com/apis/library/youtube.googleapis.com) … 投稿に使う
+   - [**YouTube Analytics API** を有効にする](https://console.cloud.google.com/apis/library/youtubeanalytics.googleapis.com) … 再生回数などの読み取りに使う
+3. [**OAuth同意画面**](https://console.cloud.google.com/apis/credentials/consent)
    - User Type は **外部**
    - アプリ名・メールアドレスを埋める（審査は不要です）
    - **テストユーザー**に、YouTube チャンネルを持っている自分の Google アカウントを追加する
@@ -34,9 +34,11 @@ YT_REFRESH_TOKEN
 
 ## 2. OAuth クライアントを作る
 
-「APIとサービス」→「認証情報」→「認証情報を作成」→「OAuth クライアント ID」
+[**認証情報**](https://console.cloud.google.com/apis/credentials) →「認証情報を作成」→「OAuth クライアント ID」
 
 - アプリケーションの種類：**ウェブ アプリケーション**
+  > ⚠️ **「デスクトップ」ではありません。** デスクトップ型にはリダイレクト URI の
+  > 欄が無く、次の手順で使う OAuth Playground が利用できません。
 - 承認済みのリダイレクト URI に次を**そのまま**追加：
   ```
   https://developers.google.com/oauthplayground
@@ -46,7 +48,7 @@ YT_REFRESH_TOKEN
 
 ## 3. refresh token を取る
 
-[OAuth 2.0 Playground](https://developers.google.com/oauthplayground/) を開きます。
+[**OAuth 2.0 Playground を開く**](https://developers.google.com/oauthplayground/)
 
 1. 右上の**歯車アイコン**を押して
    - **Use your own OAuth credentials** にチェック
@@ -75,11 +77,14 @@ Claude Code on the web の**環境設定**（Environments → この環境 → E
 | `YT_CLIENT_SECRET` | `GOCSPX-...` |
 | `YT_REFRESH_TOKEN` | `1//...` |
 
-設定できたら、次で疎通を確認できます。
+> **環境変数は、設定したあとに始まるセッションから有効になります。**
+> 動いているセッションには反映されません。定期実行は毎回新しいセッションで
+> 走るので問題ありませんが、先に疎通を確かめたい場合は新しい会話を始めて
+> 次を実行してもらってください。
 
 ```sh
-cd promo/youtube
-node yt.mjs check
+bash promo/youtube/setup.sh
+cd promo && node youtube/yt.mjs check
 ```
 
 チャンネル名と、直近28日の再生回数が出れば準備完了です。
@@ -90,9 +95,9 @@ node yt.mjs check
 
 - **アップロードの quota**：既定は1日10,000ユニット、投稿1本で1,600ユニットです。
   1日1本なら余裕があります（分析の読み取りは1ユニット）。
-- **初回の投稿は「非公開」で出ます**（`autopost.mjs` の既定）。
-  中身を確認してから公開に切り替える運用にしています。
-  毎回そのまま公開にしたい場合は `--privacy public` を付けてください。
+- **投稿は既定で「非公開」です。** 自動で公開したくなったら、環境変数に
+  `YT_PRIVACY=public` を足してください。認証情報と同じで、公開は既定値ではなく
+  意思決定として置いています。
 - **チャンネルの概要欄**（テスター募集文）は自動化に含めていません。
   動画が「応募方法は概要欄に」と言うので、先に一度だけ更新しておいてください。
   文面は [`../script_ja.md`](../script_ja.md) の §5 にあります。
