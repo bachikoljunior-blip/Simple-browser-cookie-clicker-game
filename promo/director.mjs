@@ -97,6 +97,26 @@ async function tapBurst(sel, times, gap) {
   return true;
 }
 
+// Hits whatever monster is currently on the field, moving on to the next as they
+// die. This goes through the game's own hit handler rather than a tap at the
+// sprite's coordinates: the golden-cookie buff swells the centre cookie until it
+// covers the monsters, so coordinate taps land on the cookie and the monsters
+// never take damage. The finger ring is still drawn where the monster is.
+async function hitMonsters(times, gap) {
+  for (let i = 0; i < times; i++) {
+    const ok = await ev(() => {
+      const mon = typeof monsters !== 'undefined' && monsters[0];
+      if (!mon || !mon.el) return false;
+      const r = mon.el.getBoundingClientRect();
+      window.__ring(r.x + r.width / 2, r.y + r.height / 2);
+      hitMonster(mon.id);
+      return true;
+    });
+    if (!ok) return;
+    await wait(gap);
+  }
+}
+
 await page.goto(URL, { waitUntil: 'load' });
 await page.addScriptTag({ content: overlaySrc });
 await ev(() => window.__promoInstall());
@@ -280,17 +300,22 @@ await tapBurst('#cookie', 4, 340);
 await wait(1100);
 
 // =============================================================== SCENE 2 — rewind
+// Hold the same full-bleed framing the hook used, so the two states can be read
+// against each other: identical composition, identical counter position, so the
+// only thing that changes is the number — 25 against 100正. Dropping to the split
+// view here would make it look like a different screen rather than the same one
+// earlier, which is the whole point of the rewind.
 await flash();
 await cap([]);
-await top('⏪ 最初はこう', 'hi');
-await setPlayFullscreen(false);
+await top('⏪ 最初はこう');
 await setFresh();
 await page.waitForTimeout(200);
 await cap(['スタートは<em>クッキー25枚</em>']);
 await shot('rewind');
-await wait(1200);
+await wait(1400);
 
 await top(null);
+await setPlayFullscreen(false);
 await cap(['タップ1回 = <em>1クッキー</em>']);
 await tapBurst('#cookie', 10, 60);
 await shot('taps');
@@ -331,22 +356,42 @@ mark('scene3');
 await flash();
 await top(null);
 await cap(['<em>金のクッキー</em>で生産が跳ねて'], 'high');
-await ev(() => { try { showGoldenCookie(); } catch (e) { return String(e); } });
-await wait(1300);
+await ev(() => {
+  try { showGoldenCookie(); } catch (e) { return String(e); }
+  // The game drops it anywhere on the field, and "anywhere" included the bottom
+  // edge — small, half under YouTube's chrome, and gone before anyone saw it.
+  // Put it in clear space below the caption and away from the centre cookie.
+  const btn = document.getElementById('goldenCookie');
+  const host = document.querySelector('.top');
+  if (btn && host) {
+    btn.style.right = 'auto';
+    btn.style.bottom = 'auto';
+    btn.style.left = Math.round(host.clientWidth * 0.58) + 'px';
+    btn.style.top = Math.round(host.clientHeight * 0.22) + 'px';
+  }
+});
+await wait(1500);
 await tapEl('#goldenCookie');
 await shot('golden');
-await wait(1000);
+await wait(1300);   // let the buff visibly take hold before cutting away
 
 await cap(['<em>モンスター</em>を殴ると素材が出る', '群れも<b>ボス</b>も来ます'], 'high');
 await ev(() => {
   try { showMonster('swarm'); showMonster('boss'); } catch (e) { return String(e); }
+  // At this point in the run a tap does 4 damage against 173hp minions, so the
+  // burst never killed anything and the drop the caption promises never
+  // appeared. 狩猟集中 is the game's own damage skill; enough of it to land the
+  // kills inside the beat.
+  state.huntFocusLv = 20;
 });
-await wait(1100);
+await wait(1000);
 await shot('monster');
-await tapBurst('.monsterInstance', 6, 90);
-await wait(700);
+await hitMonsters(10, 105);
+await wait(600);
 await hideRewardModal();
 mark('scene4');
+
+await ev(() => { state.huntFocusLv = 0; });
 
 // =============================================================== SCENE 5 — 工房
 // 486 recipes is a genuinely surprising number for a clicker, and the cooking
@@ -472,7 +517,8 @@ await cap([]);
 // するだけ)と、対象(Android)を先に出して、行動だけを赤枠に残す。
 await ev(() => window.__end(
   'クッキーストラテジャー',
-  '<u>Android</u>版の公開に必要な<br>テスターを募集しています<br>14日間 入れたままにするだけ・基本プレイ無料',
+  // 「14日間」と「基本プレイ無料」が隣り合っていると、14日間だけ無料と読める。
+  '基本プレイ無料・<u>Android</u>版<br>公開に必要なテスターを募集しています<br>やることは 14日間 入れたままにするだけ',
   '応募方法は<em>チャンネル概要欄</em>に'));
 await shot('cta');
 await wait(3600);

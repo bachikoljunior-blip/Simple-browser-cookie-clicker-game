@@ -58,6 +58,10 @@ window.__promoInstall = function () {
     animation:pfxRing .4s ease-out forwards}
   @keyframes pfxRing{0%{transform:scale(.35);opacity:1}100%{transform:scale(1.4);opacity:0}}
 
+  /* Killing a monster opens the reward dialog, which dims the field and covers
+     the beat. A stylesheet !important beats the inline display the game sets. */
+  #rewardModal{display:none !important}
+
   /* --- end card --- */
   #pfxEnd{position:absolute;inset:0;opacity:0;transition:opacity .35s ease;
     background:#120a05;
@@ -159,6 +163,16 @@ window.__promoInstall = function () {
       '<div style="position:absolute;left:0;right:0;top:0;height:9%;background:rgba(255,140,0,.30);' +
       'border-bottom:2px solid #f80"></div>';
     document.getElementById('pfxRoot').appendChild(d);
+  };
+
+  // Hiding the dialog with CSS is not enough: the game gates further monster hits
+  // on its inline display being "flex", so that value has to be cleared too or
+  // nothing can be killed after the first drop.
+  window.__suppressRewards = () => {
+    setInterval(() => {
+      const m = document.getElementById('rewardModal');
+      if (m && m.style.display && m.style.display !== 'none') m.style.display = 'none';
+    }, 30);
   };
 
   window.__end = (t, s, cta) => {
