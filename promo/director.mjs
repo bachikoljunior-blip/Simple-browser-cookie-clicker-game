@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import { startCapture } from './screencap.mjs';
 
 const SHOTS = process.argv[2] === 'shots';
+const SAFE = process.argv[3] === 'safe';   // overlay the Shorts chrome zones
 // Falls back to whatever playwright-core resolves on its own when this path
 // (the browser bundle in the recording container) is not present.
 const CHROME = process.env.PROMO_CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -63,6 +64,10 @@ const top = (html, pos) => ev(([h, p]) => window.__top(h, p), [html, pos || null
 const flashLog = [];
 const flash = async (kind) => {
   await ev(k => {
+    // A flash always starts a new beat, so the outgoing line goes with it. Some
+    // scenes take over a second to build their screen, and a caption left up
+    // through that describes whatever happens to be underneath it.
+    window.__cap([]);
     window.__flash();
     window.__hit(k);
     return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
@@ -95,6 +100,7 @@ async function tapBurst(sel, times, gap) {
 await page.goto(URL, { waitUntil: 'load' });
 await page.addScriptTag({ content: overlaySrc });
 await ev(() => window.__promoInstall());
+if (SAFE) await ev(() => window.__safeZones());
 await page.waitForTimeout(1200);
 
 // Audio gate + title are cleared under the black cover so the video opens on gameplay.
@@ -160,11 +166,17 @@ const grant = amt => ev(a => {
 }, amt);
 
 // Play screen = panel at half height. Fullscreen = the tab page fills the frame.
-const showTab = (id, full) => ev(([tabId, f]) => {
-  switchTab(tabId);
-  if (f) toggleTabPageFullscreen(tabId);
-  else closeTabPageFullscreen();
-}, [id, !!full]);
+// Clearing the caption is part of changing the screen: setting up the next one
+// takes long enough that the previous line would otherwise sit over it for the
+// best part of a second, describing something no longer on screen.
+const showTab = async (id, full) => {
+  await cap([]);
+  await ev(([tabId, f]) => {
+    switchTab(tabId);
+    if (f) toggleTabPageFullscreen(tabId);
+    else closeTabPageFullscreen();
+  }, [id, !!full]);
+};
 
 // The play area either shares the frame with a tab panel or takes the whole of
 // it. Anything whose subject lives on the play field — the quota gauge, the
@@ -179,16 +191,44 @@ const toPlayScreen = () => ev(() => {
   try { closeSkillChoiceScreen(); } catch (e) {}
   try { closeTabPageFullscreen(); } catch (e) {}
   try { switchTab('shopTab'); } catch (e) {}
-  // A monster kill queues a reward popup that would land on the closing shot.
-  const rm = document.getElementById('rewardModal');
-  if (rm) rm.style.display = 'none';
 });
 
-// A kill can queue the reward popup on top of whatever is being shown.
+// Killing a monster pops the reward dialog, which dims the whole screen and sits
+// over the very thing the beat is about — and its backdrop swallows the taps
+// aimed at the next monster. It is kept out of the take from the first frame.
 const hideRewardModal = () => ev(() => {
   const rm = document.getElementById('rewardModal');
-  if (rm) rm.style.display = 'none';
+  if (rm) rm.style.setProperty('display', 'none', 'important');
 });
+
+// Eases the tab page's list downward while a beat plays. Four panel screens back
+// to back is a long stretch of stillness in the middle of a Short; keeping the
+// content moving also shows there is more below the fold than fits the frame.
+// `to` is a fraction of the scrollable range; pass {by} instead to drift a
+// fraction of one screenful from wherever the page already is, which is what the
+// 一覧 beat needs — an absolute target sails straight past the block of numbers
+// the caption is pointing at.
+const autoScroll = (tabId, to, ms) => ev(([id, target, dur]) => {
+  const page = document.getElementById(id);
+  if (!page) return;
+  const boxes = [...page.querySelectorAll('*')].filter(el => el.scrollHeight > el.clientHeight + 40);
+  const box = boxes.sort((a, b) =>
+    (b.scrollHeight - b.clientHeight) - (a.scrollHeight - a.clientHeight))[0];
+  if (!box) return;
+  const from = box.scrollTop;
+  const to = target && target.by !== undefined
+    ? Math.min(box.scrollHeight - box.clientHeight, from + box.clientHeight * target.by)
+    : (box.scrollHeight - box.clientHeight) * target;
+  const t0 = performance.now();
+  return new Promise(res => {
+    const step = () => {
+      const k = Math.min(1, (performance.now() - t0) / dur);
+      box.scrollTop = from + (to - from) * (k < 0.5 ? 2 * k * k : 1 - 2 * (1 - k) ** 2);
+      if (k < 1) requestAnimationFrame(step); else res();
+    };
+    requestAnimationFrame(step);
+  });
+}, [tabId, to, ms]);
 
 // Scrolls a tab page so the section with the given heading is at the top. The
 // part of 一覧 worth showing (the wall of live multipliers) sits well below the
@@ -213,6 +253,7 @@ const scrollToHeading = (tabId, text) => ev(([id, t]) => {
 // of shop rows, and the text is already on screen when the cover lifts — a Short
 // that opens on half a second of untitled gameplay has lost the scroll already.
 await setLateGame();
+await hideRewardModal();
 await showTab('shopTab', false);
 await setPlayFullscreen(true);
 await page.waitForTimeout(400);
@@ -232,7 +273,11 @@ coverOffAt = Date.now();
 if (capture) capture.arm(coverOffAt);
 console.log('  audio:', await ev(() => window.__startRec()));
 await shot('hook');
-await wait(2400);
+// Pre-setting the text means the opening frames would otherwise be motionless.
+// Tapping the cookie gives the hook real movement — floating numbers and the
+// game's own click — instead of a still frame with a caption on it.
+await tapBurst('#cookie', 4, 340);
+await wait(1100);
 
 // =============================================================== SCENE 2 — rewind
 await flash();
@@ -310,15 +355,29 @@ await showTab('workshopTab', true);
 await wait(600);
 await top('素材の使い道', 'hi');
 await cap(['集めた素材で<em>装備</em>を作る', 'レシピは<em>486種類</em>']);
+const craftPan = autoScroll('workshopTab', 0.30, 1900);
 await shot('craft');
 await wait(1900);
+await craftPan;
 
+// Scrolling moved the 作成 / 料理 buttons out of the frame, so put the page back
+// to the top before reaching for one of them.
+await cap([]);
+await ev(() => {
+  const page = document.getElementById('workshopTab');
+  if (page) [...page.querySelectorAll('*')].forEach(el => {
+    if (el.scrollHeight > el.clientHeight + 40) el.scrollTop = 0;
+  });
+});
+await wait(250);
 await tapEl('#workshopPanel >> text=料理');
 await wait(700);
 await top(null);
 await cap(['<em>料理</em>は<b>ノルマの進行を遅くする</b>', '金のクッキーを出やすくする一皿も']);
+const cookPan = autoScroll('workshopTab', 0.22, 2200);
 await shot('cook');
 await wait(2200);
+await cookPan;
 mark('scene5');
 
 // =============================================================== SCENE 6 — 研究 / 一覧
@@ -326,16 +385,20 @@ await flash();
 await showTab('researchTab', true);
 await wait(600);
 await cap(['<em>研究</em>で<b>生産の計算式</b>を書き換えて']);
+const researchPan = autoScroll('researchTab', 0.32, 1600);
 await shot('research');
 await wait(1600);
+await researchPan;
 
 await showTab('infoTab', true);
 await wait(500);
 console.log('  info scroll:', await scrollToHeading('infoTab', '現在の倍率・状態'));
 await wait(400);
 await cap(['効いている倍率は<em>全部この画面で見られる</em>']);
+const infoPan = autoScroll('infoTab', { by: 0.34 }, 2100);
 await shot('info');
 await wait(2100);
+await infoPan;
 mark('scene6');
 
 // =============================================================== SCENE 7 — 転生スキルツリー

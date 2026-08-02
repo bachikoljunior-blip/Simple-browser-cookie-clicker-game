@@ -3,7 +3,12 @@
 // All sizes are in vw so the same layout holds at any capture resolution.
 window.__promoInstall = function () {
   const css = `
+  /* YouTube draws its own chrome over the finished Short: the title, channel row
+     and progress bar across the bottom, and the like/comment/share column down
+     the right. Anything burned in has to stay clear of both, or it gets covered
+     on the only screen that matters. These are the reserved bands. */
   #pfxRoot{position:fixed;inset:0;z-index:99999;pointer-events:none;
+    --uiBottom:20%; --uiRight:13%; --uiTop:9%;
     font-family:"IPAPGothic","IPAGothic",sans-serif}
   #pfxCover{position:absolute;inset:0;background:#000;opacity:1}
   #pfxCover.off{opacity:0}
@@ -15,9 +20,9 @@ window.__promoInstall = function () {
   @keyframes pfxFlash{0%{opacity:.94}28%{opacity:.9}100%{opacity:0}}
 
   /* --- banner: sits on the seam between play area and panel --- */
-  #pfxTop{position:absolute;left:2.5%;right:2.5%;top:37.5%;display:flex;justify-content:center;opacity:0}
+  #pfxTop{position:absolute;left:3%;right:var(--uiRight);top:37.5%;display:flex;justify-content:center;opacity:0}
   #pfxTop.on{opacity:1;animation:pfxDrop .26s cubic-bezier(.2,1.6,.4,1)}
-  #pfxTop.hi{top:5.5%}
+  #pfxTop.hi{top:11%}
   #pfxTop .b{
     display:inline-block;padding:1.157vw 3.241vw;border-radius:1.852vw;
     background:linear-gradient(180deg,#ffd85e,#f2a01c);
@@ -27,7 +32,7 @@ window.__promoInstall = function () {
   @keyframes pfxDrop{0%{transform:translateY(-5.093vw) scale(.82);opacity:0}100%{transform:none;opacity:1}}
 
   /* --- caption stack, anchored so it can never run off frame --- */
-  #pfxCap{position:absolute;left:2.5%;right:2.5%;bottom:11%;text-align:center;opacity:0}
+  #pfxCap{position:absolute;left:3%;right:var(--uiRight);bottom:calc(var(--uiBottom) + 3%);text-align:center;opacity:0}
   #pfxCap.on{opacity:1}
   /* For full-bleed play scenes: sits in the empty sky under the quota gauge,
      clear of the cookie and of whatever has spawned around it. */
@@ -56,7 +61,8 @@ window.__promoInstall = function () {
   /* --- end card --- */
   #pfxEnd{position:absolute;inset:0;opacity:0;transition:opacity .35s ease;
     background:#120a05;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3.241vw;padding:0 6%}
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3.241vw;
+    padding:var(--uiTop) var(--uiRight) var(--uiBottom) 6%}
   #pfxEnd.on{opacity:1}
   #pfxEnd::before{content:"";position:absolute;inset:0;
     background:radial-gradient(ellipse at 50% 34%,rgba(150,84,20,.55),rgba(10,6,3,0) 62%)}
@@ -138,6 +144,21 @@ window.__promoInstall = function () {
   window.__mount = sel => {
     const host = (sel && document.querySelector(sel)) || document.body;
     host.appendChild(document.getElementById('pfxRoot'));
+  };
+
+  // Debug aid: paints the areas YouTube's own Shorts chrome sits on top of, so
+  // burned-in text can be checked against them instead of guessed at.
+  window.__safeZones = () => {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:absolute;inset:0;z-index:100000;pointer-events:none';
+    d.innerHTML =
+      '<div style="position:absolute;left:0;right:0;bottom:0;height:20%;background:rgba(255,0,0,.34);' +
+      'border-top:2px solid #f00"></div>' +
+      '<div style="position:absolute;right:0;top:0;bottom:0;width:13%;background:rgba(255,0,0,.34);' +
+      'border-left:2px solid #f00"></div>' +
+      '<div style="position:absolute;left:0;right:0;top:0;height:9%;background:rgba(255,140,0,.30);' +
+      'border-bottom:2px solid #f80"></div>';
+    document.getElementById('pfxRoot').appendChild(d);
   };
 
   window.__end = (t, s, cta) => {
