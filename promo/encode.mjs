@@ -89,7 +89,10 @@ fs.rmSync(MID, { force: true });
 if (FULL) {
   execFileSync(FF, ['-y', '-hide_banner', '-loglevel', 'error', '-i', OUT,
     '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-pix_fmt', 'yuv420p',
-    '-profile:v', 'high', '-movflags', '+faststart',
+    '-profile:v', 'high', '-level', '4.0', '-movflags', '+faststart',
+    // The JPEG frames carry no colour tags, so the encoder was guessing bt470bg
+    // (PAL) and iOS shifted the colours on import. Tag it as plain HD.
+    '-color_primaries', 'bt709', '-color_trc', 'bt709', '-colorspace', 'bt709',
     '-c:a', 'aac', '-b:a', '160k', MP4], { stdio: 'inherit' });
   console.log(MP4, (fs.statSync(MP4).size / 1e6).toFixed(1) + 'MB');
 }
