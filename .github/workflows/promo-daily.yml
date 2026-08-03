@@ -96,14 +96,19 @@ jobs:
       - name: 投稿履歴を記録する
         # 動画そのものは残さない。次に何を出すかを決めるのに要るのは履歴だけで、
         # 毎日18MBを積むと履歴の方が読めなくなる。
+        #
+        # 投稿しなかった回（認証情報が無い、リンクが未設定など）は履歴も変わらない
+        # ので、何もせずに抜ける。ここで落ちると成功した収録まで失敗扱いになる。
         run: |
+          if [ -z "$(git status --porcelain promo/youtube/posted.json)" ]; then
+            echo "履歴に変化なし"
+            exit 0
+          fi
           git config user.name  'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git add promo/youtube/posted.json
-          git diff --staged --quiet || {
-            git commit -m "投稿履歴を更新する"
-            git push origin "HEAD:${PROMO_REF}"
-          }
+          git commit -m "投稿履歴を更新する"
+          git push origin "HEAD:${PROMO_REF}"
 
       - name: 失敗したときは素材を残す
         if: failure()
