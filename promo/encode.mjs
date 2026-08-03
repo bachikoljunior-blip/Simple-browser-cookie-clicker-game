@@ -19,9 +19,17 @@ const BUNDLED = '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux';
 const FF = process.env.PROMO_FFMPEG
   || (spawnSync('ffmpeg', ['-version']).status === 0 ? 'ffmpeg' : BUNDLED);
 const FULL = FF !== BUNDLED;
-const { frames: DIR, fps: FPS, audio: AUDIO, takeSec, flashLog } =
+const { frames: DIR, fps: FPS, audio: AUDIO, takeSec, flashLog,
+        width: CAP_W = 900, height: CAP_H = 1600 } =
   JSON.parse(fs.readFileSync('trim.json', 'utf8'));
-const OUT = process.argv[2] || 'cookie_strateger_short.webm';
+// The capture is at whatever size the game could actually fill; the deliverable
+// is the standard frame of the matching shape. Portrait is upscaled (the board
+// caps at 900px), landscape is not (the wide layout already renders larger than
+// it needs to be), so this is a resize in one direction and a no-op in the other.
+const LANDSCAPE = CAP_W > CAP_H;
+const SCALE = LANDSCAPE ? '1920:1080' : '1080:1920';
+const OUT = process.argv[2]
+  || (LANDSCAPE ? 'cookie_strateger_long.webm' : 'cookie_strateger_short.webm');
 const MID = 'video/_video_only.webm';
 const NARRATION = 'video/narration.wav';
 const MP4 = OUT.replace(/\.webm$/, '.mp4');
@@ -36,8 +44,8 @@ await new Promise((resolve, reject) => {
     // This build has no image2 demuxer and cannot probe a JPEG stream, so the
     // frames arrive on stdin with the codec named explicitly.
     '-f', 'image2pipe', '-c:v', 'mjpeg', '-framerate', String(FPS), '-i', 'pipe:0',
-    '-vf', 'scale=1080:1920:flags=lanczos',
-    '-c:v', 'libvpx', '-b:v', '5M', '-crf', '28',
+    '-vf', `scale=${SCALE}:flags=lanczos`,
+    '-c:v', 'libvpx', '-b:v', LANDSCAPE ? '3M' : '5M', '-crf', '28',
     '-deadline', 'good', '-cpu-used', '3', '-auto-alt-ref', '0', '-an',
     '-r', String(FPS), MID], { stdio: ['pipe', 'inherit', 'inherit'] });
   ff.on('error', reject);

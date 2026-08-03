@@ -89,9 +89,19 @@ if (process.argv[2] === 'check') {
 }
 
 // ---------------------------------------------------------------- build mode
-const { fps, frameCount, flashLog, markLog, variant } = JSON.parse(fs.readFileSync('trim.json', 'utf8'));
-const CUT = byId(variant || process.env.PROMO_VARIANT || 'unit') || VARIANTS[0];
-CUES.filter(c => c.text === null).forEach(c => { c.text = CUT.hook.narration; });
+const { fps, frameCount, flashLog, markLog, variant, narration } =
+  JSON.parse(fs.readFileSync('trim.json', 'utf8'));
+
+// The long-form director writes its cue list into trim.json, because there the
+// line and the caption it belongs with are written together in topics.mjs. The
+// Shorts cut is a fixed sequence of scenes, so its cues stay in the table above.
+// Either way what comes out of this block is a list of {anchor, at, text}.
+const SCRIPTED = Array.isArray(narration) && narration.length > 0;
+if (!SCRIPTED) {
+  const CUT = byId(variant || process.env.PROMO_VARIANT || 'unit') || VARIANTS[0];
+  CUES.filter(c => c.text === null).forEach(c => { c.text = CUT.hook.narration; });
+}
+const CUE_LIST = SCRIPTED ? narration : CUES;
 const total = frameCount / fps;
 // Scenes 2..8 each open on a cut, so the flash log is their start times; scene 1
 // starts at zero and scene 9 (the end card) starts where scene 8 was marked done.
@@ -103,7 +113,7 @@ fs.rmSync(TMP, { recursive: true, force: true });
 fs.mkdirSync(TMP, { recursive: true });
 
 const anchor = c => (c.mark ? markLog[c.mark] : starts[c.scene]);
-const placed = CUES
+const placed = CUE_LIST
   .map(c => ({ ...c, start: anchor(c) + c.at }))
   .filter(c => Number.isFinite(c.start))
   .sort((a, b) => a.start - b.start);
