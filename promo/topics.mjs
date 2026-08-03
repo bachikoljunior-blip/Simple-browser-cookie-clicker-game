@@ -39,7 +39,7 @@ export const TOPICS = [
         run: async s => { await s.setMidGame(); await s.showTab('shopTab'); },
         lines: [
           { hold: 7000, caption: ['放置ゲーなのに、<em>締め切り</em>があります'],
-            narration: 'クッキーストラテジャーという放置クリッカーを作っています。今日は、このゲームの中心にある生産ノルマという仕組みの話です。' },
+            narration: '放置クリッカーを作っています。今日は生産ノルマという仕組みの話です。' },
           { hold: 7000, caption: ['ふつうの放置ゲーは<em>置いておけば増える</em>'],
             narration: 'ふつうの放置ゲーは、置いておけば増えます。このゲームでも増えます。ただ、増えるだけでは進まないようにしてあります。' },
         ] },
