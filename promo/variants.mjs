@@ -31,9 +31,17 @@ const TAGS = ['Shorts', '放置ゲーム', 'クリッカー', 'インクリメ�
  *
  * Step ① is not decoration. Play's opt-in page turns away anyone who is not
  * already in the group, and that rejection reads like the test being closed.
+ *
+ * The URLs are here to be read and copied, not tapped. Until the channel earns
+ * advanced features, YouTube renders external links in a description as plain
+ * text — which is why the video sends people to the channel page, where the
+ * links section is real buttons. Saying so here costs one line and saves the
+ * viewer who taps a URL, gets nothing, and concludes the test is closed.
  */
 const cta = ({ groupUrl, optInUrl, contact }) => `
 ■ テスターを募集しています（Android専用・無料）
+
+※ 下のURLがタップできない場合は、チャンネルの概要欄にリンクがあります。
 
 Google Play で公開するのに、14日間のクローズドテストが必要です。
 その期間つきあってくださる方を探しています。

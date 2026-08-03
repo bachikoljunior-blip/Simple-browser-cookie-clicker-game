@@ -45,7 +45,7 @@ const CUES = [
   { mark: 'treeReady', at: 0.10, text: '転生。ノードは71個。' },
   { mark: 'treeReady', at: 2.50, text: '周回ごとに速くなる。' },
   { scene: 8, at: 0.35, text: 'さっきの数字に戻ります。' },
-  { scene: 9, at: 0.35, text: 'アンドロイドのテスター募集中。リンクは説明欄です。' },
+  { scene: 9, at: 0.35, text: 'アンドロイドのテスター募集中。リンクはチャンネル概要欄に。' },
 ];
 
 function synth(text, rate, wav, trace) {
