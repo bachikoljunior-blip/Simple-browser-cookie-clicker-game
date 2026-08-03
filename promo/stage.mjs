@@ -398,15 +398,21 @@ export async function openStage({ width, height, fps = 20, quality = 95,
    * Lifts the cover and starts the clock. Everything before this happened in the
    * dark, which is the point: the first frame is a finished screen.
    *
-   * The grid is armed a little after the cover comes off rather than with it.
-   * The screencast delivers the frame that was current when it was asked, and
-   * asking on the same tick as the reveal gets the black one.
+   * The take starts when the browser is seen to be delivering the uncovered
+   * screen, not when the cover is switched off. Those are different instants —
+   * the screencast kept sending the cover for 90ms after the DOM change in the
+   * one case that was measured, and longer on a page that had just been rebuilt
+   * — and anchoring on the DOM change opened the video on black.
+   *
+   * Waiting here rather than subtracting a fixed offset keeps every other
+   * timeline honest: beat marks, the take length and the soundtrack are all
+   * measured from coverOffAt, so moving it to the truth moves them with it.
    */
   async function begin() {
     await ev(() => window.__cover(false));
-    coverOffAt = Date.now();
     await ev(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
-    await page.waitForTimeout(90);
+    if (capture) await capture.waitForChange();
+    coverOffAt = Date.now();
     if (capture) capture.arm(coverOffAt);
     return coverOffAt;
   }

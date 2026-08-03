@@ -24,6 +24,7 @@ export async function startCapture(cdpSession, { dir, fps = 25, quality = 82, wi
   let index = 0;
   let stopAt = Infinity;
   let dropped = 0;
+  let changeWatch = null; // { ref, resolve } — see waitForChange
 
   cdpSession.on('Page.screencastFrame', async ({ data, sessionId, metadata }) => {
     const buf = Buffer.from(data, 'base64');
@@ -43,6 +44,12 @@ export async function startCapture(cdpSession, { dir, fps = 25, quality = 82, wi
     }
     held = buf;
 
+    if (changeWatch && !buf.equals(changeWatch.ref)) {
+      const w = changeWatch;
+      changeWatch = null;
+      w.resolve();
+    }
+
     // Acking late throttles the browser, so never block on it.
     cdpSession.send('Page.screencastFrameAck', { sessionId }).catch(() => {});
   });
@@ -52,6 +59,33 @@ export async function startCapture(cdpSession, { dir, fps = 25, quality = 82, wi
   });
 
   return {
+    /**
+     * Resolves once the browser hands back a frame different from the one it is
+     * showing right now.
+     *
+     * Changing the page and starting the grid are separate events, and the gap
+     * between them is not small: measured against a real take, the screencast
+     * went on delivering the old picture for 90ms after the DOM changed, and
+     * longer when the page had just been rebuilt. Arming the grid on the DOM
+     * change therefore opened the video on the cover — six to eight black frames,
+     * which on a Short is the whole swipe decision.
+     *
+     * Comparing bytes rather than waiting a fixed time is what makes this exact:
+     * the cover is a flat fill, so every frame of it is byte-identical, and the
+     * first frame that differs is by definition the first one showing something
+     * else. Times out rather than hanging; a take that never changed is a
+     * problem for the caller's own checks, not something to stall on here.
+     */
+    waitForChange(timeoutMs = 3000) {
+      if (!held) return Promise.resolve();
+      return new Promise(resolve => {
+        const w = { ref: held, resolve };
+        changeWatch = w;
+        setTimeout(() => {
+          if (changeWatch === w) { changeWatch = null; resolve(); }
+        }, timeoutMs).unref?.();
+      });
+    },
     /** Begin laying frames onto the grid, anchored to a wall-clock ms timestamp. */
     arm(startMs) { gridT = startMs / 1000; },
     /** Stop after the grid slot covering this wall-clock ms timestamp. */
