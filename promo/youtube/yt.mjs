@@ -66,9 +66,32 @@ function humanBytes(n) {
 // 値がどこから来たかを覚えておきます（check で表示するため）。
 const envSource = {};
 
+// 値の優先順位は「.env に書かれた空でない値」→「環境変数」の順です。
+// 環境変数は編集しても次のセッションからしか効かないので、
+// 手元ですぐ直せる .env を勝たせています。食い違うときは check が知らせます。
+const envConflicts = [];
+
 // KEY=VALUE 形式だけを読みます。値の前後の引用符は外します。
 function loadEnv() {
   const conf = {};
+  const KEYS = [
+    "YT_CLIENT_ID",
+    "YT_CLIENT_SECRET",
+    "YT_REFRESH_TOKEN",
+    "YT_VIDEO",
+    "YT_THUMBNAIL",
+    "YT_PRIVACY",
+    "YT_CATEGORY_ID",
+  ];
+
+  // 先に環境変数を土台として入れます（CI や環境設定から渡す用）。
+  for (const key of KEYS) {
+    if (process.env[key]) {
+      conf[key] = process.env[key];
+      envSource[key] = "環境変数";
+    }
+  }
+
   if (fs.existsSync(ENV_FILE)) {
     for (const line of fs.readFileSync(ENV_FILE, "utf8").split("\n")) {
       const m = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
@@ -80,23 +103,16 @@ function loadEnv() {
       ) {
         value = value.slice(1, -1);
       }
+      // 空の行（YT_CLIENT_ID= だけ）は「未設定」扱いにして、環境変数を消しません。
+      if (!value) {
+        if (!(m[1] in conf)) conf[m[1]] = "";
+        continue;
+      }
+      if (process.env[m[1]] && process.env[m[1]] !== value) {
+        envConflicts.push(m[1]);
+      }
       conf[m[1]] = value;
-      if (value) envSource[m[1]] = ".env";
-    }
-  }
-  // 環境変数が入っていればそちらを優先します（CI や環境設定から渡す用）。
-  for (const key of Object.keys(conf).concat([
-    "YT_CLIENT_ID",
-    "YT_CLIENT_SECRET",
-    "YT_REFRESH_TOKEN",
-    "YT_VIDEO",
-    "YT_THUMBNAIL",
-    "YT_PRIVACY",
-    "YT_CATEGORY_ID",
-  ])) {
-    if (process.env[key]) {
-      conf[key] = process.env[key];
-      envSource[key] = "環境変数";
+      envSource[m[1]] = ".env";
     }
   }
   return conf;
@@ -241,6 +257,10 @@ async function cmdCheck(argv) {
   for (const key of ["YT_CLIENT_ID", "YT_CLIENT_SECRET", "YT_REFRESH_TOKEN"]) {
     if (conf[key]) ok(`${key} が設定されています（${envSource[key]}）`);
     else ng(`${key} が空です`);
+  }
+
+  for (const key of envConflicts) {
+    warn(`${key} は環境変数と .env で値が違います。.env の方を使います`);
   }
 
   // クライアント ID は形が決まっているので、貼り間違いをここで捕まえます。
