@@ -123,9 +123,9 @@ function pickCut(perCut) {
  * specific second where the promise ran out, and the take that produced it
  * logged the time of every cut, so the second maps to a beat.
  *
- * Printed on every run rather than kept for when someone asks: the whole point
- * of posting daily is that each one answers a question, and an answer nobody
- * reads is the same as not having measured.
+ * Runs before anything is rendered. Printed after the upload it would still be
+ * true, but it would be a report on a video already made — the reading has to
+ * arrive while the next one can still change.
  */
 async function reportRetention(recent) {
   if (!recent.length) return;
@@ -267,7 +267,10 @@ if (recent && !force) {
   process.exit(0);
 }
 
+// Read the channel first, then decide, then spend the four minutes of capture.
 const perCut = await history();
+await reportRetention(readLog().slice(-3).reverse());
+
 const { cut, why } = pickCut(perCut);
 console.log(`\nchose "${cut.id}" — ${why}`);
 
@@ -303,6 +306,3 @@ const posted = readLog();
 posted.push({ at: new Date().toISOString(), cut: cut.id, videoId: res.id, privacy: res.privacy, title: meta.title });
 fs.writeFileSync(LOG, JSON.stringify(posted, null, 2));
 console.log(`recorded in ${path.relative(PROMO, LOG)}`);
-
-// The one just posted has no data yet; the ones before it do.
-await reportRetention(posted.slice(-4, -1).reverse());
