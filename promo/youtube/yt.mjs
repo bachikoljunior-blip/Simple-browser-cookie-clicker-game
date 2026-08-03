@@ -405,6 +405,69 @@ export async function upload(file, { title, description, tags = [], privacy = 'p
 }
 
 /**
+ * Edit an existing video's snippet. Needs a manage scope (`youtube.force-ssl`);
+ * with upload-only it answers 403, which is what `check` reports on.
+ *
+ * **The snippet is replaced, not merged.** Send only a description and the title
+ * is cleared — the API treats an absent field as "set to empty", and title plus
+ * categoryId are required on every write. So the current snippet is fetched and
+ * the patch laid over it, rather than trusting the caller to remember. Getting
+ * this wrong wipes the title of a published video, which is not a quiet failure.
+ *
+ * One thing deliberately not done here: stamping `#cut-`/`#topic-` markers onto
+ * a video. Those markers are the record of which angle has been tried, read back
+ * off the channel by the pickers. Writing one onto a video the pipeline did not
+ * produce would make the picker skip an angle it never actually showed anyone.
+ */
+export async function updateVideo(videoId, patch) {
+  const cur = await api(`${DATA_API}/videos?part=snippet&id=${videoId}`);
+  const snippet = cur.items?.[0]?.snippet;
+  if (!snippet) throw new Error(`no video ${videoId} on this account`);
+  const token = await accessToken();
+  const res = await fetch(`${DATA_API}/videos?part=snippet`, {
+    method: 'PUT',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      id: videoId,
+      snippet: {
+        title: snippet.title,
+        categoryId: snippet.categoryId,
+        defaultLanguage: snippet.defaultLanguage || 'ja',
+        description: snippet.description || '',
+        tags: snippet.tags || [],
+        ...patch,
+      },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`update failed (${res.status}): ${err?.error?.message || ''}`);
+  }
+  return (await res.json()).snippet;
+}
+
+/**
+ * Leave a comment as the channel. The API has no way to pin one — pinning is
+ * console-only — so this is worth doing when the video has no other comments and
+ * the owner's lands at the top on its own, and not much otherwise.
+ */
+export async function comment(videoId, text) {
+  const token = await accessToken();
+  const res = await fetch(`${DATA_API}/commentThreads?part=snippet`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      snippet: { videoId, topLevelComment: { snippet: { textOriginal: text } } },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`comment failed (${res.status}): ${err?.error?.message || ''}`);
+  }
+  return (await res.json()).id;
+}
+
+/**
  * Replace a video's thumbnail. Covered by the upload scope already held — no
  * re-consent needed — but the channel also has to have custom thumbnails turned
  * on, which is an account setting rather than a scope. Confirmed working on
@@ -465,6 +528,28 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         `視聴率 ${r.avgViewPercent}%  (${r.n}本)`));
       if (rows.length && rows.every(r => r.n < 3)) {
         console.log('  ※ 各時間帯の本数が少なく、差は偶然の範囲です');
+      }
+    } else if (cmd === 'backfill') {
+      // A video with no description is a video that cannot be joined from. Any
+      // that this pipeline uploaded already carries the terms, so in practice
+      // this catches ones posted by hand before the automation existed.
+      const { describe } = await import('../variants.mjs');
+      const t = JSON.parse(fs.readFileSync(new URL('./tester.json', import.meta.url), 'utf8'));
+      const links = {
+        groupUrl: (process.env.YT_TESTER_GROUP_URL || t.groupUrl || '').trim(),
+        optInUrl: (process.env.YT_TESTER_OPTIN_URL || t.optInUrl || '').trim(),
+        contact: (process.env.YT_TESTER_CONTACT || t.contact || '').trim(),
+      };
+      const TAGS = ['放置ゲーム', 'クリッカー', 'インクリメンタル', '個人開発',
+        'インディーゲーム', 'Androidゲーム', 'クッキーストラテジャー'];
+      const empty = (await channelVideos()).filter(v => !(v.description || '').trim());
+      if (!empty.length) { console.log('説明欄が空の動画はありません'); }
+      for (const v of empty) {
+        const body = describe(
+          { description: 'クッキーをタップして増やす放置クリッカー「クッキーストラテジャー」です。' },
+          links).trim() + '\n\n' + TAGS.map(x => '#' + x).join(' ');
+        await updateVideo(v.id, { description: body, tags: TAGS });
+        console.log(`  ${v.id}  説明欄を追加  ${v.title}`);
       }
     } else if (cmd === 'sources') {
       const days = Number(rest[0]) || 28;
