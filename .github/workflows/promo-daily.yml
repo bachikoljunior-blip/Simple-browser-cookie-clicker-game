@@ -3,6 +3,12 @@
 # This exists because the scheduled-session route needs a live environment to
 # fire into; a workflow only needs the repository. Everything the render depends
 # on is installed here rather than assumed.
+#
+# Only this file belongs on the default branch — `schedule` reads workflows from
+# there and nowhere else. The render code stays on PROMO_REF and is checked out
+# from it, which keeps promo/ off the published site: the repository root is
+# served at cookiestrateger.com, so anything merged to main is a 18MB video and
+# a pile of internal notes that anyone can fetch. Nothing here needs to be there.
 name: 毎日のShorts投稿
 
 on:
@@ -29,6 +35,10 @@ concurrency:
   group: promo-daily
   cancel-in-progress: false
 
+env:
+  # The branch holding promo/. Kept off main on purpose — see the note above.
+  PROMO_REF: claude/youtube-shorts-promo-video-4vtvqt
+
 jobs:
   post:
     runs-on: ubuntu-latest
@@ -38,6 +48,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PROMO_REF }}
 
       - uses: actions/setup-node@v4
         with:
@@ -90,7 +102,7 @@ jobs:
           git add promo/youtube/posted.json
           git diff --staged --quiet || {
             git commit -m "投稿履歴を更新する"
-            git push
+            git push origin "HEAD:${PROMO_REF}"
           }
 
       - name: 失敗したときは素材を残す
