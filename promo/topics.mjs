@@ -59,11 +59,16 @@ export const TOPICS = [
           { hold: 7500, caption: ['違うのは<em>間に合わせる必要がある</em>こと'],
             narration: '違うのは、それを間に合わせる必要があることです。ノルマは進行とともに上がっていくので、放っておくと差が開きます。' },
         ] },
+      // This beat used to say the lost spawns were the *only* penalty. They are
+      // not: quotaFailed also switches off the shield's hold bonus
+      // (equip2HoldMul) and stops quotaHold order progress (tickOrderProgress).
+      // What is still true — and all this now claims — is that production keeps
+      // running and nothing already earned is taken away.
       { id: 'fail',
         run: async s => { await s.ev(() => { state.quotaFailed = true; try { renderActiveTab(); } catch (e) {} }); },
         lines: [
           { hold: 7500, caption: ['間に合わないと<em>その周回は</em>', 'モンスターが出なくなります'],
-            narration: '間に合わなかった場合、その周回はモンスターが出なくなります。ペナルティはこれだけで、生産が止まったり進行が消えたりはしません。' },
+            narration: '間に合わなかった場合、その周回はモンスターが出なくなります。ただ、生産そのものは止まりませんし、進行が消えることもありません。' },
           { hold: 7000, caption: ['止まるのは<em>素材の供給</em>だけ'],
             narration: '止まるのは素材の供給です。オフラインでもクッキーは貯まりますし、次の周回になればまた出てきます。' },
         ] },
