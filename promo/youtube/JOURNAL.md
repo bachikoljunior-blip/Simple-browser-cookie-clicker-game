@@ -124,3 +124,52 @@ echo $CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE   # cloud_default なら環境が違�
 あれらは env_01UfT9yyy4sYmF5acfjhieVc の session_01RsuTmmSdXrrcQGj3KbbinW に
 紐づいている＝認証情報の通る環境にいる。消していたら、動いていた経路を
 潰したうえで、代わりに投稿できないセッションを常駐先にするところだった。
+
+## 2026-08-03  (session_01F3gsdgMsBvCUcyYtUwF7Ci・常駐を引き取った)
+
+- **`cloud_default` なら投稿できない、は誤り。** 前の記入が残した見分け方
+  （`echo $CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE` が `cloud_default` なら詰み）は、
+  このセッションで反証された。`cloud_default` だが `YT_CLIENT_ID` /
+  `YT_CLIENT_SECRET` / `YT_REFRESH_TOKEN` は3つとも入っており、`yt.mjs check` も
+  通った。環境名は認証情報の有無の**代理指標にすぎず、代理指標のほうが先に壊れる**。
+  見るべきは `env | grep YT_` と `yt.mjs check` そのもの。KICKOFF.md の 0 番と
+  見分け方は、この一段を足して読むこと。
+- **`promo/` は main に無い。** main には一度も入っておらず、
+  `claude/youtube-shorts-promo-video-4vtvqt` にだけ在る。指定された作業ブランチ
+  （`claude/cookie-strategist-youtube-m1hc3z`）は main の先端から切られていたので、
+  promo ブランチをマージして取り込んだ（衝突なし）。**以後の作業も日誌も、この
+  ブランチにある。** 古い promo ブランチは追わない。定期実行のプロンプトの
+  ブランチ名も差し替えた —— ここを直さないと、明日の実行が古いブランチを
+  checkout して、この記入ごと見失う。
+- **今日出したのは Shorts ではなく解説動画。** 引き継ぎ文には Shorts のコマンドが
+  書いてあったが、今日のぶんの Shorts は前任が 12:27 JST に公開済みだった
+  （`NxQqVTq2hoE`）。もう1本出すと「1日1本ずつ」を破る。いっぽう
+  `posted-long.json` は空で、`autopost-long.mjs` は一度も通したことがなかった。
+  **空いているのは解説動画の枠のほうだった**ので、そちらを出した。題材は `quota`
+  （picker が「まだ出していない題材」の先頭を採る）。
+- 公開時刻は **21:00 JST**。既存の実績は 09 時台の1本だけ、今日の Shorts が 12 時台。
+  比べられる状態を作るのが先なので、まだ誰もいない時間帯を取った。解説動画の定期実行は
+  12:10 JST なので、放っておけば 12 時台に寄る —— 手動で出せる今日のうちに夜側の点を
+  打っておく。数字が出るのは早くて数日後。
+- **台本のウソを1つ潰した。** `quota` の fail ビートが「ペナルティはこれだけで、
+  生産が止まったり進行が消えたりはしません」と言っていた。`play.html` を読むと
+  `quotaFailed` は盾の維持ボーナス（`equip2HoldMul`）も切るし、`quotaHold` の
+  注文進行（`tickOrderProgress`）も止める。**「これだけ」が嘘**。残るほうの主張
+  （生産は止まらない・積んだものは消えない）は本当なので、そこだけを言う形に直した。
+  撮影が始まってから気づいたので、いったん止めて撮り直している。裏取りは撮る前に。
+- **録画の頭に黒コマが3枚入っていた**（`opening frame looks blank (308 bytes)` で
+  投稿前検査が落ちた）。`begin()` は幕を上げてから 2rAF + 90ms 待って撮り始めるのに、
+  グリッドの起点は幕が上がった時刻なので、その待ちに重なるスロットが幕（黒）の
+  コマで埋まる。`screencap.mjs` で、撮り始め前のコマで埋めたスロットを撮り始め後の
+  最初のコマで書き直すようにした。スロットの実時刻は動かないので音はズレない。
+  **縦型（Shorts）も同じ経路を通るので、あちらの先頭フレームも一緒に良くなっている。**
+- 罠：**`setup.sh` はこのハーネスでは戻ってこない。** 中で立てる
+  `python3 -m http.server` が標準出力を握ったままなので、パイプが閉じない。
+  仕事自体は数秒で終わっている（ffmpeg も open_jtalk も既に入っていた）。
+  `run_in_background` で投げて、`curl -sf http://localhost:8765/play.html` が
+  200 を返したら先へ進んでよい。完了を待つと永遠に待つ。
+- **撮る前に `git pull`**（ユーザー指示）。ゲーム本体が動いていたら、映すのも
+  裏取りするのも古いコードになる。定期実行のプロンプトにも入れた。
+- 定期実行2つ（Shorts / 解説動画）を、前任のセッションからこのセッションに
+  張り替えた。中身は前のプロンプトをそのまま、ブランチ名と `git pull` の一行だけ
+  差し替えている。`create_new_session_on_fire` は使っていない。
