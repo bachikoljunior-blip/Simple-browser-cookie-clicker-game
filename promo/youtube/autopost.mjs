@@ -177,15 +177,23 @@ function metadata(cut, links) {
 /**
  * The About text is written by hand and cannot be edited through these scopes,
  * so it can drift out of step with what the videos say. Worth a look each run —
- * it costs one quota unit and it is the only other place a viewer is sent.
+ * it costs one quota unit.
+ *
+ * What this can and cannot see matters. It reads the About *description*; the
+ * channel's links live in a separate "links" section the Data API does not
+ * expose, so a channel with the join link properly set still looks bare here.
+ * That makes a missing link unprovable, and the check only reports what it
+ * actually saw. The video does not depend on any of this — it sends people to
+ * its own description, which is written on the way up.
  */
 async function noteAboutText(links) {
   try {
     const text = await about();
     if (!text.includes(links.groupUrl)) {
-      console.log('\nnote: the channel About does not contain the tester group link.');
-      console.log('      The description carries it, so the video stands on its own,');
-      console.log('      but anyone arriving via the channel page still hits a dead end.');
+      console.log('\nnote: the tester group link is not in the channel About text.');
+      console.log('      It may still be set in the channel links section, which the');
+      console.log('      API does not return — this is not conclusive either way.');
+      console.log('      The video carries the link in its own description regardless.');
     }
   } catch (e) {
     console.log(`could not read the channel About: ${e.message.split('\n')[0]}`);

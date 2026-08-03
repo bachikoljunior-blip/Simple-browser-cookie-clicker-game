@@ -1,0 +1,105 @@
+# Builds one promo Short and posts it, once a day.
+#
+# This exists because the scheduled-session route needs a live environment to
+# fire into; a workflow only needs the repository. Everything the render depends
+# on is installed here rather than assumed.
+name: 毎日のShorts投稿
+
+on:
+  schedule:
+    # 08:40 UTC = 17:40 JST. GitHub's scheduler runs late under load, so this is
+    # a floor rather than an appointment — fine for a daily post.
+    - cron: '40 8 * * *'
+  workflow_dispatch:
+    inputs:
+      cut:
+        description: '切り口を指定する（空なら成績から自動で選ぶ）'
+        required: false
+        type: choice
+        options: ['', unit, idle-trap, recipes, boss, tree, numbers]
+      publish:
+        description: '公開する（外すと非公開で上がる）'
+        required: false
+        default: true
+        type: boolean
+
+# One post at a time. Two overlapping runs would spend the upload quota twice
+# and put up near-duplicates minutes apart.
+concurrency:
+  group: promo-daily
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 依存関係を入れる
+        run: |
+          sudo apt-get update -qq
+          # ffmpeg: 音声コーデックと H.264 のため。
+          # open-jtalk 一式: 日本語ナレーションの合成。
+          sudo apt-get install -y -qq ffmpeg open-jtalk \
+            open-jtalk-mecab-naist-jdic hts-voice-nitech-jp-atr503-m001
+          npm ci --omit=dev || npm install --no-audit --no-fund
+          npm install --no-save playwright-core
+          npx playwright install --with-deps chromium
+
+      - name: ゲームを配信する
+        # 収録は play.html を http:// で開く必要がある（file:// では
+        # AudioContext と fullscreen が使えない）。
+        run: |
+          python3 -m http.server 8765 >/tmp/server.log 2>&1 &
+          for _ in $(seq 1 20); do
+            curl -sf -o /dev/null http://localhost:8765/play.html && break
+            sleep 0.5
+          done
+          curl -sf -o /dev/null http://localhost:8765/play.html
+
+      - name: 作って投稿する
+        working-directory: promo
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+        run: |
+          args=()
+          # 手動実行で publish のチェックを外したときだけ非公開になる。
+          # 既定は公開で、スケジュール実行は常に公開。
+          if [ "${{ github.event_name }}" != 'workflow_dispatch' ] || [ "${{ inputs.publish }}" = 'true' ]; then
+            args+=(--public)
+          fi
+          if [ -n "${{ inputs.cut }}" ]; then args+=(--cut "${{ inputs.cut }}"); fi
+          node youtube/autopost.mjs "${args[@]}"
+
+      - name: 投稿履歴を記録する
+        # 動画そのものは残さない。次に何を出すかを決めるのに要るのは履歴だけで、
+        # 毎日18MBを積むと履歴の方が読めなくなる。
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add promo/youtube/posted.json
+          git diff --staged --quiet || {
+            git commit -m "投稿履歴を更新する"
+            git push
+          }
+
+      - name: 失敗したときは素材を残す
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promo-debug
+          path: |
+            promo/trim.json
+            promo/cookie_strateger_short.mp4
+          if-no-files-found: ignore
+          retention-days: 5
