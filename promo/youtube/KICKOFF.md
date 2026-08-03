@@ -7,9 +7,18 @@
 要るのは、**そのセッションが落ちたとき**と、**別の環境に移すとき**だけ。そのときの
 手順がこれです。
 
+0. **先に環境変数を確認する。** 環境「クッキー」(env_01UfT9yyy4sYmF5acfjhieVc) の
+   Environment variables に `YT_CLIENT_ID` / `YT_CLIENT_SECRET` / `YT_REFRESH_TOKEN`
+   の3つが入っていること。入っていなければ [`SETUP.md`](SETUP.md) の手順で入れる
 1. 「+ 新規セッション」で新しいセッションを作る（リポジトリは
    `Simple-browser-cookie-clicker-game`）
 2. 下の文面をそのまま貼る
+
+**0 を飛ばさないこと。** 環境変数は**設定したあとに始まるセッション**にしか入りません。
+順番を逆にすると、投稿できない常駐セッションが出来上がり、あとから環境変数を足しても
+そのセッションは永久に受け取れません（2026-08-03 にこれで1日落としています。
+`JOURNAL.md` 参照）。認証情報が Actions secrets にしか無かったのが原因で、
+Actions の workflow を消した時点で投稿経路がゼロになりました。
 
 セッションIDを人が調べて渡す必要はありません。**セッション自身が自分のIDを知っている**
 ので、自分で登録させます。
@@ -28,6 +37,15 @@ promo/youtube/posted.json / posted-long.json（何をいつ出したか）
 ## 次に、今日のぶんを投稿する
 
 bash promo/youtube/setup.sh
+cd promo && node youtube/yt.mjs check
+
+これが通らなければ（認証情報が無い、など）、そこで止めて報告してください。撮影は
+4分かかるので、投稿できないと分かっている状態で回す意味はありません。認証情報は
+環境変数からしか読まれず、**動いているセッションには後から入りません** ——
+その場合の直し方は環境変数を入れて「新しいセッションを作り直す」ことです。
+
+通ったら投稿します。
+
 cd promo && node youtube/autopost.mjs --public --at <公開時刻>
 
 公開時刻は自分で決めてください。node youtube/yt.mjs hours で公開時刻ごとの成績が
