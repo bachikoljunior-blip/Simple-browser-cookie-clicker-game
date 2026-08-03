@@ -115,6 +115,41 @@ export async function about() {
 
 const ymd = d => d.toISOString().slice(0, 10);
 
+/**
+ * Every video currently on the channel, newest first.
+ *
+ * The channel itself is the record. A file listing what was posted goes stale
+ * the moment a video is deleted — it keeps claiming a cut was tried when
+ * nothing of it remains — and it is empty on a fresh runner. Asking the API
+ * costs a couple of quota units and is true by construction.
+ */
+export async function channelVideos(max = 50) {
+  const ch = await api(`${DATA_API}/channels?part=contentDetails&mine=true`);
+  const uploads = ch.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+  if (!uploads) return [];
+  const items = [];
+  let pageToken = '';
+  while (items.length < max) {
+    const q = new URLSearchParams({ part: 'contentDetails', maxResults: '50', playlistId: uploads });
+    if (pageToken) q.set('pageToken', pageToken);
+    const page = await api(`${DATA_API}/playlistItems?${q}`);
+    items.push(...(page.items || []).map(i => i.contentDetails.videoId));
+    pageToken = page.nextPageToken || '';
+    if (!pageToken) break;
+  }
+  if (!items.length) return [];
+  const meta = await api(`${DATA_API}/videos?part=snippet,status,statistics,contentDetails` +
+    `&id=${items.slice(0, max).join(',')}`);
+  return (meta.items || []).map(v => ({
+    id: v.id,
+    title: v.snippet.title,
+    description: v.snippet.description || '',
+    publishedAt: v.snippet.publishedAt,
+    privacy: v.status.privacyStatus,
+    views: Number(v.statistics.viewCount || 0),
+  })).sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
+}
+
 /** Per-video performance over the last `days`, most viewed first. */
 export async function videoStats(days = 28) {
   const end = new Date();

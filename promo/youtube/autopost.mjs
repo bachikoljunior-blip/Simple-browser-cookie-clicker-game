@@ -5,7 +5,6 @@
 //   node autopost.mjs --dry-run    render only, print what it would have posted
 //   node autopost.mjs --cut boss   force a particular cut
 //   node autopost.mjs --public     publish rather than upload privately
-//   node autopost.mjs --force      post even if one already went up today
 //
 // Privacy defaults to `private`, so the automation cannot publish to the channel
 // until someone deliberately passes --public (or sets YT_PRIVACY). That is the
@@ -14,7 +13,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { VARIANTS, MARK, describe } from '../variants.mjs';
-import { videoStats, channel, about, upload, credentials, retention } from './yt.mjs';
+import { videoStats, channelVideos, channel, about, upload, credentials, retention } from './yt.mjs';
 
 const PROMO = path.resolve(import.meta.dirname, '..');
 const MP4 = path.join(PROMO, 'cookie_strateger_short.mp4');
@@ -26,50 +25,49 @@ const dryRun = args.includes('--dry-run');
 // argument — so any other flag was being read as a cut name.
 const cutAt = args.indexOf('--cut');
 const forced = cutAt === -1 ? undefined : args[cutAt + 1];
-const force = args.includes('--force');
 const privacy = args.includes('--public') ? 'public' : (process.env.YT_PRIVACY || 'private');
 
 const readLog = () => (fs.existsSync(LOG) ? JSON.parse(fs.readFileSync(LOG, 'utf8')) : []);
 
-/**
- * One a day, and not one more.
- *
- * The six cuts share a body — only the opening seconds and the title differ —
- * so two of them next to each other in a feed read as the same video posted
- * twice. That already happened once: a manual post and a test run landed back
- * to back and both had to be deleted. A schedule alone does not prevent it,
- * because manual runs, retries and re-runs all bypass the schedule.
- */
-function postedRecently() {
-  const last = readLog().at(-1);
-  if (!last) return null;
-  const hours = (Date.now() - Date.parse(last.at)) / 3600_000;
-  return hours < 20 ? { last, hours } : null;
-}
-
 const run = (cmd, cmdArgs, env = {}) =>
   execFileSync(cmd, cmdArgs, { cwd: PROMO, stdio: 'inherit', env: { ...process.env, ...env } });
 
-// --- what has been posted, and how it did --------------------------------------
-// The cut id is written into each description as #cut-<id>, so a published video
-// can be traced back to the cut that made it without keeping state anywhere.
+// --- what is on the channel, and how it did ------------------------------------
+// Rebuilt from the API every run. The cut id is written into each description as
+// #cut-<id>, so a live video says which cut made it; nothing has to be
+// remembered between runs, and a video that was deleted stops counting the
+// moment it is gone.
 async function history() {
+  const videos = await channelVideos();
+  console.log(`チャンネルの動画 ${videos.length}本` +
+    (videos.length ? `（最新: ${videos[0].title}）` : ''));
+
   let stats = [];
   try {
     stats = await videoStats(28);
   } catch (e) {
-    console.log(`analytics unavailable: ${e.message.split('\n')[0]}`);
-    return null;
+    console.log(`アナリティクスが読めません: ${e.message.split('\n')[0]}`);
   }
+  const byId = Object.fromEntries(stats.map(s => [s.id, s]));
+
   const perCut = {};
-  for (const v of stats) {
+  const mine = [];
+  for (const v of videos) {
     const cut = VARIANTS.find(c => v.description.includes(MARK(c.id)));
-    if (!cut) continue;
-    const age = v.publishedAt
-      ? Math.max(1, (Date.now() - Date.parse(v.publishedAt)) / 86400_000) : 1;
-    (perCut[cut.id] ||= []).push({ ...v, viewsPerDay: v.views / age });
+    if (!cut) continue;                       // posted by hand, not by this
+    mine.push({ ...v, cut: cut.id });
+    const s = byId[v.id];
+    const age = Math.max(1, (Date.now() - Date.parse(v.publishedAt)) / 86400_000);
+    (perCut[cut.id] ||= []).push({
+      ...v,
+      avgViewPercent: s?.avgViewPercent ?? null,
+      views: s?.views ?? v.views,
+      viewsPerDay: (s?.views ?? v.views) / age,
+    });
   }
-  return perCut;
+  // Nothing of ours is up yet, or none of it has numbers worth ranking on.
+  const rankable = Object.values(perCut).flat().some(r => r.avgViewPercent !== null);
+  return { perCut: rankable ? perCut : null, mine };
 }
 
 /**
@@ -78,41 +76,41 @@ async function history() {
  * Anything never tried wins outright: six cuts is a small enough field to see
  * all of before optimising.
  */
-function pickCut(perCut) {
+function pickCut(perCut, mine) {
   if (forced) {
     const c = VARIANTS.find(v => v.id === forced);
     if (!c) throw new Error(`no cut named "${forced}"`);
-    return { cut: c, why: 'forced on the command line' };
+    return { cut: c, why: 'コマンドラインで指定' };
   }
   if (!perCut) {
-    const posted = readLog();
-    const tried = new Set(posted.map(p => p.cut));
-    const fresh = VARIANTS.filter(v => !tried.has(v.id));
-    const cut = fresh[0] || VARIANTS[posted.length % VARIANTS.length];
-    return { cut, why: fresh.length ? 'not posted yet (no analytics)' : 'rotating (no analytics)' };
+    // No numbers yet — go by what is actually up on the channel right now.
+    const live = new Set(mine.map(v => v.cut));
+    const fresh = VARIANTS.filter(v => !live.has(v.id));
+    const cut = fresh[0] || VARIANTS[mine.length % VARIANTS.length];
+    return { cut, why: fresh.length ? 'まだ出していない切り口' : '順番に回している' };
   }
   const untried = VARIANTS.filter(v => !perCut[v.id]);
-  if (untried.length) return { cut: untried[0], why: 'not tried yet' };
+  if (untried.length) return { cut: untried[0], why: 'まだ出していない切り口' };
 
   const scored = VARIANTS.map(v => {
-    const rows = perCut[v.id];
+    const rows = perCut[v.id].filter(r => r.avgViewPercent !== null);
     const retention = rows.reduce((a, r) => a + r.avgViewPercent, 0) / rows.length;
     const perDay = rows.reduce((a, r) => a + r.viewsPerDay, 0) / rows.length;
     return { v, retention, perDay, n: rows.length };
   }).sort((a, b) => (b.retention - a.retention) || (b.perDay - a.perDay));
 
-  console.log('cut performance (28d):');
+  console.log('\n--- 切り口ごとの成績 (28日) ---');
   scored.forEach(s => console.log(
-    `  ${s.v.id.padEnd(10)} retention ${s.retention.toFixed(1)}%  ` +
-    `${s.perDay.toFixed(1)} views/day  (${s.n} video${s.n > 1 ? 's' : ''})`));
+    `  ${s.v.id.padEnd(10)} 平均視聴率 ${s.retention.toFixed(1)}%  ` +
+    `1日あたり ${s.perDay.toFixed(1)}回  (${s.n}本)`));
 
   // Mostly exploit, but keep testing: a cut that lost once may have lost to the
   // hour it went up rather than to the hook.
   const explore = Math.random() < 0.3;
   const least = [...scored].sort((a, b) => a.n - b.n)[0];
   return explore
-    ? { cut: least.v, why: `exploring (fewest posts: ${least.n})` }
-    : { cut: scored[0].v, why: `best retention (${scored[0].retention.toFixed(1)}%)` };
+    ? { cut: least.v, why: `試行（最も本数が少ない: ${least.n}本）` }
+    : { cut: scored[0].v, why: `平均視聴率が最良 (${scored[0].retention.toFixed(1)}%)` };
 }
 
 /**
@@ -127,13 +125,13 @@ function pickCut(perCut) {
  * true, but it would be a report on a video already made — the reading has to
  * arrive while the next one can still change.
  */
-async function reportRetention(recent) {
-  if (!recent.length) return;
+async function reportRetention(mine) {
   console.log('\n--- 直近の離脱 ---');
-  for (const p of recent) {
+  if (!mine.length) { console.log('  この仕組みで出した動画がまだありません'); return; }
+  for (const p of mine.slice(0, 3)) {
     let r;
-    try { r = await retention(p.videoId); } catch { continue; }
-    if (!r.points.length) { console.log(`${p.cut}: まだ十分な視聴時間がありません`); continue; }
+    try { r = await retention(p.id); } catch { continue; }
+    if (!r.points.length) { console.log(`  ${p.cut}: まだ十分な視聴時間がありません`); continue; }
 
     // The biggest single fall, and where half the audience was gone.
     let worst = { drop: 0, at: 0 }, half = null, prev = null;
@@ -142,7 +140,7 @@ async function reportRetention(recent) {
       if (half === null && pt.watch <= 0.5) half = pt.at;
       prev = pt.watch;
     }
-    console.log(`${p.cut.padEnd(10)} ${r.seconds}s  ` +
+    console.log(`  ${p.cut.padEnd(10)} ${r.seconds}s  ` +
       `半分が離脱 ${half === null ? '最後まで残った' : half.toFixed(1) + 's'}  ` +
       `最大の落ち込み ${worst.at.toFixed(1)}s で -${(worst.drop * 100).toFixed(0)}%`);
   }
@@ -258,21 +256,12 @@ async function noteAboutText(links) {
 // the video had nowhere to send anyone.
 const links = testerLinks();
 
-const recent = postedRecently();
-if (recent && !force) {
-  console.log(`前回の投稿から ${recent.hours.toFixed(1)} 時間しか経っていません ` +
-    `(${recent.last.cut} / ${recent.last.videoId})。`);
-  console.log('本編は全カット共通なので、続けて出すと同じ動画の再投稿に見えます。');
-  console.log('意図して出すなら --force を付けてください。');
-  process.exit(0);
-}
-
 // Read the channel first, then decide, then spend the four minutes of capture.
-const perCut = await history();
-await reportRetention(readLog().slice(-3).reverse());
+const { perCut, mine } = await history();
+await reportRetention(mine);
 
-const { cut, why } = pickCut(perCut);
-console.log(`\nchose "${cut.id}" — ${why}`);
+const { cut, why } = pickCut(perCut, mine);
+console.log(`\n選んだ切り口: "${cut.id}" — ${why}`);
 
 const file = render(cut);
 const meta = metadata(cut, links);
