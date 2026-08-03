@@ -150,6 +150,39 @@ export async function videoStats(days = 28) {
 }
 
 /**
+ * Second-by-second retention for one video.
+ *
+ * This is the measurement worth having. Average view percentage says a Short
+ * did badly; this says where. Paired with the cut times the director logs, a
+ * drop stops being a number and becomes a beat that did not hold — which is the
+ * only version of the feedback that can be acted on.
+ *
+ * Returns [] for a video YouTube has not accumulated enough watch time on yet.
+ */
+export async function retention(videoId, days = 90) {
+  const end = new Date();
+  const start = new Date(end.getTime() - days * 86400_000);
+  const q = new URLSearchParams({
+    ids: 'channel==MINE',
+    startDate: ymd(start), endDate: ymd(end),
+    metrics: 'audienceWatchRatio',
+    dimensions: 'elapsedVideoTimeRatio',
+    filters: `video==${videoId}`,
+  });
+  const r = await api(`${ANALYTICS_API}?${q}`);
+  const meta = await api(`${DATA_API}/videos?part=contentDetails,snippet&id=${videoId}`);
+  const iso = meta.items?.[0]?.contentDetails?.duration || 'PT0S';
+  const seconds = (+(iso.match(/(\d+)H/)?.[1] || 0)) * 3600
+    + (+(iso.match(/(\d+)M/)?.[1] || 0)) * 60
+    + (+(iso.match(/(\d+)S/)?.[1] || 0));
+  return {
+    title: meta.items?.[0]?.snippet?.title || '',
+    seconds,
+    points: (r.rows || []).map(([ratio, watch]) => ({ at: ratio * seconds, ratio, watch })),
+  };
+}
+
+/**
  * Resumable upload. Resumable rather than simple because a 20MB body over a
  * proxied connection is exactly the size that fails halfway and leaves no way to
  * tell whether the video landed.
@@ -206,13 +239,38 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         console.log(`  ${String(v.views).padStart(6)} views  ${v.avgViewPercent}%  ${v.title}`));
     } else if (cmd === 'stats') {
       console.log(JSON.stringify(await videoStats(Number(rest[0]) || 28), null, 2));
+    } else if (cmd === 'retention') {
+      const [videoId] = rest;
+      if (!videoId) throw new Error('usage: yt.mjs retention <videoId>');
+      const r = await retention(videoId);
+      if (!r.points.length) {
+        console.log(`${r.title}: no retention data yet (needs more watch time)`);
+      } else {
+        // The cut times of the take that is on disk. Only meaningful when this
+        // video came from that take, so it is shown as a hint, not a label.
+        let cuts = [];
+        try {
+          const t = JSON.parse(fs.readFileSync('trim.json', 'utf8'));
+          cuts = (t.flashLog || []).map((at, i) => ({ at, name: `カット${i + 2}` }));
+        } catch { /* no take on disk — plain curve */ }
+        console.log(`${r.title}  (${r.seconds}s)\n`);
+        let prev = null;
+        for (const p of r.points) {
+          const near = cuts.find(c => Math.abs(c.at - p.at) < 0.6);
+          const fall = prev !== null && prev - p.watch >= 0.08 ? `  -${((prev - p.watch) * 100).toFixed(0)}%` : '';
+          console.log(`${p.at.toFixed(1).padStart(5)}s ${p.watch.toFixed(2).padStart(5)} ` +
+            `${'#'.repeat(Math.round(p.watch * 36))}${fall}${near ? `   <- ${near.name}` : ''}`);
+          prev = p.watch;
+        }
+      }
     } else if (cmd === 'upload') {
       const [file, metaFile] = rest;
       if (!file || !metaFile) throw new Error('usage: yt.mjs upload <file.mp4> <meta.json>');
       const r = await upload(file, JSON.parse(fs.readFileSync(metaFile, 'utf8')));
       console.log(`uploaded ${r.privacy}: ${r.url}`);
     } else {
-      console.log('usage: yt.mjs check | stats [days] | upload <file.mp4> <meta.json>');
+      console.log('usage: yt.mjs check | stats [days] | retention <videoId> | ' +
+        'upload <file.mp4> <meta.json>');
     }
   } catch (e) {
     console.error(String(e.message || e));

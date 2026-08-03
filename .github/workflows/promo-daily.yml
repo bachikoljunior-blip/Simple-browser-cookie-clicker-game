@@ -28,6 +28,11 @@ on:
         required: false
         default: true
         type: boolean
+      force:
+        description: '今日すでに1本出ていても投稿する'
+        required: false
+        default: false
+        type: boolean
 
 # One post at a time. Two overlapping runs would spend the upload quota twice
 # and put up near-duplicates minutes apart.
@@ -91,6 +96,9 @@ jobs:
             args+=(--public)
           fi
           if [ -n "${{ inputs.cut }}" ]; then args+=(--cut "${{ inputs.cut }}"); fi
+          # 20時間以内に1本出ていれば autopost 側が止まる。全カットで本編が共通な
+          # ぶん、連投は同じ動画の再投稿に見える。手動で承知のうえ出すとき用。
+          if [ "${{ inputs.force }}" = 'true' ]; then args+=(--force); fi
           node youtube/autopost.mjs "${args[@]}"
 
       - name: 投稿履歴を記録する

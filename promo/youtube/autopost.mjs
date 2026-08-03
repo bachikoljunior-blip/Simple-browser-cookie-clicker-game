@@ -5,6 +5,7 @@
 //   node autopost.mjs --dry-run    render only, print what it would have posted
 //   node autopost.mjs --cut boss   force a particular cut
 //   node autopost.mjs --public     publish rather than upload privately
+//   node autopost.mjs --force      post even if one already went up today
 //
 // Privacy defaults to `private`, so the automation cannot publish to the channel
 // until someone deliberately passes --public (or sets YT_PRIVACY). That is the
@@ -13,7 +14,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { VARIANTS, MARK, describe } from '../variants.mjs';
-import { videoStats, channel, about, upload, credentials } from './yt.mjs';
+import { videoStats, channel, about, upload, credentials, retention } from './yt.mjs';
 
 const PROMO = path.resolve(import.meta.dirname, '..');
 const MP4 = path.join(PROMO, 'cookie_strateger_short.mp4');
@@ -25,7 +26,26 @@ const dryRun = args.includes('--dry-run');
 // argument — so any other flag was being read as a cut name.
 const cutAt = args.indexOf('--cut');
 const forced = cutAt === -1 ? undefined : args[cutAt + 1];
+const force = args.includes('--force');
 const privacy = args.includes('--public') ? 'public' : (process.env.YT_PRIVACY || 'private');
+
+const readLog = () => (fs.existsSync(LOG) ? JSON.parse(fs.readFileSync(LOG, 'utf8')) : []);
+
+/**
+ * One a day, and not one more.
+ *
+ * The six cuts share a body — only the opening seconds and the title differ —
+ * so two of them next to each other in a feed read as the same video posted
+ * twice. That already happened once: a manual post and a test run landed back
+ * to back and both had to be deleted. A schedule alone does not prevent it,
+ * because manual runs, retries and re-runs all bypass the schedule.
+ */
+function postedRecently() {
+  const last = readLog().at(-1);
+  if (!last) return null;
+  const hours = (Date.now() - Date.parse(last.at)) / 3600_000;
+  return hours < 20 ? { last, hours } : null;
+}
 
 const run = (cmd, cmdArgs, env = {}) =>
   execFileSync(cmd, cmdArgs, { cwd: PROMO, stdio: 'inherit', env: { ...process.env, ...env } });
@@ -65,7 +85,7 @@ function pickCut(perCut) {
     return { cut: c, why: 'forced on the command line' };
   }
   if (!perCut) {
-    const posted = fs.existsSync(LOG) ? JSON.parse(fs.readFileSync(LOG, 'utf8')) : [];
+    const posted = readLog();
     const tried = new Set(posted.map(p => p.cut));
     const fresh = VARIANTS.filter(v => !tried.has(v.id));
     const cut = fresh[0] || VARIANTS[posted.length % VARIANTS.length];
@@ -93,6 +113,39 @@ function pickCut(perCut) {
   return explore
     ? { cut: least.v, why: `exploring (fewest posts: ${least.n})` }
     : { cut: scored[0].v, why: `best retention (${scored[0].retention.toFixed(1)}%)` };
+}
+
+/**
+ * Where people stopped watching the last few posts.
+ *
+ * Average view percentage ranks the cuts; this says what to change. A Short
+ * that holds to 5s and collapses by 9s is not a bad idea badly titled — it is a
+ * specific second where the promise ran out, and the take that produced it
+ * logged the time of every cut, so the second maps to a beat.
+ *
+ * Printed on every run rather than kept for when someone asks: the whole point
+ * of posting daily is that each one answers a question, and an answer nobody
+ * reads is the same as not having measured.
+ */
+async function reportRetention(recent) {
+  if (!recent.length) return;
+  console.log('\n--- 直近の離脱 ---');
+  for (const p of recent) {
+    let r;
+    try { r = await retention(p.videoId); } catch { continue; }
+    if (!r.points.length) { console.log(`${p.cut}: まだ十分な視聴時間がありません`); continue; }
+
+    // The biggest single fall, and where half the audience was gone.
+    let worst = { drop: 0, at: 0 }, half = null, prev = null;
+    for (const pt of r.points) {
+      if (prev !== null && prev - pt.watch > worst.drop) worst = { drop: prev - pt.watch, at: pt.at };
+      if (half === null && pt.watch <= 0.5) half = pt.at;
+      prev = pt.watch;
+    }
+    console.log(`${p.cut.padEnd(10)} ${r.seconds}s  ` +
+      `半分が離脱 ${half === null ? '最後まで残った' : half.toFixed(1) + 's'}  ` +
+      `最大の落ち込み ${worst.at.toFixed(1)}s で -${(worst.drop * 100).toFixed(0)}%`);
+  }
 }
 
 // --- render ---------------------------------------------------------------------
@@ -205,6 +258,15 @@ async function noteAboutText(links) {
 // the video had nowhere to send anyone.
 const links = testerLinks();
 
+const recent = postedRecently();
+if (recent && !force) {
+  console.log(`前回の投稿から ${recent.hours.toFixed(1)} 時間しか経っていません ` +
+    `(${recent.last.cut} / ${recent.last.videoId})。`);
+  console.log('本編は全カット共通なので、続けて出すと同じ動画の再投稿に見えます。');
+  console.log('意図して出すなら --force を付けてください。');
+  process.exit(0);
+}
+
 const perCut = await history();
 const { cut, why } = pickCut(perCut);
 console.log(`\nchose "${cut.id}" — ${why}`);
@@ -237,7 +299,10 @@ const c = await channel();
 const res = await upload(file, meta);
 console.log(`\nuploaded to ${c.title}: ${res.url} (${res.privacy})`);
 
-const posted = fs.existsSync(LOG) ? JSON.parse(fs.readFileSync(LOG, 'utf8')) : [];
+const posted = readLog();
 posted.push({ at: new Date().toISOString(), cut: cut.id, videoId: res.id, privacy: res.privacy, title: meta.title });
 fs.writeFileSync(LOG, JSON.stringify(posted, null, 2));
 console.log(`recorded in ${path.relative(PROMO, LOG)}`);
+
+// The one just posted has no data yet; the ones before it do.
+await reportRetention(posted.slice(-4, -1).reverse());
