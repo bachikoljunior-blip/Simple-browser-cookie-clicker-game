@@ -16,7 +16,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { TOPICS, MARK } from '../topics.mjs';
 import { describe } from '../variants.mjs';
-import { videoStats, channelVideos, channel, upload, credentials, retention } from './yt.mjs';
+import { buildThumbnail } from '../thumbnail.mjs';
+import { videoStats, channelVideos, channel, upload, credentials, retention, setThumbnail } from './yt.mjs';
 
 const PROMO = path.resolve(import.meta.dirname, '..');
 const MP4 = path.join(PROMO, 'cookie_strateger_long.mp4');
@@ -249,6 +250,24 @@ const c = await channel();
 const res = await upload(file, meta);
 console.log(`\nuploaded to ${c.title}: ${res.url} ` +
   (res.publishAt ? `(${res.publishAt} に公開予定)` : `(${res.privacy})`));
+
+// The thumbnail is chosen rather than left to YouTube, which picks a frame on
+// its own and has no idea which one carries the point. It is built from the file
+// that was just uploaded, so it cannot promise a screen the video does not have.
+// Anything going wrong here is reported and stepped over: the video is already
+// published, and the posting log below still has to be written.
+try {
+  const trim = JSON.parse(fs.readFileSync(path.join(PROMO, 'trim.json'), 'utf8'));
+  const thumb = buildThumbnail(topic, {
+    mp4: file, trim, out: path.join(PROMO, 'video', 'thumbnail.png'),
+  });
+  if (thumb) {
+    await setThumbnail(res.id, thumb);
+    console.log(`サムネイルを設定: ${topic.thumb.lines.join(' / ')}`);
+  }
+} catch (e) {
+  console.log(`サムネイルは設定できませんでした（動画はそのまま公開されます）: ${e.message}`);
+}
 
 const posted = readLog();
 posted.push({ at: new Date().toISOString(), topic: topic.id, videoId: res.id,

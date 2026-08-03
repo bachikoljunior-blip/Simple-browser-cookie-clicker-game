@@ -300,6 +300,30 @@ export async function upload(file, { title, description, tags = [], privacy = 'p
   };
 }
 
+/**
+ * Replace a video's thumbnail. Covered by the upload scope already held — no
+ * re-consent needed — but the channel also has to have custom thumbnails turned
+ * on, which is an account setting rather than a scope. Confirmed working on
+ * 2026-08-03; if it starts returning 403 that is the setting, not the token.
+ *
+ * A failure here must not take the run down with it: by the time this is called
+ * the video is already up, and a default thumbnail is worse than a chosen one
+ * but far better than an exception that skips writing the posting log.
+ */
+export async function setThumbnail(videoId, file) {
+  const token = await accessToken();
+  const body = fs.readFileSync(file);
+  const type = file.endsWith('.jpg') ? 'image/jpeg' : 'image/png';
+  const res = await fetch(
+    `https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${videoId}&uploadType=media`,
+    { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': type }, body });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`thumbnail failed (${res.status}): ${err?.error?.message || ''}`);
+  }
+  return true;
+}
+
 // ------------------------------------------------------------------ CLI
 if (import.meta.url === `file://${process.argv[1]}`) {
   const [cmd, ...rest] = process.argv.slice(2);

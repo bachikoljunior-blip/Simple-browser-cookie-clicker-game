@@ -34,6 +34,7 @@ export const TOPICS = [
       '素材が手に入らなくなります。置いておくだけでもクッキーは増えますが、' +
       '伸ばしたいなら管理が要る。その設計の話です。',
     tags: TAGS,
+    thumb: { at: 'fail_0', lines: ['放置だけだと伸びない', '放置ゲーを作った'] },
     beats: [
       { id: 'intro',
         run: async s => { await s.setMidGame(); await s.showTab('shopTab'); },
@@ -105,6 +106,7 @@ export const TOPICS = [
       '素材は装備の材料で、装備は次の周回を速くします。' +
       'クリッカーに戦闘を足すと何がつながるのか、という話です。',
     tags: TAGS,
+    thumb: { at: 'boss_0', lines: ['クッキーをタップしてたら', 'ボスが出てきた'] },
     beats: [
       { id: 'intro',
         run: async s => { await s.setLateGame(); await s.hideRewardModal(); await s.showTab('shopTab'); await s.ev(() => { try { showMonster('normal'); } catch (e) {} state.huntFocusLv = 20; }); },
@@ -164,6 +166,7 @@ export const TOPICS = [
       '転生すると生産はリセットされますが、ポイントが入り、71ノードのスキルツリーに振れます。' +
       '取り方は何度でも組み直せます。周回のたびに何が変わるのか、という話です。',
     tags: TAGS,
+    thumb: { at: 'tree_0', crop: null, lines: ['放置ゲーのスキルツリーが', '71ノードある'] },
     beats: [
       { id: 'intro',
         run: async s => { await s.setLateGame(); await s.showTab('shopTab'); },
@@ -223,6 +226,7 @@ export const TOPICS = [
       '研究を買うと生産の計算式が変わります。そして今どの倍率がいくつ乗っているのかは、' +
       'すべて一覧画面で確認できます。数字を隠さないとどうなるか、という話です。',
     tags: TAGS,
+    thumb: { at: 'list_0', lines: ['効いてる倍率が', '全部見える放置ゲー'] },
     beats: [
       { id: 'intro',
         run: async s => { await s.setLateGame(); await s.showTab('shopTab'); },
@@ -283,6 +287,7 @@ export const TOPICS = [
       '作った装備はタップ力と生産の両方に効きます。' +
       'クリッカーに装備を足すと何が起きるのか、という話です。',
     tags: TAGS,
+    thumb: { at: 'intro_1', lines: ['クリッカーなのに', '装備が486種類'] },
     beats: [
       { id: 'intro',
         run: async s => { await s.setLateGame(); await s.showTab('workshopTab', true); await s.waitForImages('workshopTab'); },
@@ -342,6 +347,7 @@ export const TOPICS = [
       '所持クッキーは兆をはるかに超えて伸びます。正は10の40乗、100正で10の42乗。' +
       'その先には載・極・恒河沙と続きます。桁が増え続けるゲームで何が起きるか、という話です。',
     tags: TAGS,
+    thumb: { at: 'unit_0', lines: ['所持クッキー100正', '＝10の42乗'] },
     beats: [
       { id: 'intro',
         run: async s => { await s.setLateGame(); await s.showTab('shopTab'); },
