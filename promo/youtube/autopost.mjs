@@ -5,6 +5,7 @@
 //   node autopost.mjs --dry-run    render only, print what it would have posted
 //   node autopost.mjs --cut boss   force a particular cut
 //   node autopost.mjs --public     publish rather than upload privately
+//   node autopost.mjs --at <time>  go live at an RFC3339 instant instead of at once
 //
 // Privacy defaults to `private`, so the automation cannot publish to the channel
 // until someone deliberately passes --public (or sets YT_PRIVACY). That is the
@@ -26,6 +27,17 @@ const dryRun = args.includes('--dry-run');
 const cutAt = args.indexOf('--cut');
 const forced = cutAt === -1 ? undefined : args[cutAt + 1];
 const privacy = args.includes('--public') ? 'public' : (process.env.YT_PRIVACY || 'private');
+// When it goes live, as distinct from when it was made. Passed straight to
+// YouTube's scheduled publishing, so the render can happen whenever the machine
+// is free while the moment it appears is chosen on its own evidence.
+const atIdx = args.indexOf('--at');
+const publishAt = atIdx === -1 ? null : args[atIdx + 1];
+if (publishAt && Number.isNaN(Date.parse(publishAt))) {
+  throw new Error(`--at "${publishAt}" is not a date. Use RFC3339, e.g. 2026-08-04T12:10:00+09:00`);
+}
+if (publishAt && Date.parse(publishAt) <= Date.now()) {
+  throw new Error(`--at "${publishAt}" is in the past; YouTube rejects that.`);
+}
 
 const readLog = () => (fs.existsSync(LOG) ? JSON.parse(fs.readFileSync(LOG, 'utf8')) : []);
 
@@ -222,6 +234,7 @@ function metadata(cut, links) {
     description: `${describe(cut, links)}\n\n${tags.map(t => '#' + t).join(' ')}\n\n${MARK(cut.id)}`,
     tags,
     privacy,
+    publishAt,
   };
 }
 
@@ -265,7 +278,8 @@ console.log(`\n選んだ切り口: "${cut.id}" — ${why}`);
 
 const file = render(cut);
 const meta = metadata(cut, links);
-console.log(`\ntitle: ${meta.title}\nprivacy: ${meta.privacy}\nfile: ` +
+console.log(`\ntitle: ${meta.title}\nprivacy: ${meta.privacy}` +
+  (publishAt ? `\n公開予定: ${publishAt}` : '') + `\nfile: ` +
   `${(fs.statSync(file).size / 1e6).toFixed(1)}MB`);
 console.log(`\n--- description ---\n${meta.description}\n---`);
 
@@ -289,9 +303,11 @@ await noteAboutText(links);
 
 const c = await channel();
 const res = await upload(file, meta);
-console.log(`\nuploaded to ${c.title}: ${res.url} (${res.privacy})`);
+console.log(`\nuploaded to ${c.title}: ${res.url} ` +
+  (res.publishAt ? `(${res.publishAt} に公開予定)` : `(${res.privacy})`));
 
 const posted = readLog();
-posted.push({ at: new Date().toISOString(), cut: cut.id, videoId: res.id, privacy: res.privacy, title: meta.title });
+posted.push({ at: new Date().toISOString(), cut: cut.id, videoId: res.id,
+  privacy: res.privacy, publishAt: res.publishAt, title: meta.title });
 fs.writeFileSync(LOG, JSON.stringify(posted, null, 2));
 console.log(`recorded in ${path.relative(PROMO, LOG)}`);

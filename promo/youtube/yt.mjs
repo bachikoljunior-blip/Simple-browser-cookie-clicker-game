@@ -185,6 +185,31 @@ export async function videoStats(days = 28) {
 }
 
 /**
+ * How past videos did, grouped by the local hour they went live.
+ *
+ * Whether an upload should go out at noon or at six is a question about the
+ * audience, and this is the only evidence on hand for it. With three videos it
+ * says almost nothing, which is worth saying out loud rather than dressing a
+ * coin flip as a finding — the counts are returned alongside so a caller can
+ * see how thin the ground is.
+ */
+export async function byHour(days = 90, tzOffsetHours = 9) {
+  const stats = await videoStats(days);
+  const hours = {};
+  for (const v of stats) {
+    if (!v.publishedAt) continue;
+    const h = new Date(Date.parse(v.publishedAt) + tzOffsetHours * 3600_000).getUTCHours();
+    (hours[h] ||= []).push(v);
+  }
+  return Object.entries(hours).map(([h, rows]) => ({
+    hour: Number(h),
+    n: rows.length,
+    views: Math.round(rows.reduce((a, r) => a + r.views, 0) / rows.length),
+    avgViewPercent: Math.round(rows.reduce((a, r) => a + r.avgViewPercent, 0) / rows.length * 10) / 10,
+  })).sort((a, b) => b.views - a.views);
+}
+
+/**
  * Second-by-second retention for one video.
  *
  * This is the measurement worth having. Average view percentage says a Short
@@ -223,12 +248,23 @@ export async function retention(videoId, days = 90) {
  * tell whether the video landed.
  */
 export async function upload(file, { title, description, tags = [], privacy = 'private',
-                                     categoryId = '20' } = {}) {
+                                     categoryId = '20', publishAt = null } = {}) {
   const token = await accessToken();
   const size = fs.statSync(file).size;
+  // Scheduled publishing. YouTube only accepts publishAt on a video that is
+  // private, and treats the pair as "stay private until this instant, then go
+  // public" — so the upload can happen whenever the machine is free while the
+  // moment it goes live is a separate decision. That separation is the point:
+  // rendering takes minutes and wants a quiet slot, going live wants the hour
+  // the audience is actually there, and those are not the same constraint.
+  const scheduled = publishAt && new Date(publishAt) > new Date();
   const metadata = {
     snippet: { title, description, tags, categoryId },
-    status: { privacyStatus: privacy, selfDeclaredMadeForKids: false },
+    status: {
+      privacyStatus: scheduled ? 'private' : privacy,
+      selfDeclaredMadeForKids: false,
+      ...(scheduled ? { publishAt: new Date(publishAt).toISOString() } : {}),
+    },
   };
 
   const start = await fetch(`${UPLOAD_API}?uploadType=resumable&part=snippet,status`, {
@@ -256,7 +292,12 @@ export async function upload(file, { title, description, tags = [], privacy = 'p
   if (!res.ok) {
     throw new Error(`upload failed (${res.status}): ${body?.error?.message || ''}`);
   }
-  return { id: body.id, url: `https://www.youtube.com/watch?v=${body.id}`, privacy };
+  return {
+    id: body.id,
+    url: `https://www.youtube.com/watch?v=${body.id}`,
+    privacy: scheduled ? 'private' : privacy,
+    publishAt: scheduled ? new Date(publishAt).toISOString() : null,
+  };
 }
 
 // ------------------------------------------------------------------ CLI
@@ -274,6 +315,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         console.log(`  ${String(v.views).padStart(6)} views  ${v.avgViewPercent}%  ${v.title}`));
     } else if (cmd === 'stats') {
       console.log(JSON.stringify(await videoStats(Number(rest[0]) || 28), null, 2));
+    } else if (cmd === 'hours') {
+      const rows = await byHour(Number(rest[0]) || 90);
+      if (!rows.length) console.log('公開時刻ごとのデータがまだありません');
+      rows.forEach(r => console.log(
+        `  ${String(r.hour).padStart(2, '0')}時台  平均 ${String(r.views).padStart(5)}回  ` +
+        `視聴率 ${r.avgViewPercent}%  (${r.n}本)`));
+      if (rows.length && rows.every(r => r.n < 3)) {
+        console.log('  ※ 各時間帯の本数が少なく、差は偶然の範囲です');
+      }
     } else if (cmd === 'retention') {
       const [videoId] = rest;
       if (!videoId) throw new Error('usage: yt.mjs retention <videoId>');
@@ -304,8 +354,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       const r = await upload(file, JSON.parse(fs.readFileSync(metaFile, 'utf8')));
       console.log(`uploaded ${r.privacy}: ${r.url}`);
     } else {
-      console.log('usage: yt.mjs check | stats [days] | retention <videoId> | ' +
-        'upload <file.mp4> <meta.json>');
+      console.log('usage: yt.mjs check | stats [days] | hours [days] | ' +
+        'retention <videoId> | upload <file.mp4> <meta.json>');
     }
   } catch (e) {
     console.error(String(e.message || e));
