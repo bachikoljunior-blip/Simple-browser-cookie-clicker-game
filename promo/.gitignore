@@ -1,0 +1,12 @@
+# Render scratch: frame grid, captured audio, narration, timing log.
+video/
+trim.json
+framescan/
+# Review stills written by `node director.mjs shots`.
+beat_*.png
+
+# youtube/posted.json is deliberately NOT ignored. It was, back when this ran in
+# one long-lived container and the file could just stay on disk. A scheduled
+# workflow gets a clean runner every time, so an untracked file is an empty one:
+# the picker would find no history, fall back to the first cut, and post the same
+# one every day. It is committed for the same reason it exists.

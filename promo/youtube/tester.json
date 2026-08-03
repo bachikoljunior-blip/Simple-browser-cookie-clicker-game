@@ -1,0 +1,12 @@
+{
+  "_": "Where a viewer who wants to join actually goes. The video says the links are in the description, so they have to be real before anything is published — autopost.mjs refuses to upload while groupUrl is empty. Not secret: this is the text viewers read.",
+
+  "groupUrl": "https://groups.google.com/g/cookiestrateger-testers",
+  "_groupUrl": "The Google Group that defines the closed test's tester list. Joining it first is mandatory — the opt-in link rejects anyone who is not a member. Only the Play Console owner has this URL. Override with YT_TESTER_GROUP_URL.",
+
+  "optInUrl": "https://play.google.com/apps/testing/com.cookiestrateger.game",
+  "_optInUrl": "Derived from packageId in store/android/twa-manifest.json. Play always serves the opt-in page at this path.",
+
+  "contact": "",
+  "_contact": "Optional. Shown as the fallback when the install fails. Leave empty to point at the comments instead."
+}

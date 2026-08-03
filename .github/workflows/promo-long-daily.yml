@@ -1,0 +1,107 @@
+# Builds one landscape explainer and posts it, once a day.
+#
+# Separate from promo-daily.yml rather than a second job in it: they post
+# different formats to the same channel and want different hours, and a failure
+# in one should not stop the other. Only this file belongs on the default branch
+# — the render code stays on PROMO_REF so promo/ never reaches the published
+# site (the repository root is served at cookiestrateger.com).
+name: 毎日の解説動画投稿
+
+on:
+  schedule:
+    # 03:10 UTC = 12:10 JST. Deliberately far from the Shorts run at 17:40 JST:
+    # two videos landing together read as a dump, and the second one competes
+    # with the first for the same first hour of impressions.
+    - cron: '10 3 * * *'
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: '題材を指定する（空なら成績から自動で選ぶ）'
+        required: false
+        type: choice
+        options: ['', quota, hunt, prestige, numbers, craft, scale]
+      publish:
+        description: '公開する（外すと非公開で上がる）'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: promo-long-daily
+  cancel-in-progress: false
+
+env:
+  PROMO_REF: claude/youtube-shorts-promo-video-4vtvqt
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PROMO_REF }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 依存関係を入れる
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg open-jtalk \
+            open-jtalk-mecab-naist-jdic hts-voice-nitech-jp-atr503-m001
+          npm ci --omit=dev || npm install --no-audit --no-fund
+          npm install --no-save playwright-core
+          npx playwright install --with-deps chromium
+
+      - name: ゲームを配信する
+        run: |
+          python3 -m http.server 8765 >/tmp/server.log 2>&1 &
+          for _ in $(seq 1 20); do
+            curl -sf -o /dev/null http://localhost:8765/play.html && break
+            sleep 0.5
+          done
+          curl -sf -o /dev/null http://localhost:8765/play.html
+
+      - name: 作って投稿する
+        working-directory: promo
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+        run: |
+          args=()
+          if [ "${{ github.event_name }}" != 'workflow_dispatch' ] || [ "${{ inputs.publish }}" = 'true' ]; then
+            args+=(--public)
+          fi
+          if [ -n "${{ inputs.topic }}" ]; then args+=(--topic "${{ inputs.topic }}"); fi
+          node youtube/autopost-long.mjs "${args[@]}"
+
+      - name: 投稿履歴を記録する
+        # The videos themselves are not kept. Deciding what to post next only
+        # needs the history, and a daily 11MB would bury it.
+        run: |
+          if [ -z "$(git status --porcelain promo/youtube/posted-long.json)" ]; then
+            echo "履歴に変化なし"
+            exit 0
+          fi
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add promo/youtube/posted-long.json
+          git commit -m "解説動画の投稿履歴を更新する"
+          git push origin "HEAD:${PROMO_REF}"
+
+      - name: 失敗したときは素材を残す
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: promo-long-debug
+          path: |
+            promo/trim.json
+            promo/cookie_strateger_long.mp4
+          if-no-files-found: ignore
+          retention-days: 5
