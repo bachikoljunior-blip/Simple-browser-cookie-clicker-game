@@ -14,10 +14,23 @@ const DATA_API = 'https://www.googleapis.com/youtube/v3';
 const UPLOAD_API = 'https://www.googleapis.com/upload/youtube/v3/videos';
 const ANALYTICS_API = 'https://youtubeanalytics.googleapis.com/v2/reports';
 
+/**
+ * Credentials get typed into a settings box by hand, usually on a phone, and the
+ * two ways that goes wrong are both silent: surrounding whitespace, and a value
+ * pasted twice head-to-tail (autocomplete fires again on the second tap). Google
+ * answers the second one with "invalid_client — The OAuth client was not found",
+ * which reads like the client was deleted rather than mistyped. Both are
+ * unambiguous to undo, so undo them rather than fail a scheduled run over a
+ * stray keystroke.
+ */
+const clean = v => (v || '').trim()
+  .replace(/^(\d+-)\1/, '$1')
+  .replace(/(\.apps\.googleusercontent\.com)\1$/, '$1');
+
 export function credentials() {
-  const id = process.env.YT_CLIENT_ID;
-  const secret = process.env.YT_CLIENT_SECRET;
-  const refresh = process.env.YT_REFRESH_TOKEN;
+  const id = clean(process.env.YT_CLIENT_ID);
+  const secret = clean(process.env.YT_CLIENT_SECRET);
+  const refresh = clean(process.env.YT_REFRESH_TOKEN);
   const missing = [
     !id && 'YT_CLIENT_ID',
     !secret && 'YT_CLIENT_SECRET',
@@ -85,6 +98,19 @@ export async function channel() {
     views: Number(c.statistics.viewCount || 0),
     videos: Number(c.statistics.videoCount || 0),
   };
+}
+
+/**
+ * The channel's About text. Read-only on purpose: the scopes here cover reading
+ * and uploading, not editing the channel, so this can be checked but not fixed
+ * from code — which is exactly why the video points at its own description
+ * instead.
+ */
+export async function about() {
+  const r = await api(`${DATA_API}/channels?part=snippet,brandingSettings&mine=true`);
+  const c = r.items?.[0];
+  if (!c) throw new Error('no channel on this account');
+  return c.brandingSettings?.channel?.description || c.snippet.description || '';
 }
 
 const ymd = d => d.toISOString().slice(0, 10);

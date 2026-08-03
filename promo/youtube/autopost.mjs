@@ -4,24 +4,25 @@
 //   node autopost.mjs              render and upload
 //   node autopost.mjs --dry-run    render only, print what it would have posted
 //   node autopost.mjs --cut boss   force a particular cut
+//   node autopost.mjs --public     publish rather than upload privately
 //
-// Privacy comes from YT_PRIVACY and defaults to `private`, so the automation
-// cannot publish to the channel until that is deliberately set to `public`.
-// Setting it is the same act as providing the credentials: a decision, not a
-// default.
+// Privacy defaults to `private`, so the automation cannot publish to the channel
+// until someone deliberately passes --public (or sets YT_PRIVACY). That is the
+// same kind of act as providing the credentials: a decision, not a default.
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { VARIANTS, MARK } from '../variants.mjs';
-import { videoStats, channel, upload, credentials } from './yt.mjs';
+import { VARIANTS, MARK, describe } from '../variants.mjs';
+import { videoStats, channel, about, upload, credentials } from './yt.mjs';
 
 const PROMO = path.resolve(import.meta.dirname, '..');
 const MP4 = path.join(PROMO, 'cookie_strateger_short.mp4');
 const LOG = path.join(PROMO, 'youtube', 'posted.json');
+const TESTER = path.join(PROMO, 'youtube', 'tester.json');
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
 const forced = args[args.indexOf('--cut') + 1];
-const privacy = process.env.YT_PRIVACY || 'private';
+const privacy = args.includes('--public') ? 'public' : (process.env.YT_PRIVACY || 'private');
 
 const run = (cmd, cmdArgs, env = {}) =>
   execFileSync(cmd, cmdArgs, { cwd: PROMO, stdio: 'inherit', env: { ...process.env, ...env } });
@@ -132,25 +133,76 @@ function verify(file) {
   console.log(`checks passed: ${dur.toFixed(1)}s, ${v.width}x${v.height}, ${a.codec_name} audio`);
 }
 
-function metadata(cut) {
+/**
+ * Where a viewer who wants to test actually lands.
+ *
+ * The video ends by saying the links are in the description, so this is the one
+ * thing that has to be true before anything goes up. It is checked rather than
+ * assumed because the channel is already in the failure state it guards against:
+ * the About text says the links are in the video description, and the videos
+ * that were up had no description at all, so every viewer who went looking for a
+ * way in over 568 views found a loop and nothing else.
+ */
+function testerLinks() {
+  const t = JSON.parse(fs.readFileSync(TESTER, 'utf8'));
+  const links = {
+    groupUrl: (process.env.YT_TESTER_GROUP_URL || t.groupUrl || '').trim(),
+    optInUrl: (process.env.YT_TESTER_OPTIN_URL || t.optInUrl || '').trim(),
+    contact: (process.env.YT_TESTER_CONTACT || t.contact || '').trim(),
+  };
+  const bad = ['groupUrl', 'optInUrl'].filter(k => !/^https?:\/\/\S+$/.test(links[k]));
+  if (bad.length) {
+    throw new Error(
+      `tester links not set: ${bad.join(', ')}.\n` +
+      `The video says the join links are in the description, so it must not be ` +
+      `published without them.\nFill them in ${path.relative(PROMO, TESTER)} ` +
+      `(or set YT_TESTER_GROUP_URL).`);
+  }
+  return links;
+}
+
+function metadata(cut, links) {
   const tags = cut.tags.slice(0, 12);
   return {
     title: cut.title.slice(0, 100),
-    description: `${cut.description.trim()}\n\n${tags.map(t => '#' + t).join(' ')}\n\n${MARK(cut.id)}`,
+    description: `${describe(cut, links)}\n\n${tags.map(t => '#' + t).join(' ')}\n\n${MARK(cut.id)}`,
     tags,
     privacy,
   };
 }
 
+/**
+ * The About text is written by hand and cannot be edited through these scopes,
+ * so it can drift out of step with what the videos say. Worth a look each run —
+ * it costs one quota unit and it is the only other place a viewer is sent.
+ */
+async function noteAboutText(links) {
+  try {
+    const text = await about();
+    if (!text.includes(links.groupUrl)) {
+      console.log('\nnote: the channel About does not contain the tester group link.');
+      console.log('      The description carries it, so the video stands on its own,');
+      console.log('      but anyone arriving via the channel page still hits a dead end.');
+    }
+  } catch (e) {
+    console.log(`could not read the channel About: ${e.message.split('\n')[0]}`);
+  }
+}
+
 // --- go ---------------------------------------------------------------------------
+// Checked before rendering: three minutes of capture is a poor way to find out
+// the video had nowhere to send anyone.
+const links = testerLinks();
+
 const perCut = await history();
 const { cut, why } = pickCut(perCut);
 console.log(`\nchose "${cut.id}" — ${why}`);
 
 const file = render(cut);
-const meta = metadata(cut);
+const meta = metadata(cut, links);
 console.log(`\ntitle: ${meta.title}\nprivacy: ${meta.privacy}\nfile: ` +
   `${(fs.statSync(file).size / 1e6).toFixed(1)}MB`);
+console.log(`\n--- description ---\n${meta.description}\n---`);
 
 if (dryRun) {
   console.log('\n--dry-run: not uploading');
@@ -168,6 +220,7 @@ try {
 }
 
 verify(file);
+await noteAboutText(links);
 
 const c = await channel();
 const res = await upload(file, meta);
