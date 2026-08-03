@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>ゲームデータ資料集｜クッキーストラテジャー</title>
+  <meta name="description" content="クッキーストラテジャーの設備・研究・転生スキル・討伐報酬・モンスター・ステージ・工房（素材／装備／料理）のデータを、ゲーム内の実際の数値にもとづいて一覧にまとめた資料集です。">
+  <meta name="theme-color" content="#1d130d">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="ゲームデータ資料集｜クッキーストラテジャー">
+  <meta property="og:description" content="クッキーストラテジャーの設備・研究・転生スキル・討伐報酬・モンスター・ステージ・工房（素材／装備／料理）のデータを、ゲーム内の実際の数値にもとづいて一覧にまとめた資料集です。">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:url" content="https://cookiestrateger.com/data.html">
+  <meta property="og:image" content="https://cookiestrateger.com/icons/icon-512.png">
+  <link rel="canonical" href="https://cookiestrateger.com/data.html">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="stylesheet" href="site.css">
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "トップ",
+      "item": "https://cookiestrateger.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "データ",
+      "item": "https://cookiestrateger.com/data.html"
+    }
+  ]
+}
+  </script>
+</head>
+<body>
+
+<header class="siteHeader">
+  <div class="siteHeaderInner">
+    <a class="siteBrand" href="index.html">
+      <img src="icons/icon-192.png" alt="クッキーストラテジャーのアイコン">
+      <span>クッキーストラテジャー</span>
+    </a>
+    <nav class="siteNav" aria-label="メインナビゲーション">
+      <a href="index.html">トップ</a>
+      <a href="play.html" class="play">▶ 遊ぶ</a>
+      <a href="guide.html">遊び方</a>
+      <a href="systems.html">システム</a>
+      <a href="strategy.html">攻略</a>
+      <a href="data.html" class="active">データ</a>
+      <a href="updates.html">更新履歴</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <nav class="crumbs" aria-label="パンくずリスト"><a href="index.html">トップ</a><span class="sep">›</span><span aria-current="page">データ</span></nav>
+  <h1>ゲームデータ資料集</h1>
+  <p class="lead">クッキーストラテジャーに登場する設備・研究・スキル・報酬・モンスター・ステージ・素材のデータを、<strong>ゲーム本体で実際に使われている数値</strong>から起こして一覧にまとめました。「次に何を買うべきか」「どのモンスターを狙うべきか」を、プレイ中に手早く確認するための資料集です。</p>
+
+  <p>各ページは、ゲーム内の定義データ（設備の基礎コストと値上がり率、研究の効果式、スキルの必要ポイントと前提、モンスターのHP倍率や報酬相性など）をそのまま整理したものです。攻略の考え方については<a href="strategy.html">攻略ページ</a>を、システムそのものの仕組みは<a href="systems.html">システム解説</a>をあわせてご覧ください。</p>
+
+  <div class="pageLinks">
+    <a href="data-upgrades.html"><b>設備データ一覧</b><span>全16種の設備。基礎コスト・値上がり率・基礎生産・解放スキル。</span></a>
+    <a href="data-research.html"><b>研究データ一覧</b><span>全21件の研究。コストと効果、段階2・段階3の解放条件。</span></a>
+    <a href="data-skills.html"><b>転生スキル一覧</b><span>全71ノード。枝ごとの必要ポイント・前提スキル・効果。</span></a>
+    <a href="data-rewards.html"><b>討伐報酬カード一覧</b><span>全20種の報酬カードと、その系統・解禁スキル。</span></a>
+    <a href="data-monsters.html"><b>モンスター図鑑</b><span>全16種。HP・滞在時間・出現比率・報酬相性。</span></a>
+    <a href="data-stages.html"><b>ステージ一覧</b><span>全6ステージの補正値・出現モンスター・基本素材・解放条件。</span></a>
+    <a href="data-workshop.html"><b>工房データ（素材・装備・料理）</b><span>素材26種、装備7種、料理7種のレシピと効果。</span></a>
+    <a href="data-runs.html"><b>周回方針・注文・焼き加減</b><span>周回方針5種、注文7種、焼き加減4種。</span></a>
+  </div>
+
+  <div class="note">
+    <p>数値はゲームのアップデートにあわせて変わることがあります。表示に食い違いを見つけた場合は、お手数ですが<a href="contact.html">お問い合わせ</a>からご連絡いただけると助かります。</p>
+  </div>
+
+  <h2>データの読み方</h2>
+  <h3>設備の「値上がり率」</h3>
+  <p>設備の価格は「基礎コスト × 値上がり率<sup>所持台数</sup>」で決まります。値上がり率が 1.30 の設備は、1台買うたびに次の価格が30%ずつ上がるということです。上位の設備ほど値上がり率が高く設定されているため、上位設備だけを買い進めるより、<strong>値上がり率の低い下位設備も並行して増やす</strong>ほうが総生産は伸びやすくなります。</p>
+  <h3>「毎秒生産」と「タップ生産」</h3>
+  <p>設備は、毎秒の自動生産を増やす <code>cps</code> 型と、1タップの生産を増やす <code>click</code> 型に分かれます。研究「指先の型」を取ると毎秒生産の一部がタップにも乗るため、後半はこの2つが完全には独立しなくなります。</p>
+  <h3>「報酬相性」</h3>
+  <p>モンスターを倒したときにもらえる報酬レベルは、<strong>倒した相手の種類 × 報酬カードの系統</strong>の相性で変わります。たとえば「鉄焼きガード」は設備系の報酬と相性が3.5倍、「はやての運び屋」は金クッキー系と3.0倍です。狙っている報酬がある場合は、相性の良い相手を選んで倒すと効率が上がります。</p>
+
+  <div class="pageLinks">
+    <a href="strategy.html"><b>攻略・周回の考え方</b><span>データを実際の立ち回りに落とし込む。</span></a>
+    <a href="systems.html"><b>システム解説</b><span>仕組みそのものの説明。</span></a>
+    <a href="play.html"><b>▶ ゲームを遊ぶ</b><span>確認しながらプレイする。</span></a>
+  </div>
+</main>
+
+<footer class="siteFooter">
+  <div class="siteFooterInner">
+    <nav class="footNav" aria-label="フッターナビゲーション">
+      <a href="index.html">トップ</a>
+      <a href="play.html">ゲームを遊ぶ</a>
+      <a href="guide.html">遊び方</a>
+      <a href="systems.html">システム</a>
+      <a href="strategy.html">攻略</a>
+      <a href="data.html">データ</a>
+      <a href="faq.html">よくある質問</a>
+      <a href="glossary.html">用語集</a>
+      <a href="updates.html">更新履歴</a>
+      <a href="about.html">運営者情報</a>
+      <a href="terms.html">利用規約</a>
+      <a href="privacy.html">プライバシーポリシー</a>
+      <a href="contact.html">お問い合わせ</a>
+    </nav>
+    <p>ご意見・ご感想・不具合のご報告は <a href="contact.html">お問い合わせページ</a> からお気軽にどうぞ。</p>
+    <p class="copyright">© 2026 クッキーストラテジャー</p>
+  </div>
+</footer>
+
+</body>
+</html>

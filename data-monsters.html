@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>モンスター図鑑（全16種）｜クッキーストラテジャー</title>
+  <meta name="description" content="クッキーストラテジャーに登場するモンスター全16種のデータ。HP倍率・滞在時間・出現比率・同時出現数・報酬相性を種類ごとにまとめた図鑑ページです。">
+  <meta name="theme-color" content="#1d130d">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="モンスター図鑑（全16種）｜クッキーストラテジャー">
+  <meta property="og:description" content="クッキーストラテジャーに登場するモンスター全16種のデータ。HP倍率・滞在時間・出現比率・同時出現数・報酬相性を種類ごとにまとめた図鑑ページです。">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:url" content="https://cookiestrateger.com/data-monsters.html">
+  <meta property="og:image" content="https://cookiestrateger.com/icons/icon-512.png">
+  <link rel="canonical" href="https://cookiestrateger.com/data-monsters.html">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="stylesheet" href="site.css">
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "トップ",
+      "item": "https://cookiestrateger.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "データ",
+      "item": "https://cookiestrateger.com/data.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "モンスター図鑑",
+      "item": "https://cookiestrateger.com/data-monsters.html"
+    }
+  ]
+}
+  </script>
+</head>
+<body>
+
+<header class="siteHeader">
+  <div class="siteHeaderInner">
+    <a class="siteBrand" href="index.html">
+      <img src="icons/icon-192.png" alt="クッキーストラテジャーのアイコン">
+      <span>クッキーストラテジャー</span>
+    </a>
+    <nav class="siteNav" aria-label="メインナビゲーション">
+      <a href="index.html">トップ</a>
+      <a href="play.html" class="play">▶ 遊ぶ</a>
+      <a href="guide.html">遊び方</a>
+      <a href="systems.html">システム</a>
+      <a href="strategy.html">攻略</a>
+      <a href="data.html" class="active">データ</a>
+      <a href="updates.html">更新履歴</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <nav class="crumbs" aria-label="パンくずリスト"><a href="index.html">トップ</a><span class="sep">›</span><a href="data.html">データ</a><span class="sep">›</span><span aria-current="page">モンスター図鑑</span></nav>
+  <h1>モンスター図鑑（全16種）</h1>
+  <p class="lead">ノルマを満たしているあいだ、画面にはクッキーモンスターが現れます。種類ごとにHP・滞在時間・落とす素材・報酬の相性が違うので、<strong>何を狙って何を倒すか</strong>が周回の効率を左右します。</p>
+
+  <div class="toc">
+    <strong>目次</strong>
+    <ul>
+      <li><a href="#list">モンスター一覧表</a></li>
+      <li><a href="#family">系統別の特徴</a></li>
+      <li><a href="#boss">ボスと深層</a></li>
+      <li><a href="#drop">倒し方でドロップが変わる</a></li>
+    </ul>
+  </div>
+  <h2 id="list">モンスター一覧表</h2>
+  <p>HP倍率・滞在倍率は、その時点の基準値に対する倍率です。出現比率は全種が出現するステージでの抽選割合を示しています。</p>
+  <div class="tableWrap">
+    <table>
+      <thead><tr><th>モンスター</th><th>HP</th><th>滞在</th><th>出現比率</th><th>同時数</th><th>ドロップ数</th><th>報酬Lv補正</th></tr></thead>
+      <tbody>
+      <tr>
+        <td><img class="ic" src="images/object_cookieMonster.webp" alt="クッキーモンスター" loading="lazy"> クッキーモンスター</td>
+        <td>×1</td>
+        <td>×1</td>
+        <td>26%</td>
+        <td>1体</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><img class="ic" src="images/object_cookieMonster.webp" alt="金環クッキーモンスター" loading="lazy"> 金環クッキーモンスター</td>
+        <td>×1.2</td>
+        <td>×1.1</td>
+        <td>12%</td>
+        <td>1体</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><img class="ic" src="images/object_cookieMonster.webp" alt="堅焼きクッキーモンスター" loading="lazy"> 堅焼きクッキーモンスター</td>
+        <td>×0.85</td>
+        <td>×0.9</td>
+        <td>12%</td>
+        <td>1体</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><img class="ic" src="images/monster_swarm.webp" alt="こつぶ群れ" loading="lazy"> こつぶ群れ</td>
+        <td>×0.22</td>
+        <td>×1</td>
+        <td>12%</td>
+        <td>3体</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><img class="ic" src="images/monster_swarm.webp" alt="あわつぶ群れ" loading="lazy"> あわつぶ群れ</td>
+        <td>×0.27</td>
+        <td>×1.1</td>
+        <td>5%</td>
+        <td>3体</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><img class="ic" src="images/monster_swarm.webp" alt="くろつぶ群れ" loading="lazy"> くろつぶ群れ</td>
+        <td>×0.18</td>
+        <td>×0.9</td>
+        <td>5%</td>
+        <td>3体</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><img class="ic" src="images/monster_tank.webp" alt="鉄焼きガード" loading="lazy"> 鉄焼きガード</td>
+        <td>×6</td>
+        <td>×1.5</td>
+        <td>8%</td>
+        <td>1体</td>
+        <td>—</td>
+        <td>+18</td>
+      </tr>
+      <tr>
+        <td><img class="ic" src="images/monster_tank.webp" alt="銀焼きガード" loading="lazy"> 銀焼きガード</td>
+        <td>×7</td>
+        <td>×1.65</td>
+        <td>3%</td>
+        <td>1体</td>
+        <td>—</td>
+        <td>+18</td>
+      </tr>
+      <tr>
+        <td><img class="ic" src="images/monster_tank.webp" alt="黒鉄ガード" loading="lazy"> 黒鉄ガード</td>
+        <td>×5</td>
+        <td>×1.35</td>
+        <td>3%</td>
+        <td>1体</td>
+        <td>—</td>
+        <td>+18</td>
+      </tr>
+      <tr>
+        <td><img class="ic" src="images/monster_speedy.webp" alt="はやての運び屋" loading="lazy"> はやての運び屋</td>
+        <td>×0.45</td>
+        <td>×0.55</td>
+        <td>8%</td>
+        <td>1体</td>
+        <td>×2</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><img class="ic" src="images/monster_speedy.webp" alt="かぜの運び屋" loading="lazy"> かぜの運び屋</td>
+        <td>×0.5</td>
+        <td>×0.6</td>
+        <td>3%</td>
+        <td>1体</td>
+        <td>×2</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><img class="ic" src="images/monster_speedy.webp" alt="よあけの運び屋" loading="lazy"> よあけの運び屋</td>
+        <td>×0.4</td>
+        <td>×0.5</td>
+        <td>3%</td>
+        <td>1体</td>
+        <td>×2</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><img class="ic" src="images/monster_goldenBeast.webp" alt="黄金獣" loading="lazy"> 黄金獣</td>
+        <td>×2.5</td>
+        <td>×1</td>
+        <td>抽選外</td>
+        <td>1体</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><img class="ic" src="images/monster_goldenBeast.webp" alt="白金獣" loading="lazy"> 白金獣</td>
+        <td>×3</td>
+        <td>×1.1</td>
+        <td>抽選外</td>
+        <td>1体</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><img class="ic" src="images/monster_goldenBeast.webp" alt="緋金獣" loading="lazy"> 緋金獣</td>
+        <td>×2.2</td>
+        <td>×0.9</td>
+        <td>抽選外</td>
+        <td>1体</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><img class="ic" src="images/monster_boss.webp" alt="ステージボス" loading="lazy"> ステージボス</td>
+        <td>×12</td>
+        <td>×1</td>
+        <td>抽選外</td>
+        <td>1体</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">※ 黄金獣とボスは通常抽選の対象外です。黄金獣はステージ3以降に特殊な条件で出現し、ボスは一定の討伐数ごとに出現します。</p>
+
+  <h2 id="family">系統別の特徴</h2>
+  <h3><img class="ic" src="images/object_cookieMonster.webp" alt="" loading="lazy"> クッキーモンスター系</h3>
+  <p>基準となる相手です。HP・滞在時間ともに標準で、報酬相性もすべて等倍。色違いの「金環」はHPと滞在がやや多く金クッキー系と相性1.6倍、「堅焼き」はHPが低めで設備系と相性1.6倍です。<strong>色で狙いを変えられる</strong>ようになっているので、報酬に迷いがあるときは色を見て倒す相手を選びましょう。</p>
+  <h3><img class="ic" src="images/monster_swarm.webp" alt="" loading="lazy"> こつぶ群れ系</h3>
+  <p>3体同時に出現し、1体あたりのHPは 0.18〜0.27倍と非常に低い相手です。数を稼げるため、<strong>怪物狩り系の報酬（相性1.3〜1.6倍）</strong>と相性が良く、「獣熱発酵」「狩猟炉心」のように撃破数で伸びる効果を積んでいるときに嬉しい相手です。</p>
+  <h3><img class="ic" src="images/monster_tank.webp" alt="" loading="lazy"> ガード系</h3>
+  <p>HPが5〜7倍と重いかわりに、滞在時間が長く（1.35〜1.65倍）、<strong>報酬レベルに +18</strong> の補正がつきます。設備系との相性が2.5〜3.5倍と全モンスター中で最も高いため、設備の個別強化を集めたいときの本命です。討伐火力が足りないと取り逃すので、ダメージ系の報酬を先に整えておきましょう。</p>
+  <h3><img class="ic" src="images/monster_speedy.webp" alt="" loading="lazy"> 運び屋系</h3>
+  <p>HPが0.4〜0.5倍と軽く、滞在時間も0.5〜0.6倍と短い相手。<strong>素材のドロップ数が2倍</strong>で、金クッキー系との相性も2.0〜3.0倍と高めです。素材集めの周回では逃さず倒したい相手ですが、消えるのが早いので反応が遅れると取り逃します。</p>
+  <h3><img class="ic" src="images/monster_goldenBeast.webp" alt="" loading="lazy"> 黄金獣系</h3>
+  <p>HP2.2〜3倍の特殊な相手で、通常の抽選には入っていません。ステージ3（ミントの氷河）以降で出現します。金クッキー系との相性が2.5〜3.5倍、リスク系とも2.0〜3.0倍と高く、<strong>報酬カード「金獣変異」</strong>を持っていると金ブースト中の撃破で報酬レベルが上がることがあります。</p>
+  <h3><img class="ic" src="images/monster_boss.webp" alt="" loading="lazy"> ステージボス</h3>
+  <p>HP12倍。全ての報酬系統と ×4.0 の相性を持つ最上位の相手です。ボスを倒すとステージ固有の「ボス核」が手に入り、装備「次元コンパス」の材料になります。深層領域（ステージ6）ではボスを倒すたびに層が1つ深くなり、以降のモンスターがすべて強化されます。</p>
+
+  <h2 id="boss">ボスと深層</h2>
+  <p>ボスは一定の討伐数ごとに出現します。装備「次元コンパス」を強化すると、<strong>ボス化に必要な討伐数がレベル1につき1減る</strong>ため、ボスに会う頻度を上げられます。</p>
+  <p>ステージ6「深層領域」は終わりのないステージで、内部に「層」を持ちます。層はボスを倒すごとに1ずつ深くなり、転生しても持ち越されます。層が深いほどモンスターのHPは上がりますが、同時に<strong>多くの研究・スキルが「最高到達層」を参照して強くなる</strong>ため、深く潜ること自体が恒久的な強化になります。</p>
+
+  <h2 id="drop">倒し方でドロップが変わる</h2>
+  <p>素材は「どのステージで倒したか」だけでなく、<strong>どう倒したか</strong>でも変わります。</p>
+  <ul>
+    <li><strong>通常撃破</strong>：そのステージの基本素材（バター、カカオ塊、氷結ミント、火炎香料、星屑糖）。</li>
+    <li><strong>オーバーキル</strong>（残HPの5倍以上のダメージで撃破）：レア素材が出やすくなります。狩猟型の周回方針と噛み合います。</li>
+    <li><strong>ノルマ余裕率2倍での撃破</strong>：発酵系の素材。焼成型の方針と相性が良い倒し方です。</li>
+    <li><strong>金ブースト中の撃破</strong>：黄金粉。これが黄金粉の唯一の入手経路です。</li>
+    <li><strong>バランス型（標準方針）での撃破</strong>：万能粉。ほかの素材の代わりに使えますが、必要数は2倍換算になります。</li>
+  </ul>
+  <div class="note">つまり「同じモンスターでも、どの方針でどう倒すかで手に入る素材が変わる」設計です。工房で作りたい装備が決まっているなら、必要な素材から逆算して周回方針と倒し方を選ぶのが近道です。</div>
+
+  <div class="pageLinks">
+    <a href="data-stages.html"><b>ステージ一覧</b><span>どのステージに何が出るか。</span></a>
+    <a href="data-workshop.html"><b>工房データ</b><span>集めた素材の使い道。</span></a>
+    <a href="data-rewards.html"><b>討伐報酬カード一覧</b><span>報酬の系統と相性。</span></a>
+  </div>
+</main>
+
+<footer class="siteFooter">
+  <div class="siteFooterInner">
+    <nav class="footNav" aria-label="フッターナビゲーション">
+      <a href="index.html">トップ</a>
+      <a href="play.html">ゲームを遊ぶ</a>
+      <a href="guide.html">遊び方</a>
+      <a href="systems.html">システム</a>
+      <a href="strategy.html">攻略</a>
+      <a href="data.html">データ</a>
+      <a href="faq.html">よくある質問</a>
+      <a href="glossary.html">用語集</a>
+      <a href="updates.html">更新履歴</a>
+      <a href="about.html">運営者情報</a>
+      <a href="terms.html">利用規約</a>
+      <a href="privacy.html">プライバシーポリシー</a>
+      <a href="contact.html">お問い合わせ</a>
+    </nav>
+    <p>ご意見・ご感想・不具合のご報告は <a href="contact.html">お問い合わせページ</a> からお気軽にどうぞ。</p>
+    <p class="copyright">© 2026 クッキーストラテジャー</p>
+  </div>
+</footer>
+
+</body>
+</html>
