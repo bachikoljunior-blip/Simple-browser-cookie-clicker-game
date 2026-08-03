@@ -150,6 +150,63 @@ export async function channelVideos(max = 50) {
   })).sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
 }
 
+/**
+ * Where the views came from, over the last `days`.
+ *
+ * Retention answers "did they stay"; this answers "how did they arrive", and the
+ * two want opposite things done about them. Views arriving from the Shorts feed
+ * are won in the first two seconds and are worth spending hooks on. Views
+ * arriving from search are won by the title matching a question someone typed,
+ * and no amount of hook work moves them. Optimising the hook against a channel
+ * that is actually being found by search is effort spent on the wrong end of the
+ * video — which is the mistake this exists to prevent.
+ *
+ * `detail` is only meaningful for some source types (search terms, the
+ * suggesting video); the API rejects it for others, so it is asked for
+ * separately and per type rather than as one query.
+ */
+export async function trafficSources(days = 28) {
+  const end = new Date();
+  const start = new Date(end.getTime() - days * 86400_000);
+  const q = new URLSearchParams({
+    ids: 'channel==MINE',
+    startDate: ymd(start), endDate: ymd(end),
+    metrics: 'views,estimatedMinutesWatched',
+    dimensions: 'insightTrafficSourceType',
+    sort: '-views',
+  });
+  const r = await api(`${ANALYTICS_API}?${q}`);
+  const cols = (r.columnHeaders || []).map(h => h.name);
+  return (r.rows || []).map(row => Object.fromEntries(cols.map((c, i) => [c, row[i]])));
+}
+
+/**
+ * The detail behind one traffic source — search terms for YT_SEARCH, the videos
+ * that suggested us for RELATED_VIDEO. Returns [] for source types that carry no
+ * detail rather than throwing, since the caller is usually looping over whatever
+ * trafficSources() happened to return.
+ */
+export async function trafficDetail(sourceType, days = 28) {
+  const end = new Date();
+  const start = new Date(end.getTime() - days * 86400_000);
+  const q = new URLSearchParams({
+    ids: 'channel==MINE',
+    startDate: ymd(start), endDate: ymd(end),
+    metrics: 'views',
+    dimensions: 'insightTrafficSourceDetail',
+    filters: `insightTrafficSourceType==${sourceType}`,
+    sort: '-views',
+    maxResults: '25',
+  });
+  try {
+    const r = await api(`${ANALYTICS_API}?${q}`);
+    const cols = (r.columnHeaders || []).map(h => h.name);
+    return (r.rows || []).map(row => Object.fromEntries(cols.map((c, i) => [c, row[i]])));
+  } catch {
+    return [];
+  }
+}
+
 /** Per-video performance over the last `days`, most viewed first. */
 export async function videoStats(days = 28) {
   const end = new Date();
@@ -347,6 +404,27 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         `視聴率 ${r.avgViewPercent}%  (${r.n}本)`));
       if (rows.length && rows.every(r => r.n < 3)) {
         console.log('  ※ 各時間帯の本数が少なく、差は偶然の範囲です');
+      }
+    } else if (cmd === 'sources') {
+      const days = Number(rest[0]) || 28;
+      const rows = await trafficSources(days);
+      if (!rows.length) { console.log('流入のデータがまだありません'); }
+      const total = rows.reduce((a, r) => a + r.views, 0) || 1;
+      // Plain-language names: the raw enum reads like a database column, and the
+      // point of this table is to be glanced at while deciding what to shoot.
+      const NAMES = {
+        SHORTS: 'Shorts フィード', SUBSCRIBER: '登録者のフィード', YT_SEARCH: 'YouTube 検索',
+        RELATED_VIDEO: '関連動画', BROWSE: 'ブラウジング機能', NO_LINK_OTHER: '不明・直接',
+        EXT_URL: '外部サイト', YT_CHANNEL: 'チャンネルページ', NOTIFICATION: '通知',
+        PLAYLIST: '再生リスト', END_SCREEN: '終了画面', ANNOTATION: 'カード',
+      };
+      for (const r of rows) {
+        const t = r.insightTrafficSourceType;
+        console.log(`  ${(NAMES[t] || t).padEnd(16)} ${String(r.views).padStart(5)}回  ` +
+          `${(r.views / total * 100).toFixed(0)}%  視聴 ${Math.round(r.estimatedMinutesWatched)}分`);
+        for (const d of (await trafficDetail(t, days)).slice(0, 5)) {
+          console.log(`      ${String(d.views).padStart(4)}回  ${d.insightTrafficSourceDetail}`);
+        }
       }
     } else if (cmd === 'retention') {
       const [videoId] = rest;
