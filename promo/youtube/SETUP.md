@@ -91,6 +91,73 @@ cd promo && node youtube/yt.mjs check
 
 ---
 
+## スコープを広げる（既存動画を編集できるようにする）
+
+上の3スコープでできるのは**投稿とサムネイルの差し替えだけ**です。すでに公開した
+動画の説明欄・タイトル・タグは編集できません（`videos.update` が
+`403 insufficientPermissions`）。再生リストと固定コメントも同じ理由で使えません。
+
+**これが効くのは、いちばん見られている動画に導線が無いときです。** いま
+`UUCI_m2Xqus`（「テスター募集！クッキーストラテジャー」）は説明欄が空で、
+チャンネルの再生の大半をこの1本が集めています。開けば、そこに参加リンクを
+入れられます。
+
+やることは**手順3をもう一度、スコープを1つ足してやり直すだけ**です。
+Google Cloud 側（手順1・2）は触りません。
+
+1. [OAuth 2.0 Playground](https://developers.google.com/oauthplayground/) を開く
+2. 歯車 → **Use your own OAuth credentials** → 同じ Client ID / Client secret を貼る
+   （**新しく作らないこと。** 作ると `YT_CLIENT_ID` と `YT_CLIENT_SECRET` も
+   差し替えになります）
+3. Step 1 に次の**4つ**を貼る（`youtube.force-ssl` が増えた1つ）
+   ```
+   https://www.googleapis.com/auth/youtube.upload
+   https://www.googleapis.com/auth/youtube.readonly
+   https://www.googleapis.com/auth/youtube.force-ssl
+   https://www.googleapis.com/auth/yt-analytics.readonly
+   ```
+4. **Authorize APIs** → 同じ Google アカウントで許可
+   （「このアプリは確認されていません」が出たら「詳細」→「安全でないページに移動」）
+5. **Exchange authorization code for tokens** → 新しい **Refresh token**（`1//`…）をコピー
+
+> `youtube.force-ssl` は読み取りと管理を両方含みます。既存の3つは残したままで
+> 構いません。**古い refresh token は無効になりません** —— 新しいほうに
+> 差し替えるまで、いままでどおり動き続けます。
+
+### 差し替え先は2つあり、意味が違います
+
+| 置き場所 | 反映されるタイミング |
+|---|---|
+| 環境変数（Environments → Environment variables） | **次に始まるセッションから。** 動いているセッションには入らない |
+| `promo/youtube/.env` | **次のコマンドから即座に。** 実行のたびに読み直している |
+
+常駐セッションが動き続けている間に切り替えたいなら `.env` のほうです。
+コンテナの中に置くだけで、`.gitignore` 済みなのでコミットされません。
+
+```sh
+cat > promo/youtube/.env <<'EOF'
+YT_CLIENT_ID=...apps.googleusercontent.com
+YT_CLIENT_SECRET=GOCSPX-...
+YT_REFRESH_TOKEN=1//...
+EOF
+```
+
+> コンテナは作り直されると消えるので、**環境変数のほうにも同じ値を入れておいてください。**
+> `.env` はいま動いているセッションに届けるための一時的な口です。
+
+### 効いたか確かめる
+
+```sh
+cd promo && node youtube/yt.mjs check
+```
+
+最後の3行に出どころとスコープが出ます。こうなれば成功です。
+
+```
+スコープ: youtube.readonly youtube.upload youtube.force-ssl yt-analytics.readonly
+  → 既存動画の編集・再生リスト・固定コメントも可能
+```
+
 ## 補足
 
 - **アップロードの quota**：既定は1日10,000ユニット、投稿1本で1,600ユニットです。

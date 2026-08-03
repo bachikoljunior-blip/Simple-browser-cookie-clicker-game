@@ -27,10 +27,41 @@ const clean = v => (v || '').trim()
   .replace(/^(\d+-)\1/, '$1')
   .replace(/(\.apps\.googleusercontent\.com)\1$/, '$1');
 
+/**
+ * Optional `promo/youtube/.env`, which wins over the environment.
+ *
+ * Environment variables are handed to a session when it starts and never again,
+ * so rotating a credential — widening the OAuth scopes, replacing an expired
+ * refresh token — cannot reach a session that is already running. That matters
+ * here because the posting schedule fires into one long-lived session: without a
+ * file to read, a rotated token only takes effect whenever that session is next
+ * replaced, which may be never.
+ *
+ * So a file, read fresh on every call, gitignored. It holds the same three names
+ * in `KEY=value` form. Delete it and the environment takes over again.
+ */
+const ENV_FILE = new URL('./.env', import.meta.url).pathname;
+
+function fromFile() {
+  let text;
+  try { text = fs.readFileSync(ENV_FILE, 'utf8'); } catch { return {}; }
+  const out = {};
+  for (const line of text.split('\n')) {
+    const m = /^\s*(?:export\s+)?([A-Z_][A-Z0-9_]*)\s*=\s*(.*)$/.exec(line);
+    if (!m) continue;
+    // Strip one layer of matching quotes; a token pasted with them is otherwise
+    // wrong in a way that only shows up as "invalid_grant" much later.
+    out[m[1]] = m[2].trim().replace(/^(['"])(.*)\1$/, '$2');
+  }
+  return out;
+}
+
 export function credentials() {
-  const id = clean(process.env.YT_CLIENT_ID);
-  const secret = clean(process.env.YT_CLIENT_SECRET);
-  const refresh = clean(process.env.YT_REFRESH_TOKEN);
+  const file = fromFile();
+  const pick = k => clean(file[k] ?? process.env[k]);
+  const id = pick('YT_CLIENT_ID');
+  const secret = pick('YT_CLIENT_SECRET');
+  const refresh = pick('YT_REFRESH_TOKEN');
   const missing = [
     !id && 'YT_CLIENT_ID',
     !secret && 'YT_CLIENT_SECRET',
@@ -39,9 +70,25 @@ export function credentials() {
   if (missing.length) {
     throw new Error(
       `YouTube credentials missing: ${missing.join(', ')}.\n` +
-      'Set them as environment variables — see promo/youtube/SETUP.md.');
+      'Set them as environment variables, or in promo/youtube/.env — see promo/youtube/SETUP.md.');
   }
   return { id, secret, refresh };
+}
+
+/** Which of the two sources each credential came from, for `check` to report. */
+export function credentialSources() {
+  const file = fromFile();
+  return Object.fromEntries(['YT_CLIENT_ID', 'YT_CLIENT_SECRET', 'YT_REFRESH_TOKEN']
+    .map(k => [k, file[k] ? '.env' : (process.env[k] ? '環境変数' : 'なし')]));
+}
+
+/** The scopes the current refresh token actually carries. */
+export async function grantedScopes() {
+  const token = await accessToken();
+  const r = await fetch(`${TOKEN_URL.replace('/token', '/tokeninfo')}?access_token=${token}`);
+  if (!r.ok) return [];
+  const j = await r.json().catch(() => ({}));
+  return (j.scope || '').split(' ').filter(Boolean);
 }
 
 let cachedToken = null;
@@ -394,6 +441,20 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         `${s.reduce((a, v) => a + v.views, 0)} views`);
       s.slice(0, 5).forEach(v =>
         console.log(`  ${String(v.views).padStart(6)} views  ${v.avgViewPercent}%  ${v.title}`));
+
+      // What this token is allowed to do. Worth a line every run because the
+      // answer decides which fixes are even available: without a manage scope,
+      // an existing video's empty description cannot be filled in from here, and
+      // a run that does not know that will keep proposing it.
+      const scopes = await grantedScopes();
+      const short = scopes.map(s => s.replace('https://www.googleapis.com/auth/', ''));
+      const manage = scopes.some(s => /youtube\.force-ssl|auth\/youtube$/.test(s));
+      const src = credentialSources();
+      console.log(`\n認証情報の出どころ: ${Object.entries(src).map(([k, v]) => `${k}=${v}`).join(', ')}`);
+      console.log(`スコープ: ${short.join(' ') || '(取得できず)'}`);
+      console.log(manage
+        ? '  → 既存動画の編集・再生リスト・固定コメントも可能'
+        : '  → 投稿とサムネイルのみ。既存動画の説明欄は編集できない（SETUP.md の「スコープを広げる」）');
     } else if (cmd === 'stats') {
       console.log(JSON.stringify(await videoStats(Number(rest[0]) || 28), null, 2));
     } else if (cmd === 'hours') {
