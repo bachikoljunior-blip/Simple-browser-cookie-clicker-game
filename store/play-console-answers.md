@@ -27,10 +27,16 @@
 |---|---|
 | アプリに広告が含まれていますか | **いいえ** |
 
-根拠: **Google Play 版では広告を一切出しません。** `play.html` の `<head>` で
-Play 版（TWA）と判定した場合は AdSense のスクリプト自体を読み込まず、
+根拠: **Google Play 版では広告を一切出しません。** `play.html` と `index.html` の
+`<head>` で Play 版（TWA）と判定した場合は AdSense のスクリプト自体を読み込まず、
 広告表示（`adBreak`）も呼びません。広告の代わりに「周回スタートは5時間に1回」の
 制限を設け、買い切りのアプリ内アイテムで解除できるようにしています。
+
+Play 版の判定は ①`android-app://` の referrer ②Digital Goods API（`getDigitalGoodsService`）
+の有無 ③`?twa=1` の3つで、いずれかに当たれば sessionStorage に記録して以後のページに
+引き継ぎます。②があるため、アプリ内でプライバシーポリシー等を経由してトップページに
+戻っても広告は読み込まれません（AdSense はアプリ内での掲載自体が規約違反のため、
+「広告なし」の申告と実装を必ず一致させてください）。
 
 ※ ブラウザ版（cookiestrateger.com）は従来どおり AdSense を表示しますが、
 これはアプリ外のウェブサイトなので Play の広告申告には影響しません。

@@ -25,17 +25,34 @@
        ブラウザ版に漏れないよう sessionStorage を使用(Android Chrome は TWA とブラウザで
        localStorage を共有するため)。動作確認用に ?twa=1 でも有効化できる。 -->
   <script>
-    try {
-      if (new URLSearchParams(location.search).get("twa") === "1"
-          || (document.referrer && document.referrer.indexOf("android-app://") === 0)) {
-        sessionStorage.setItem("cookie_game_twa_session", "1");
-      }
-    } catch (_) {}
+    window.isPlayStoreBuild = (function () {
+      try {
+        // getDigitalGoodsService は Play からインストールされた TWA でしか生えない
+        // (通常のブラウザタブでは undefined)ので、referrer が付かない遷移
+        // (プライバシーポリシー等からこのページに戻ってきた場合)でも Play版と判定できる。
+        if (new URLSearchParams(location.search).get("twa") === "1"
+            || (document.referrer && document.referrer.indexOf("android-app://") === 0)
+            || ("getDigitalGoodsService" in window)) {
+          sessionStorage.setItem("cookie_game_twa_session", "1");
+        }
+        return sessionStorage.getItem("cookie_game_twa_session") === "1";
+      } catch (_) { return false; }
+    })();
   </script>
 
-  <!-- Google AdSense(標準の読み込みコード。トップページとゲームページに設置) -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3280484274197291"
-       crossorigin="anonymous"></script>
+  <!-- Google AdSense(標準の読み込みコード。トップページとゲームページに設置)
+       Google Play(TWA)版では広告を一切出さない申告をしているため、play.html と同様に
+       Play版と判定した場合は AdSense のスクリプト自体を読み込まない。
+       (アプリ内から privacy.html 経由でこのトップページに来られるため、ここも塞ぐ必要がある) -->
+  <script>
+    if (!window.isPlayStoreBuild) {
+      var adsenseTag = document.createElement("script");
+      adsenseTag.async = true;
+      adsenseTag.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3280484274197291";
+      adsenseTag.crossOrigin = "anonymous";
+      document.head.appendChild(adsenseTag);
+    }
+  </script>
 
   <script type="application/ld+json">
   {

@@ -141,6 +141,27 @@ bubblewrap build
 `bubblewrap` を最新にした上で、生成された `app/build.gradle` の
 `targetSdkVersion` が `36` になっているか確認してください。低い場合は手で上げます。
 
+### Play Billing Library の要件
+
+**2026年8月31日以降、新規アプリ・アップデートは Play Billing Library 8 以上でないと
+提出できません**（11月1日までの延長申請は可能）。
+
+bubblewrap 1.24.1 が書き出す `app/build.gradle` は
+`com.google.androidbrowserhelper:billing:1.1.0` を指定し、これは
+**Billing Library 7.1.1** を引くため、そのままでは 8月31日以降に弾かれます。
+Billing Library 8 系（8.3.0）を引く `billing:1.2.0` に上げてください。
+あわせて `androidbrowserhelper` も alpha 版ではなく安定版 `2.7.2` に固定します。
+
+```gradle
+implementation 'com.google.androidbrowserhelper:billing:1.2.0'
+implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.2'
+```
+
+クラス名（`playbilling.provider.PaymentActivity` / `PaymentService`）は変わっていないので、
+生成された `AndroidManifest.xml` の書き換えは不要です。
+**GitHub Actions の「2. Androidアプリをビルド」では自動で置き換わります**ので、
+ローカルで `bubblewrap build` する場合だけ手で直してください。
+
 ---
 
 ## 3. Digital Asset Links の設置（← 一番ハマるところ）
@@ -148,7 +169,7 @@ bubblewrap build
 これを正しく置かないと、アプリ内に **Chrome の URL バーが出っぱなし**になり、
 「ただのブラウザじゃないか」と審査で弾かれることもあります。
 
-### 3-1. 登録すべき指紋は「2つ」
+### 3-1. 登録すべき指紋は「アップロード鍵 + アプリ署名鍵ぜんぶ」
 
 1. **アップロード鍵**の SHA-256（`bubblewrap init` で作った鍵）
 2. **Play アプリ署名鍵**の SHA-256
@@ -156,6 +177,24 @@ bubblewrap build
 
 Play は AAB を受け取ると自分の鍵で再署名するため、**本番で効くのは 2 番**です。
 1 番だけだと内部テストでも URL バーが出ます。両方入れてください。
+
+#### 量子対応ハイブリッド署名を使っている場合（アプリ署名鍵が複数ある）
+
+アプリの署名ページに **「従来の鍵」「ポスト量子暗号鍵」** という区分が出ている場合、
+**アプリ署名鍵の証明書は1つではありません。** Google のドキュメントでは、
+この場合 **3つの鍵の指紋をすべて登録する**よう案内されています。
+
+| 鍵 | 使われるデバイス |
+|---|---|
+| 新しい従来型の鍵 | Android 17 以降 |
+| PQC 鍵（ML-DSA-65） | Android 17 以降（ハイブリッド署名） |
+| 従来型の鍵（RSA 4096） | Android 16 以前 |
+
+**1つでも欠けていると、その鍵で署名されたデバイスだけ照合に失敗して URL バーが出ます。**
+端末によって出たり出なかったりするのが特徴です。ページに出ている SHA-256 は
+**全部** `assetlinks.json` に入れてください（余分に入っていても害はありません）。
+
+参考: [Play アプリ署名を使用する](https://support.google.com/googleplay/android-developer/answer/9842756?hl=ja)
 
 ```bash
 # ローカルのアップロード鍵は自動で入る

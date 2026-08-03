@@ -7,12 +7,17 @@ name: 3. assetlinks.json を更新
 # Play Console → テストとリリース → 設定 → アプリの署名 →
 # 「アプリ署名鍵の証明書」の SHA-256 証明書フィンガープリントをコピーして貼ってください。
 # アップロード鍵の指紋は暗号化済みキーストアから自動で取り出します。
+#
+# 【重要】量子対応ハイブリッド署名を使っている場合、アプリ署名鍵の証明書は1つではありません。
+# 「従来の鍵」「ポスト量子暗号鍵」など、そのページに出てくる SHA-256 を**全部**貼ってください。
+# 1つでも欠けていると、その鍵で署名されたデバイスだけ照合に失敗し、URL バーが出ます。
+# 区切りはカンマ・空白・改行のどれでも構いません。多めに入れても害はありません。
 
 on:
   workflow_dispatch:
     inputs:
       play_signing_sha256:
-        description: 'Play の「アプリ署名鍵」の SHA-256 指紋(AA:BB:... 形式。まだ無ければ空でOK)'
+        description: 'Play の「アプリ署名鍵」の SHA-256 指紋。複数ある場合は全部(カンマ/空白/改行区切り)'
         required: false
         default: ''
 
@@ -62,13 +67,27 @@ jobs:
             const valid = s => /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/.test(s);
 
             const prints = [];
-            for (const [label, raw] of [["アップロード鍵", process.env.UPLOAD_SHA256],
-                                       ["Playアプリ署名鍵", process.env.PLAY_SHA256]]) {
+            const add = (label, raw) => {
               const v = norm(raw);
-              if (!v) { console.log(`- ${label}: 未指定のため入れません`); continue; }
+              if (!v) return;
               if (!valid(v)) throw new Error(`${label} の指紋の形式が不正です: ${raw}`);
-              if (!prints.includes(v)) prints.push(v);
+              if (prints.includes(v)) { console.log(`- ${label}: ${v} (重複のためスキップ)`); return; }
+              prints.push(v);
               console.log(`- ${label}: ${v}`);
+            };
+
+            add("アップロード鍵", process.env.UPLOAD_SHA256);
+
+            // Play 側は複数になりうる。量子対応ハイブリッド署名では「従来の鍵」と
+            // 「ポスト量子暗号鍵」で証明書が分かれ、デバイスによって使われる鍵が変わるため、
+            // 全部入れておかないと一部の端末だけ照合に失敗して URL バーが出る。
+            const playKeys = (process.env.PLAY_SHA256 || "").split(/[\s,]+/).filter(Boolean);
+            if (!playKeys.length) {
+              console.log("- Playアプリ署名鍵: 未指定のため入れません");
+            } else {
+              playKeys.forEach((s, i) => {
+                add(playKeys.length > 1 ? `Playアプリ署名鍵 #${i + 1}` : "Playアプリ署名鍵", s);
+              });
             }
             if (!prints.length) throw new Error("指紋が1つもありません");
 
