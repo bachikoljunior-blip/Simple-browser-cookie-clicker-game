@@ -21,7 +21,10 @@ const LOG = path.join(PROMO, 'youtube', 'posted.json');
 const TESTER = path.join(PROMO, 'youtube', 'tester.json');
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
-const forced = args[args.indexOf('--cut') + 1];
+// indexOf returns -1 when the flag is absent, and args[-1 + 1] is the first
+// argument — so any other flag was being read as a cut name.
+const cutAt = args.indexOf('--cut');
+const forced = cutAt === -1 ? undefined : args[cutAt + 1];
 const privacy = args.includes('--public') ? 'public' : (process.env.YT_PRIVACY || 'private');
 
 const run = (cmd, cmdArgs, env = {}) =>
