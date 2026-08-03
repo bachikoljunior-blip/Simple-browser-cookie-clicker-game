@@ -133,6 +133,33 @@ jobs:
           echo "--- 変更後 ---"
           grep -nE 'targetSdk|compileSdk' "$GRADLE" || true
 
+      - name: 依存ライブラリのバージョンを上書き
+        run: |
+          set -euo pipefail
+          # bubblewrap 1.24.1 が書き出す依存は
+          #   com.google.androidbrowserhelper:billing:1.1.0        → Play Billing Library 7.1.1
+          #   com.google.androidbrowserhelper:androidbrowserhelper:2.7.0-alpha02
+          # の2つ。Billing Library 7 は 2026/8/31(猶予 11/1)で新規アップロードが
+          # 受け付けられなくなるため、Billing Library 8 系を引く billing:1.2.0 に上げる。
+          # androidbrowserhelper も alpha 版のままにせず安定版 2.7.2 に固定する。
+          # クラス名(playbilling.provider.PaymentActivity / PaymentService)は変わっていないので
+          # 生成済みの AndroidManifest.xml をそのまま使える。
+          GRADLE=android-build/app/build.gradle
+          echo "--- 変更前 ---"
+          grep -nE 'androidbrowserhelper' "$GRADLE" || true
+          sed -i -E "s#(com\.google\.androidbrowserhelper:billing:)[0-9A-Za-z.\-]+#\1${BILLING_VERSION}#" "$GRADLE"
+          sed -i -E "s#(com\.google\.androidbrowserhelper:androidbrowserhelper:)[0-9A-Za-z.\-]+#\1${ABH_VERSION}#" "$GRADLE"
+          echo "--- 変更後 ---"
+          grep -nE 'androidbrowserhelper' "$GRADLE" || true
+          # 意図したバージョンになっているか確認し、なっていなければここで止める
+          grep -q "com.google.androidbrowserhelper:billing:${BILLING_VERSION}" "$GRADLE" \
+            || { echo "::error::billing の差し替えに失敗しました"; exit 1; }
+          grep -q "com.google.androidbrowserhelper:androidbrowserhelper:${ABH_VERSION}" "$GRADLE" \
+            || { echo "::error::androidbrowserhelper の差し替えに失敗しました"; exit 1; }
+        env:
+          BILLING_VERSION: '1.2.0'
+          ABH_VERSION: '2.7.2'
+
       - name: ビルド(AAB + APK)
         working-directory: android-build
         env:

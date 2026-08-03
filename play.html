@@ -18,15 +18,20 @@
 
   <!-- Google AdSense
        Google Play(TWA)版では広告を一切出さないので、AdSense のスクリプト自体を読み込まない。
-       Play判定は referrer(android-app://)と sessionStorage。ブラウザ版に漏れないよう
-       localStorage ではなく sessionStorage を使う(Android版ChromeはTWAとブラウザで共有するため)。
+       Play判定は referrer(android-app://)・Digital Goods API の有無・sessionStorage。
+       ブラウザ版に漏れないよう localStorage ではなく sessionStorage を使う
+       (Android版ChromeはTWAとブラウザで共有するため)。
        動作確認用に ?twa=1 でも Play版扱いにできる -->
   <script>
     window.isPlayStoreBuild = (function () {
       try {
-        if (new URLSearchParams(location.search).get("twa") === "1") {
-          sessionStorage.setItem("cookie_game_twa_session", "1");
-        } else if (document.referrer && document.referrer.indexOf("android-app://") === 0) {
+        // getDigitalGoodsService は Play からインストールされた TWA でしか生えない
+        // (通常のブラウザタブでは undefined)。referrer が付かない起動のされ方
+        // (リンク経由での遷移・検証失敗時の Custom Tab フォールバックなど)でも
+        // Play版を取りこぼして広告を出してしまわないための保険。
+        if (new URLSearchParams(location.search).get("twa") === "1"
+            || (document.referrer && document.referrer.indexOf("android-app://") === 0)
+            || ("getDigitalGoodsService" in window)) {
           sessionStorage.setItem("cookie_game_twa_session", "1");
         }
         return sessionStorage.getItem("cookie_game_twa_session") === "1";

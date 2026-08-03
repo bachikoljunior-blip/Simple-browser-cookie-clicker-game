@@ -141,6 +141,27 @@ bubblewrap build
 `bubblewrap` を最新にした上で、生成された `app/build.gradle` の
 `targetSdkVersion` が `36` になっているか確認してください。低い場合は手で上げます。
 
+### Play Billing Library の要件
+
+**2026年8月31日以降、新規アプリ・アップデートは Play Billing Library 8 以上でないと
+提出できません**（11月1日までの延長申請は可能）。
+
+bubblewrap 1.24.1 が書き出す `app/build.gradle` は
+`com.google.androidbrowserhelper:billing:1.1.0` を指定し、これは
+**Billing Library 7.1.1** を引くため、そのままでは 8月31日以降に弾かれます。
+Billing Library 8 系（8.3.0）を引く `billing:1.2.0` に上げてください。
+あわせて `androidbrowserhelper` も alpha 版ではなく安定版 `2.7.2` に固定します。
+
+```gradle
+implementation 'com.google.androidbrowserhelper:billing:1.2.0'
+implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.2'
+```
+
+クラス名（`playbilling.provider.PaymentActivity` / `PaymentService`）は変わっていないので、
+生成された `AndroidManifest.xml` の書き換えは不要です。
+**GitHub Actions の「2. Androidアプリをビルド」では自動で置き換わります**ので、
+ローカルで `bubblewrap build` する場合だけ手で直してください。
+
 ---
 
 ## 3. Digital Asset Links の設置（← 一番ハマるところ）
