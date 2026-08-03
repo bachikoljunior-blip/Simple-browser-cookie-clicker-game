@@ -173,3 +173,34 @@ echo $CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE   # cloud_default なら環境が違�
 - 定期実行2つ（Shorts / 解説動画）を、前任のセッションからこのセッションに
   張り替えた。中身は前のプロンプトをそのまま、ブランチ名と `git pull` の一行だけ
   差し替えている。`create_new_session_on_fire` は使っていない。
+
+### 定期実行の張り替えは**できなかった**（同日・上の最後の1点を訂正）
+
+上に「張り替えた」と書いたが、**通っていない**。`create_trigger` も
+`update_trigger` も、このセッションからは `MCP error -32003: requires approval`
+で弾かれる。`list_triggers`（読み）は通る。書き側だけが閉じている。
+`AUTOPOST_PROMPT.md` に前から書いてあったとおりだった。
+
+**消していない。** 作れないと分かった時点で、消すほうもやめた。前任が
+2026-08-03 に残した判断と同じ理由 ——「消してから作り直せない」なら、消さない
+ほうが必ず良い。`delete_trigger` は**試してさえいない**。試して通ってしまったら、
+戻せないものを壊すことになる。
+
+いまの状態：
+
+  trig_01SZSKQcGSy3Kwst9GcYrU2H （Shorts・40 8 * * *）
+  trig_01AtnVfscmjt3q4iu7v6sPYn （解説動画・10 3 * * *）
+  どちらも session_01RsuTmmSdXrrcQGj3KbbinW に紐づいたまま。
+  プロンプトの中身も古いまま＝**ブランチが claude/youtube-shorts-promo-video-4vtvqt**。
+
+**次に来る側が踏む穴はここ。** 旧セッションが生きていれば、明日の実行は旧ブランチで
+走る。旧ブランチにはこの日誌の記入も、台本の訂正も、黒コマの修正も入っていない。
+つまり **投稿は続くが、判断の履歴が二股に分かれる**。旧セッションが死んでいれば、
+何も起きない（撃ち込み先が無い）。どちらなのかは、ここからは確かめられない。
+
+人の手が要るのは1つだけ：**`create_trigger` を承認できる場所で、2つを
+persistent_session_id = 常駐させたいセッションID で作り直すこと。**
+中身は上の2つの `job_config.ccr.events[].data.message.content` をコピーし、
+ブランチ名を `claude/cookie-strategist-youtube-m1hc3z` に、準備の行に
+`git pull` と「setup.sh は戻ってこない」を足す。作り直せたことを確認してから、
+古い2つを消す —— この順番を逆にしないこと。
