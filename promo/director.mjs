@@ -120,8 +120,31 @@ if (SHORT) cues.push({ mark: 'hook', at: 0.30, text: VARIANT.hook.narration });
 // Pre-setting the text means the opening frames would otherwise be motionless.
 // Tapping the cookie gives the hook real movement — floating numbers and the
 // game's own click — instead of a still frame with a caption on it.
-if (VARIANT.hook.taps) await tapBurst('#cookie', 4, 340);
-await wait(VARIANT.hook.taps ? 1100 : 2300);
+// Give the opening seconds movement, whatever screen the cut opens on.
+//
+// Only `unit` had taps, so the other five cuts opened on a completely still
+// picture — and `unit` is the one cut that has ever been distributed. One data
+// point is not proof, but a static frame is a known-bad opening for a medium
+// that decides in two seconds, and it costs nothing to fix. It matters more in
+// short mode, where the hook is not an introduction to the video: it is a fifth
+// of it.
+//
+// The motion has to suit the screen. Tapping the cookie is invisible while a
+// panel is open, so the list screens scroll instead and the skill map drifts.
+const hookMotion = {
+  play:  () => tapBurst('#cookie', 4, 340),
+  quota: () => tapBurst('#cookie', 4, 340),
+  hunt:  () => tapBurst('#cookie', 3, 300),
+  craft: () => autoScroll('workshopTab', 0.14, 1500),
+  info:  () => autoScroll('infoTab', 0.12, 1500),
+  tree:  () => ev(() => {
+    const f = document.querySelector('.skillMapFrame');
+    if (f) f.scrollTo({ top: f.scrollTop + f.clientHeight * 0.35, behavior: 'smooth' });
+  }),
+};
+const moved = hookMotion[VARIANT.hook.screen] || hookMotion.play;
+await moved();
+await wait(VARIANT.hook.screen === 'play' || VARIANT.hook.screen === 'quota' ? 1100 : 900);
 
 // ---- SHORT: jump straight to the kinetic beat, on the board scene 3 sets up
 if (SHORT) {
