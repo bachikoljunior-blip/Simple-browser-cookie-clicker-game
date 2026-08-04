@@ -21,8 +21,17 @@ const DIC = '/var/lib/mecab/dic/open-jtalk/naist-jdic';
 const VOICE = '/usr/share/hts-voice/nitech-jp-atr503-m001/nitech_jp_atr503_m001.htsvoice';
 const TMP = 'video/tts';
 const OUT = 'video/narration.wav';
-const RATE_BASE = 1.2;      // brisker than the default; Shorts narration is quick
-const RATE_MAX = 1.55;      // beyond this it stops sounding like speech
+// Briskness, per engine. Both call 1.0 "normal" but they are not the same
+// number: open_jtalk at 1.2 lands where Cloud TTS lands nearer 1.1.
+const RATE_BASE_LOCAL = 1.2;
+const RATE_BASE_CLOUD = 1.15;
+// How far above base a line may be pushed to fit its gap. open_jtalk is an HMM
+// voice and falls apart early; the neural voices hold together further, and they
+// speak slower at the same nominal rate, so they need the extra room to fit the
+// same lines. Measured on one take: at the old shared ceiling the cloud voice
+// overran four lines where open_jtalk overran one.
+const RATE_MAX_MUL_LOCAL = 1.3;
+const RATE_MAX_MUL_CLOUD = 1.45;
 const SR = 48000;
 
 // `scene` names the beat the line belongs to, or `mark` names a moment the
@@ -48,7 +57,7 @@ const CUES = [
   { scene: 9, at: 0.35, text: 'アンドロイドのテスター募集中。リンクはチャンネル概要欄に。' },
 ];
 
-function synth(text, rate, wav, trace) {
+function localSynth(text, rate, wav, trace) {
   const args = ['-x', DIC, '-m', VOICE, '-r', String(rate), '-ow', wav];
   if (trace) args.push('-ot', trace);
   const r = spawnSync('open_jtalk', args, { input: text + '\n' });
@@ -56,13 +65,102 @@ function synth(text, rate, wav, trace) {
   return wav;
 }
 
+/**
+ * The Google key, from `youtube/.env` first and the environment second.
+ *
+ * Same order as the YouTube credentials and for the same reason: environment
+ * variables reach a session only when it starts, and the posting schedule fires
+ * into one long-lived session, so a value added later can never arrive that way.
+ */
+function ttsKey() {
+  try {
+    const txt = fs.readFileSync(new URL('./youtube/.env', import.meta.url).pathname, 'utf8');
+    for (const line of txt.split('\n')) {
+      const m = /^\s*GOOGLE_TTS_API_KEY\s*=\s*(.*)$/.exec(line);
+      if (m) return m[1].trim().replace(/^(['"])(.*)\1$/, '$2');
+    }
+  } catch { /* no file is not an error */ }
+  return (process.env.GOOGLE_TTS_API_KEY || '').trim();
+}
+
+const KEY = ttsKey();
+const CLOUD_VOICE = process.env.PROMO_TTS_VOICE || 'ja-JP-Chirp3-HD-Charon';
+const CLOUD = Boolean(KEY) && process.env.PROMO_TTS !== 'local';
+
+/**
+ * Cloud Text-to-Speech. Returns false rather than throwing when it cannot
+ * deliver, so the caller falls back to open_jtalk.
+ *
+ * The voice is the one thing a viewer judges in the first second, and the first
+ * second is the whole of a Short's distribution decision — 98% of this channel's
+ * views arrive from the Shorts feed. That is why this is worth a network
+ * dependency at all. It is also why the dependency must never be load-bearing:
+ * a failed synthesis has to degrade to the offline voice, not cancel the day's
+ * video.
+ */
+function cloudSynth(text, rate, wav) {
+  const body = JSON.stringify({
+    input: { text },
+    voice: { languageCode: 'ja-JP', name: CLOUD_VOICE },
+    audioConfig: {
+      audioEncoding: 'LINEAR16', sampleRateHertz: SR,
+      speakingRate: Math.max(0.25, Math.min(4, rate)),
+    },
+  });
+  const r = spawnSync('curl', ['-sS', '--max-time', '30', '-X', 'POST',
+    '-H', 'content-type: application/json', '--data-binary', '@-',
+    `https://texttospeech.googleapis.com/v1/text:synthesize?key=${KEY}`],
+    { input: body, maxBuffer: 64 * 1024 * 1024 });
+  if (r.status !== 0) return false;
+  let audio;
+  try { audio = JSON.parse(r.stdout.toString()).audioContent; } catch { return false; }
+  if (!audio) return false;
+  fs.writeFileSync(wav, Buffer.from(audio, 'base64'));
+  return true;
+}
+
+let cloudFailed = false;
+
+/**
+ * `rate` is on the engine's own scale: open_jtalk's -r and Cloud TTS's
+ * speakingRate are both "1 is normal, higher is faster" but are not the same
+ * number, so the base and ceiling below are per engine.
+ */
+function synth(text, rate, wav, trace) {
+  if (CLOUD && !cloudFailed && !trace) {
+    if (cloudSynth(text, rate, wav)) return wav;
+    cloudFailed = true;
+    console.log(`  !! Cloud TTS が応答しないので open_jtalk に切り替えます`);
+  }
+  return localSynth(text, rate * (RATE_BASE_LOCAL / RATE_BASE_CLOUD), wav, trace);
+}
+
+/**
+ * Read a PCM WAV by walking its chunks.
+ *
+ * open_jtalk writes the textbook 44-byte header, and the old version of this
+ * just indexed into it. Cloud TTS does not promise that layout — an extra
+ * LIST/INFO chunk ahead of the data would shift every offset and the file would
+ * be read as noise — so the chunks get found rather than assumed.
+ */
 function wavInfo(path) {
   const b = fs.readFileSync(path);
-  // canonical PCM WAV from open_jtalk: 44-byte header
-  const rate = b.readUInt32LE(24);
-  const bits = b.readUInt16LE(34);
-  const dataLen = b.readUInt32LE(40);
-  return { rate, bits, samples: dataLen / (bits / 8), pcm: b.subarray(44, 44 + dataLen) };
+  if (b.subarray(0, 4).toString() !== 'RIFF' || b.subarray(8, 12).toString() !== 'WAVE') {
+    throw new Error(`${path} is not a RIFF/WAVE file`);
+  }
+  let pos = 12, fmt = null, data = null;
+  while (pos + 8 <= b.length) {
+    const id = b.subarray(pos, pos + 4).toString();
+    const size = b.readUInt32LE(pos + 4);
+    const body = b.subarray(pos + 8, pos + 8 + size);
+    if (id === 'fmt ') fmt = body;
+    else if (id === 'data') data = body;
+    pos += 8 + size + (size % 2);            // chunks are word-aligned
+  }
+  if (!fmt || !data) throw new Error(`${path} has no fmt/data chunk`);
+  const rate = fmt.readUInt32LE(4);
+  const bits = fmt.readUInt16LE(14);
+  return { rate, bits, samples: data.length / (bits / 8), pcm: data };
 }
 
 function reading(trace) {
@@ -80,7 +178,7 @@ if (process.argv[2] === 'check') {
   fs.mkdirSync(TMP, { recursive: true });
   CUES.forEach((c, i) => {
     const wav = `${TMP}/c${i}.wav`, tr = `${TMP}/c${i}.txt`;
-    synth(c.text, RATE_BASE, wav, tr);
+    localSynth(c.text, RATE_BASE_LOCAL, wav, tr);
     const { samples, rate } = wavInfo(wav);
     console.log(`s${c.scene}+${c.at}  ${(samples / rate).toFixed(2)}s  ${c.text}`);
     console.log(`            ${reading(tr)}`);
@@ -123,12 +221,14 @@ placed.forEach((c, i) => {
   const next = i + 1 < placed.length ? placed[i + 1].start : total;
   const window = Math.max(0.6, next - c.start - 0.12);
   const wav = `${TMP}/n${i}.wav`;
-  synth(c.text, RATE_BASE, wav);
+  const base = CLOUD && !cloudFailed ? RATE_BASE_CLOUD : RATE_BASE_LOCAL;
+  synth(c.text, base, wav);
   let info = wavInfo(wav);
-  let rate = RATE_BASE;
+  let rate = base;
   const dur = () => info.samples / info.rate;
   if (dur() > window) {
-    rate = Math.min(RATE_MAX, RATE_BASE * dur() / window);
+    const ceiling = base * (CLOUD && !cloudFailed ? RATE_MAX_MUL_CLOUD : RATE_MAX_MUL_LOCAL);
+    rate = Math.min(ceiling, base * dur() / window);
     synth(c.text, rate, wav);
     info = wavInfo(wav);
   }
