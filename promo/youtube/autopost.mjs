@@ -4,6 +4,7 @@
 //   node autopost.mjs              render and upload
 //   node autopost.mjs --dry-run    render only, print what it would have posted
 //   node autopost.mjs --cut boss   force a particular cut
+//   node autopost.mjs --length short  hook → 討伐 → CTA only (~15s)
 //   node autopost.mjs --public     publish rather than upload privately
 //   node autopost.mjs --at <time>  go live at an RFC3339 instant instead of at once
 //
@@ -30,6 +31,11 @@ const privacy = args.includes('--public') ? 'public' : (process.env.YT_PRIVACY |
 // When it goes live, as distinct from when it was made. Passed straight to
 // YouTube's scheduled publishing, so the render can happen whenever the machine
 // is free while the moment it appears is chosen on its own evidence.
+// Length is a decision about the video, not about the run, so it rides with the
+// other render flags. The floor in verify() moved with it: the old 30s floor
+// would have rejected every short take as broken.
+const lenAt = args.indexOf('--length');
+const LENGTH = lenAt === -1 ? (process.env.PROMO_LENGTH || 'full') : args[lenAt + 1];
 const atIdx = args.indexOf('--at');
 const publishAt = atIdx === -1 ? null : args[atIdx + 1];
 if (publishAt && Number.isNaN(Date.parse(publishAt))) {
@@ -161,7 +167,7 @@ async function reportRetention(mine) {
 // --- render ---------------------------------------------------------------------
 function render(cut) {
   console.log(`\nrendering cut "${cut.id}" ...`);
-  run('node', ['director.mjs'], { PROMO_VARIANT: cut.id });
+  run('node', ['director.mjs'], { PROMO_VARIANT: cut.id, PROMO_LENGTH: LENGTH });
   run('node', ['narrate.mjs']);
   run('node', ['encode.mjs']);
   if (!fs.existsSync(MP4)) throw new Error('render finished but no mp4 was produced');
@@ -183,7 +189,7 @@ function verify(file) {
   const problems = [];
   if (!v) problems.push('no video stream');
   if (!a) problems.push('no audio stream');
-  if (!(dur > 30 && dur < 70)) problems.push(`duration ${dur?.toFixed(1)}s outside 30–70s`);
+  if (!(dur > 12 && dur < 70)) problems.push(`duration ${dur?.toFixed(1)}s outside 12–70s`);
   if (v && (v.width !== 1080 || v.height !== 1920)) problems.push(`${v.width}x${v.height}, expected 1080x1920`);
 
   // A black opening frame compresses to almost nothing as a PNG.

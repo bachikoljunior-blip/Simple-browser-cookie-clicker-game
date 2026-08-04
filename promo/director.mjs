@@ -93,6 +93,21 @@ await ev(() => {
   settings.seVolume = 100;
   try { if (bgmGainNode) bgmGainNode.gain.value = 0.42; } catch (e) {}
 });
+// Short mode: hook → 討伐 → CTA, and nothing else.
+//
+// The only retention curve this channel has (UUCI_m2Xqus, 51s) loses half its
+// viewers by 7.6s and 91% by 13.8s. Everything after that — the workshop, the
+// research screen, the skill tree, the payoff, and the recruitment card the
+// video exists to deliver — is being shown to under a tenth of the audience.
+// Adding beats to a video nobody reaches is not promotion; it is decoration.
+//
+// So this path keeps the hook, keeps the single most kinetic beat (golden
+// cookie into a swarm and a boss), and gets to the CTA while people are still
+// watching. It is a test, not a verdict: the curve above comes from a video
+// this pipeline did not make, so its shape may not be ours.
+const SHORT = process.env.PROMO_LENGTH === 'short';
+const cues = [];
+
 await top(VARIANT.hook.banner);
 await cap(VARIANT.hook.caption);
 await page.waitForTimeout(350);   // let the text animate in behind the cover
@@ -100,12 +115,24 @@ await begin();
 console.log(`  cut: ${VARIANT.id}`);
 console.log('  audio:', await ev(() => window.__startRec()));
 await shot('hook');
+mark('hook');
+if (SHORT) cues.push({ mark: 'hook', at: 0.30, text: VARIANT.hook.narration });
 // Pre-setting the text means the opening frames would otherwise be motionless.
 // Tapping the cookie gives the hook real movement — floating numbers and the
 // game's own click — instead of a still frame with a caption on it.
 if (VARIANT.hook.taps) await tapBurst('#cookie', 4, 340);
 await wait(VARIANT.hook.taps ? 1100 : 2300);
 
+// ---- SHORT: jump straight to the kinetic beat, on the board scene 3 sets up
+if (SHORT) {
+  await flash();
+  await cap([]);
+  await setMidGame();
+  await toPlayScreen();
+  await setPlayFullscreen(true);
+}
+
+if (!SHORT) {
 // =============================================================== SCENE 2 — rewind
 // Hold the same full-bleed framing the hook used, so the two states can be read
 // against each other: identical composition, identical counter position, so the
@@ -166,6 +193,7 @@ await cap(['置いておくだけでも増える', 'でも<em>放置だけだと
 await shot('quota2');
 await wait(1800);
 mark('scene3');
+}   // end !SHORT (scenes 2-3)
 
 // =============================================================== SCENE 4 — 討伐
 // Golden cookie first (the field cookie visibly swells), then a swarm and a boss
@@ -173,6 +201,7 @@ mark('scene3');
 await flash();
 await top(null);
 await cap(['<em>金のクッキー</em>で生産が跳ねて'], 'high');
+mark('golden');
 await ev(() => {
   try { showGoldenCookie(); } catch (e) { return String(e); }
   // The game drops it anywhere on the field, and "anywhere" included the bottom
@@ -193,6 +222,7 @@ await shot('golden');
 await wait(1000);   // let the buff visibly take hold before cutting away
 
 await cap(['<em>モンスター</em>を殴ると素材が出る', '群れも<b>ボス</b>も来ます'], 'high');
+mark('swarm');
 await ev(() => {
   try { showMonster('swarm'); showMonster('boss'); } catch (e) { return String(e); }
   // At this point in the run a tap does 4 damage against 173hp minions, so the
@@ -207,9 +237,14 @@ await hitMonsters(10, 105);
 await wait(600);
 await hideRewardModal();
 mark('scene4');
+if (SHORT) {
+  cues.push({ mark: 'golden', at: 0.20, text: '金のクッキーで生産が跳ねます。' });
+  cues.push({ mark: 'swarm', at: 0.20, text: 'モンスターを殴ると素材が出ます。ボスも来ます。' });
+}
 
 await ev(() => { state.huntFocusLv = 0; });
 
+if (!SHORT) {
 // =============================================================== SCENE 5 — 工房
 // 486 recipes is a genuinely surprising number for a clicker, and the cooking
 // list pays off the ノルマ beat: one dish slows the quota clock down.
@@ -338,6 +373,7 @@ await cap(['<em>100正</em> ＝ 10の<em>42</em>乗']);
 await shot('payoff');
 await wait(1950);
 mark('scene8');
+}   // end !SHORT (scenes 5-8)
 
 // =============================================================== SCENE 9 — CTA
 await top(null);
@@ -361,8 +397,10 @@ await ev(() => window.__end(
   // 「14日間」と「基本プレイ無料」が隣り合っていると、14日間だけ無料と読める。
   '基本プレイ無料・<u>Android専用</u>（iPhone不可）<br>Google Play 公開に必要なテスターを募集中<br>14日間 入れたまま ＋ ときどき起動',
   '参加リンクは<em>チャンネル概要欄</em>に'));
+if (SHORT) cues.push({ mark: 'cta', at: 0.35, text: 'アンドロイドのテスター募集中。リンクはチャンネル概要欄に。' });
 await shot('cta');
 await wait(3900);   // a beat after the last word, so the loop does not cut it off
+mark('cta');
 mark('scene9 / total');
 
-await finish({ variant: VARIANT.id });
+await finish({ variant: VARIANT.id, ...(SHORT ? { narration: cues } : {}) });
