@@ -147,9 +147,10 @@ const hookMotion = {
     if (f) f.scrollTo({ top: f.scrollTop + f.clientHeight * 0.35, behavior: 'smooth' });
   }),
 };
-const moved = hookMotion[VARIANT.hook.screen] || hookMotion.play;
-await moved();
-// Ring the HUD element the hook is talking about, when the cut names one.
+// Ring first, then move. Called after the motion it only appeared 1.6s in — past
+// the window the whole hook exists to win. The point of pointing at the evidence
+// is that the evidence is seen while the viewer is still deciding.
+//
 // Reports rather than assumes: a selector that stops matching would otherwise
 // remove the evidence from the shot without anything saying so.
 if (VARIANT.hook.spot) {
@@ -160,6 +161,8 @@ if (VARIANT.hook.spot) {
   const hit = await ev(sel => window.__spot(sel, 2600), VARIANT.hook.spot);
   console.log(`  spot ${VARIANT.hook.spot}: ${hit === true ? 'ok' : `失敗 (${hit})`}`);
 }
+const moved = hookMotion[VARIANT.hook.screen] || hookMotion.play;
+await moved();
 // The hold has to leave room for the hook line to finish, not just for the
 // motion to play. Cutting it to 900ms made the tree hook overrun by 0.73s: the
 // movement was added by taking away the time the sentence needed.

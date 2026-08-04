@@ -81,8 +81,10 @@ export const VARIANTS = [
       caption: ['所持クッキー <em>100正</em>', '= 10の<em>42</em>乗'],
       narration: 'しょうって単位、知ってます?',
       taps: true,
-      // The unit being asked about is right there in the counter.
-      spot: '#cookies',
+      // No ring here. #cookies stretches the full width, so the box reads as a
+      // frame rather than a pointer — and the number it would point at is
+      // already the largest thing on screen. Ringing what already dominates adds
+      // nothing; the tool is for evidence that is small and missed.
     },
     title: '“正”って単位、知ってますか【10の42乗】',
     description: `放置クリッカーの所持数が、兆のはるか上まで来ました。`,
