@@ -12,7 +12,23 @@
       "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__delete_trigger",
       "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__fire_trigger",
       "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__list_triggers",
-      "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__send_later"
+      "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__send_later",
+      "Bash(git *)",
+      "Bash(node *)",
+      "Bash(bash promo/youtube/setup.sh*)",
+      "Bash(curl *)",
+      "Bash(ffmpeg *)",
+      "Bash(ffprobe *)",
+      "Bash(open_jtalk *)",
+      "Bash(python3 *)",
+      "Bash(cat *)",
+      "Bash(ls *)",
+      "Bash(tail *)",
+      "Bash(pgrep *)",
+      "Bash(date *)",
+      "Read",
+      "Edit"
     ]
   }
 }
+
