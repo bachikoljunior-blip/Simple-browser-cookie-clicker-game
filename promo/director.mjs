@@ -302,7 +302,7 @@ if (SHORT && BODY === 'scale') {
   // 唯一の直し方 —— 読みの検算は open_jtalk でしかできないのに、実際に喋るのは
   // Cloud TTS なので、どちらにも同じ音を出させるにはこう書くしかない。
   cues.push({ mark: 'big', at: 0.25, text: 'いまは、ひゃくしょう。10の42乗です。' });
-  await wait(2100);
+  await wait(2600);
   await shot('big');
 }
 
