@@ -254,6 +254,65 @@ export async function trafficDetail(sourceType, days = 28) {
   }
 }
 
+/**
+ * Are external URLs in a video's description actually tappable yet?
+ *
+ * This decides where every video sends people. Until the channel earns advanced
+ * features YouTube renders description URLs as plain text, so the videos point
+ * at the channel page instead, where the links section is real buttons. The day
+ * that flips, the routing should flip with it — the description is two or three
+ * taps shorter — and nothing announces the change.
+ *
+ * The check is on the rendered watch page rather than the API, because the API
+ * returns the description as the string that was uploaded and says nothing about
+ * how it is drawn. In the page, linked spans of the description carry a command:
+ * hashtags get a `/hashtag/…` browse endpoint, and external URLs get a
+ * `urlEndpoint` or a `/redirect?q=…`. Hashtags are linked even on a channel with
+ * no privileges at all, so their presence proves nothing — only an external
+ * target counts.
+ *
+ * Deliberately not asking a human to tap it and report back: an answer that
+ * depends on someone reading a message is an answer that may never arrive.
+ */
+export async function descriptionLinksLive(videoId) {
+  // Scraping a page rather than calling an API means rate limits and the odd
+  // interstitial. This runs inside a posting job, so it backs off and then gives
+  // up with `checked: false` — an unanswered question must not take down a run
+  // whose actual purpose is to publish a video.
+  let res = null;
+  for (const waitMs of [0, 3000, 12000]) {
+    if (waitMs) await new Promise(r => setTimeout(r, waitMs));
+    res = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+      headers: {
+        'user-agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 ' +
+          '(KHTML, like Gecko) Chrome/120 Mobile Safari/537.36',
+        'accept-language': 'ja,en;q=0.8',
+        accept: 'text/html,application/xhtml+xml',
+      },
+    }).catch(() => null);
+    if (res?.ok) break;
+  }
+  if (!res?.ok) {
+    return { checked: false, live: false, why: `視聴ページを取得できませんでした（${res?.status ?? 'ネットワーク'}）` };
+  }
+  const html = (await res.text())
+    .replace(/\\x22/g, '"').replace(/\\x7b/g, '{').replace(/\\x7d/g, '}')
+    .replace(/\\x5b/g, '[').replace(/\\x5d/g, ']').replace(/\\\//g, '/');
+
+  const i = html.indexOf('attributedDescriptionBodyText');
+  if (i === -1) return { checked: false, live: false, why: '説明欄が読み取れませんでした' };
+  const seg = html.slice(i, i + 40000);
+  const external = /"urlEndpoint"/.test(seg) || /"url":"\/redirect\?/.test(seg);
+  const hashtags = (seg.match(/\/hashtag\//g) || []).length;
+  return {
+    checked: true,
+    live: external,
+    why: external
+      ? '説明欄の外部リンクがタップできます'
+      : `説明欄の外部リンクはただの文字です（リンク化されているのはハッシュタグ${hashtags}件のみ）`,
+  };
+}
+
 /** Per-video performance over the last `days`, most viewed first. */
 export async function videoStats(days = 28) {
   const end = new Date();
@@ -529,6 +588,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       if (rows.length && rows.every(r => r.n < 3)) {
         console.log('  ※ 各時間帯の本数が少なく、差は偶然の範囲です');
       }
+    } else if (cmd === 'linkcheck') {
+      // Newest public video, since the answer is a property of the channel.
+      const id = rest[0] || (await channelVideos()).find(v => v.id)?.id;
+      const r = await descriptionLinksLive(id);
+      console.log(`${id}: ${r.why}`);
+      console.log(r.live
+        ? '  → 誘導先を「動画概要欄」に切り替えてよい（CLAUDE.md の恒久指令 制約2）'
+        : '  → 誘導先は「チャンネル概要欄」のまま（CLAUDE.md の恒久指令 制約2）');
     } else if (cmd === 'backfill') {
       // A video with no description is a video that cannot be joined from. Any
       // that this pipeline uploaded already carries the terms, so in practice
