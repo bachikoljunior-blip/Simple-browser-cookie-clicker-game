@@ -301,7 +301,26 @@ export async function descriptionLinksLive(videoId) {
 
   const i = html.indexOf('attributedDescriptionBodyText');
   if (i === -1) return { checked: false, live: false, why: '説明欄が読み取れませんでした' };
-  const seg = html.slice(i, i + 40000);
+
+  // Look only inside the description's own commandRuns array, matched bracket by
+  // bracket. A fixed-size window past the marker reaches into unrelated page
+  // data — related videos, channel links — and those carry urlEndpoints of their
+  // own. That window reported "the links are tappable" on a video whose
+  // description had no link at all, and acting on it would have pointed viewers
+  // at a description they cannot tap: the exact failure the check exists to
+  // prevent.
+  const runsAt = html.indexOf('"commandRuns":[', i);
+  if (runsAt === -1) {
+    // No linked spans at all — not even hashtags. Nothing is tappable.
+    return { checked: true, live: false, why: '説明欄にリンク化された箇所がありません' };
+  }
+  let p = html.indexOf('[', runsAt), depth = 0, end = p;
+  for (let k = p; k < html.length; k++) {
+    const c = html[k];
+    if (c === '[') depth++;
+    else if (c === ']') { depth--; if (depth === 0) { end = k + 1; break; } }
+  }
+  const seg = html.slice(p, end);
   const external = /"urlEndpoint"/.test(seg) || /"url":"\/redirect\?/.test(seg);
   const hashtags = (seg.match(/\/hashtag\//g) || []).length;
   return {
@@ -626,13 +645,30 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         console.log('  ※ 各時間帯の本数が少なく、差は偶然の範囲です');
       }
     } else if (cmd === 'linkcheck') {
-      // Newest public video, since the answer is a property of the channel.
-      const id = rest[0] || (await channelVideos()).find(v => v.id)?.id;
+      // Newest *public* video. channelVideos() lists scheduled uploads too, and
+      // they were sorted first — so with anything queued this was fetching the
+      // watch page of a private video, which cannot answer the question and just
+      // returned an error. A check that silently stops checking is worse than no
+      // check, because its silence reads as "nothing changed".
+      let id = rest[0];
+      if (!id) {
+        const vs = await channelVideos();
+        const st = await api(`${DATA_API}/videos?part=status&id=${vs.map(v => v.id).join(',')}`);
+        const live = new Set((st.items || [])
+          .filter(i => i.status.privacyStatus === 'public' && !i.status.publishAt)
+          .map(i => i.id));
+        id = vs.find(v => live.has(v.id))?.id;
+      }
+      if (!id) { console.log('公開済みの動画がありません'); process.exit(0); }
       const r = await descriptionLinksLive(id);
       console.log(`${id}: ${r.why}`);
-      console.log(r.live
-        ? '  → 誘導先を「動画概要欄」に切り替えてよい（CLAUDE.md の恒久指令 制約2）'
-        : '  → 誘導先は「チャンネル概要欄」のまま（CLAUDE.md の恒久指令 制約2）');
+      // "could not check" must not read as "checked, nothing changed" — that is
+      // how a switch that has already flipped goes unnoticed for days.
+      console.log(!r.checked
+        ? '  → 判定できていない。誘導先は据え置き、次の実行で必ずやり直すこと'
+        : r.live
+          ? '  → 誘導先を「動画概要欄」に切り替えてよい（CLAUDE.md の恒久指令 制約2）'
+          : '  → 誘導先は「チャンネル概要欄」のまま（CLAUDE.md の恒久指令 制約2）');
     } else if (cmd === 'backfill') {
       // A video with no description is a video that cannot be joined from. Any
       // that this pipeline uploaded already carries the terms, so in practice
