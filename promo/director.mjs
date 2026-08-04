@@ -221,6 +221,13 @@ await wait(1800);
 mark('scene3');
 }   // end !SHORT (scenes 2-3)
 
+// Which beat the short version is built around. Posting more than one video a
+// day only helps if the videos differ; in short mode the body is most of the
+// video, so a second body is what makes a second daily post something other than
+// a near-duplicate. Full mode always plays every beat, so this only selects.
+const BODY = process.env.PROMO_BODY || 'hunt';
+
+if (!SHORT || BODY === 'hunt') {
 // =============================================================== SCENE 4 — 討伐
 // Golden cookie first (the field cookie visibly swells), then a swarm and a boss
 // on screen together — the busiest, most alive frame in the game.
@@ -269,6 +276,36 @@ if (SHORT) {
 }
 
 await ev(() => { state.huntFocusLv = 0; });
+}   // end body: hunt
+
+// ---- SHORT body: scale — the same screen, thirty orders of magnitude apart.
+// The one cut that has ever been distributed was built on this contrast, so it
+// is worth a body of its own rather than only a hook.
+if (SHORT && BODY === 'scale') {
+  await flash();
+  await toPlayScreen();
+  await setPlayFullscreen(true);
+  await setFresh();
+  await cap(['スタートは<em>クッキー25枚</em>']);
+  mark('small');
+  cues.push({ mark: 'small', at: 0.20, text: '最初はクッキー25枚。' });
+  await tapBurst('#cookie', 4, 300);
+  await wait(900);
+  await shot('small');
+
+  await flash('stamp');
+  await setLateGame();
+  await setPlayFullscreen(true);
+  await cap(['<em>100正</em> ＝ 10の<em>42</em>乗']);
+  mark('big');
+  // 「正」は解析器に ヒャク・セー と読まれる。かなで書くのは engine を問わない
+  // 唯一の直し方 —— 読みの検算は open_jtalk でしかできないのに、実際に喋るのは
+  // Cloud TTS なので、どちらにも同じ音を出させるにはこう書くしかない。
+  cues.push({ mark: 'big', at: 0.25, text: 'いまは、ひゃくしょう。10の42乗です。' });
+  await wait(2100);
+  await shot('big');
+}
+
 
 if (!SHORT) {
 // =============================================================== SCENE 5 — 工房

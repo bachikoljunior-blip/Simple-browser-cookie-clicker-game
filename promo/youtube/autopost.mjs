@@ -4,7 +4,8 @@
 //   node autopost.mjs              render and upload
 //   node autopost.mjs --dry-run    render only, print what it would have posted
 //   node autopost.mjs --cut boss   force a particular cut
-//   node autopost.mjs --length short  hook → 討伐 → CTA only (~15s)
+//   node autopost.mjs --length short  hook → 本体 → CTA only (~13s)
+//   node autopost.mjs --body scale   short mode: 25枚→100正 の対比を本体にする
 //   node autopost.mjs --public     publish rather than upload privately
 //   node autopost.mjs --at <time>  go live at an RFC3339 instant instead of at once
 //
@@ -34,6 +35,8 @@ const privacy = args.includes('--public') ? 'public' : (process.env.YT_PRIVACY |
 // Length is a decision about the video, not about the run, so it rides with the
 // other render flags. The floor in verify() moved with it: the old 30s floor
 // would have rejected every short take as broken.
+const bodyAt = args.indexOf('--body');
+const BODY = bodyAt === -1 ? (process.env.PROMO_BODY || 'hunt') : args[bodyAt + 1];
 const lenAt = args.indexOf('--length');
 const LENGTH = lenAt === -1 ? (process.env.PROMO_LENGTH || 'full') : args[lenAt + 1];
 const atIdx = args.indexOf('--at');
@@ -167,7 +170,7 @@ async function reportRetention(mine) {
 // --- render ---------------------------------------------------------------------
 function render(cut) {
   console.log(`\nrendering cut "${cut.id}" ...`);
-  run('node', ['director.mjs'], { PROMO_VARIANT: cut.id, PROMO_LENGTH: LENGTH });
+  run('node', ['director.mjs'], { PROMO_VARIANT: cut.id, PROMO_LENGTH: LENGTH, PROMO_BODY: BODY });
   run('node', ['narrate.mjs']);
   run('node', ['encode.mjs']);
   if (!fs.existsSync(MP4)) throw new Error('render finished but no mp4 was produced');
