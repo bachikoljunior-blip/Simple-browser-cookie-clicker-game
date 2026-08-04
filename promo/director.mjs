@@ -397,10 +397,12 @@ await ev(() => window.__end(
   // 「14日間」と「基本プレイ無料」が隣り合っていると、14日間だけ無料と読める。
   '基本プレイ無料・<u>Android専用</u>（iPhone不可）<br>Google Play 公開に必要なテスターを募集中<br>14日間 入れたまま ＋ ときどき起動',
   '参加リンクは<em>チャンネル概要欄</em>に'));
+// Mark where the card *appears*. Marking the end of the beat put the cue past
+// the last frame — the card was on screen for 3.9s with nothing spoken over it.
+mark('cta');
 if (SHORT) cues.push({ mark: 'cta', at: 0.35, text: 'アンドロイドのテスター募集中。リンクはチャンネル概要欄に。' });
 await shot('cta');
 await wait(3900);   // a beat after the last word, so the loop does not cut it off
-mark('cta');
 mark('scene9 / total');
 
 await finish({ variant: VARIANT.id, ...(SHORT ? { narration: cues } : {}) });
