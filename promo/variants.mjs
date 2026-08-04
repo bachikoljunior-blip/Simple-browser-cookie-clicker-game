@@ -12,6 +12,17 @@
 // `id` is stable and appears in the description as `#cut-<id>`, which is how
 // autopost.mjs matches a published video back to the cut that produced it.
 
+// Numbers that may be said out loud, with what they actually count. Anything not
+// on this list has not been checked, and an array length is not automatically the
+// number a player would see — STAGES has five entries but the game has six
+// stages, because the last one is built outside the array. The full derivation is
+// in youtube/JOURNAL.md ("言い切れる数字の確定表").
+//
+//   71   skill tree nodes            486  equipment recipes
+//   21   research items (13 go to a third stage)
+//   26   materials                   7    dishes
+//   6    stages — the sixth, 深層領域, keeps going in layers
+//   10^42 = 100正
 const TAGS = ['Shorts', '放置ゲーム', 'クリッカー', 'インクリメンタル',
   '個人開発', 'インディーゲーム', 'Androidゲーム', 'クッキーストラテジャー'];
 
