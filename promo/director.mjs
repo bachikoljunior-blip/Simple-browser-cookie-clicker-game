@@ -144,7 +144,10 @@ const hookMotion = {
 };
 const moved = hookMotion[VARIANT.hook.screen] || hookMotion.play;
 await moved();
-await wait(VARIANT.hook.screen === 'play' || VARIANT.hook.screen === 'quota' ? 1100 : 900);
+// The hold has to leave room for the hook line to finish, not just for the
+// motion to play. Cutting it to 900ms made the tree hook overrun by 0.73s: the
+// movement was added by taking away the time the sentence needed.
+await wait(VARIANT.hook.screen === 'play' || VARIANT.hook.screen === 'quota' ? 1100 : 1800);
 
 // ---- SHORT: jump straight to the kinetic beat, on the board scene 3 sets up
 if (SHORT) {
