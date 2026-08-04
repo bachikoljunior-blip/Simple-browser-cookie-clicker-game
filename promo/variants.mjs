@@ -187,6 +187,25 @@ export const VARIANTS = [
     description: `素材はクッキーで買えず、クッキーに変換することもできない別勘定の資源です。だから数字がいくら伸びても、装備を進めたいなら盤面に出ることになります。`,
     tags: TAGS,
   },
+  // The stage count is the one number on the verified list with a condition
+  // attached, and the condition is the interesting part: STAGES holds five
+  // entries, MAX_STAGE_NO is six, and the sixth — 深層領域 — is assembled outside
+  // the array and keeps going in layers (play.html:6816, and 6773 calls it the
+  // infinite stage). So neither "five stages" nor "endless stages" is true, and
+  // the accurate sentence happens to be the better hook.
+  {
+    id: 'endless',
+    hook: {
+      screen: 'play',
+      banner: 'ステージは6つ',
+      caption: ['最後のひとつだけ', '<em>層</em>が続いていきます'],
+      narration: 'ステージは6つ。最後の深層領域だけ、層が続いていきます。',
+      taps: true,
+    },
+    title: '放置ゲーのステージを6つにして、最後だけ終わらなくした',
+    description: `ステージは6つ。最後の「深層領域」は層が続いていく作りで、深く届くほど研究の効果が強くなります。`,
+    tags: TAGS,
+  },
 ];
 
 export const byId = id => VARIANTS.find(v => v.id === id);
