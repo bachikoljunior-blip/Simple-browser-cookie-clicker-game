@@ -199,7 +199,7 @@ export const VARIANTS = [
       screen: 'play',
       banner: 'ステージは6つ',
       caption: ['最後のひとつだけ', '<em>層</em>が続いていきます'],
-      narration: 'ステージは6つ。最後の深層領域だけ、層が続いていきます。',
+      narration: 'ステージは6つ。最後のひとつだけ、層が続きます。',
       taps: true,
     },
     title: '放置ゲーのステージを6つにして、最後だけ終わらなくした',
