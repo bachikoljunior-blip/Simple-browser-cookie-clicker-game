@@ -226,9 +226,21 @@ placed.forEach((c, i) => {
   let info = wavInfo(wav);
   let rate = base;
   const dur = () => info.samples / info.rate;
-  if (dur() > window) {
-    const ceiling = base * (CLOUD && !cloudFailed ? RATE_MAX_MUL_CLOUD : RATE_MAX_MUL_LOCAL);
-    rate = Math.min(ceiling, base * dur() / window);
+  // Fit by measuring again, not by predicting once.
+  //
+  // Cloud TTS is not deterministic: the same sentence at the same speakingRate
+  // came back 2.28s in one render and 3.07s in the next — a third longer. A
+  // single corrective pass computed from the first measurement therefore passes
+  // one day and overruns the next, and the line most likely to be clipped is the
+  // last one, which is the recruitment card the video exists to deliver.
+  //
+  // So: adjust, re-measure, repeat, with a little margin so a rounding-sized
+  // wobble does not push it back over. Bounded, because the ceiling exists to
+  // keep the result listenable and there is no rate that rescues a line that is
+  // simply too long — that one gets the warning below and a shorter script.
+  const ceiling = base * (CLOUD && !cloudFailed ? RATE_MAX_MUL_CLOUD : RATE_MAX_MUL_LOCAL);
+  for (let attempt = 0; attempt < 3 && dur() > window && rate < ceiling; attempt++) {
+    rate = Math.min(ceiling, rate * (dur() / window) * 1.04);
     synth(c.text, rate, wav);
     info = wavInfo(wav);
   }
