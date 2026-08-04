@@ -153,8 +153,12 @@ await moved();
 // Reports rather than assumes: a selector that stops matching would otherwise
 // remove the evidence from the shot without anything saying so.
 if (VARIANT.hook.spot) {
+  // Compare against true, not truthiness. A page-side exception comes back as a
+  // string, and a string is truthy — so "did it work?" answered yes for every
+  // possible failure. That is how a check reports success on a take where
+  // nothing was highlighted at all.
   const hit = await ev(sel => window.__spot(sel, 2600), VARIANT.hook.spot);
-  console.log(`  spot ${VARIANT.hook.spot}: ${hit ? 'ok' : '見つからない'}`);
+  console.log(`  spot ${VARIANT.hook.spot}: ${hit === true ? 'ok' : `失敗 (${hit})`}`);
 }
 // The hold has to leave room for the hook line to finish, not just for the
 // motion to play. Cutting it to 900ms made the tree hook overrun by 0.73s: the
