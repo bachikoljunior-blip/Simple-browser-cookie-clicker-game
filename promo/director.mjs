@@ -57,8 +57,13 @@ const hookScreen = {
     });
   },
   craft: async () => {
+    // Panel shares the frame with the play field rather than taking it over.
+    // Full-page, the game's own workshop layout puts the crafting list down the
+    // left and decorative art down the right — in portrait that is half a frame
+    // of scenery, which is a weak two and a half seconds to open on. Sharing
+    // keeps the board (and its motion) in shot above the list.
     await setPlayFullscreen(false);
-    await showTab('workshopTab', true);
+    await showTab('workshopTab', false);
     await waitForImages('workshopTab');
   },
   info: async () => {
