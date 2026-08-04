@@ -239,7 +239,7 @@ await hideRewardModal();
 mark('scene4');
 if (SHORT) {
   cues.push({ mark: 'golden', at: 0.20, text: '金のクッキーで生産が跳ねます。' });
-  cues.push({ mark: 'swarm', at: 0.20, text: 'モンスターを殴ると素材が出ます。ボスも来ます。' });
+  cues.push({ mark: 'swarm', at: 0.20, text: '殴ると素材が出ます。ボスも来ます。' });
 }
 
 await ev(() => { state.huntFocusLv = 0; });
@@ -400,7 +400,7 @@ await ev(() => window.__end(
 // Mark where the card *appears*. Marking the end of the beat put the cue past
 // the last frame — the card was on screen for 3.9s with nothing spoken over it.
 mark('cta');
-if (SHORT) cues.push({ mark: 'cta', at: 0.35, text: 'アンドロイドのテスター募集中。リンクはチャンネル概要欄に。' });
+if (SHORT) cues.push({ mark: 'cta', at: 0.10, text: 'アンドロイドのテスター募集中。リンクはチャンネル概要欄に。' });
 await shot('cta');
 // The card is the payload, so it gets room: long enough for the line to finish
 // with margin and for the terms to be read. In short mode that is a third of the
