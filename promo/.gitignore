@@ -2,6 +2,16 @@
 video/
 trim.json
 framescan/
+
+# The finished videos. Tracked at first, when they were the thing being reviewed;
+# now they are rewritten by every scheduled run, so a tracked copy only means the
+# working tree is dirty on every run and the run has to choose between committing
+# 60MB of binary nobody reads and leaving the tree unclean. They are reproducible
+# from the source in this directory, which is the part worth keeping.
+cookie_strateger_short.mp4
+cookie_strateger_short.webm
+cookie_strateger_long.mp4
+cookie_strateger_long.webm
 # Review stills written by `node director.mjs shots`.
 beat_*.png
 
