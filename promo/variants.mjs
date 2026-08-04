@@ -81,6 +81,8 @@ export const VARIANTS = [
       caption: ['所持クッキー <em>100正</em>', '= 10の<em>42</em>乗'],
       narration: 'しょうって単位、知ってます?',
       taps: true,
+      // The unit being asked about is right there in the counter.
+      spot: '#cookies',
     },
     title: '“正”って単位、知ってますか【10の42乗】',
     description: `放置クリッカーの所持数が、兆のはるか上まで来ました。`,
@@ -94,6 +96,8 @@ export const VARIANTS = [
       caption: ['<em>放置だけだと伸びない</em>放置ゲー'],
       narration: '放置だけだと伸びない放置ゲーを作りました。',
       taps: false,
+      // 「放置だけだと伸びない」の理由はノルマ。帯を指しておく。
+      spot: '#quotaBox',
     },
     title: '“ただ放置”だと伸びない放置ゲーを作った',
     description: `生産ペースにノルマがあって、遅れるとその周回はモンスターが出なくなります。置いておくだけでも増えますが、伸ばしたいなら管理が要ります。`,
