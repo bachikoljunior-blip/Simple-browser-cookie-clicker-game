@@ -1,3 +1,15 @@
+// RETIRED 2026-08-04 — do not use this to publish.
+//
+// It writes 1920x1080, and YouTube only admits square or vertical video to the
+// Shorts feed. Both videos it produced redirect /shorts/<id> to /watch: they
+// were never in the feed at all, and they have one view between them, against
+// 208 and 768 for vertical uploads from the same channel in the same days. The
+// duration was never the problem — 1m44s is inside the three-minute limit — so
+// nothing about the writing or the pacing would have rescued them.
+//
+// Kept because the staging logic here is sound and a vertical topic renderer
+// would start from it. Publishing from it is the mistake; reading it is not.
+//
 // Records one long-form explainer for クッキーストラテジャー.
 //   PROMO_TOPIC=quota node director-wide.mjs         -> video/frames at 1920x1080
 //   PROMO_TOPIC=quota node director-wide.mjs shots   -> stills, no capture

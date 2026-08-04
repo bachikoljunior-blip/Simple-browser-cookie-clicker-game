@@ -216,6 +216,27 @@ export const VARIANTS = [
     description: `ステージは6つ。最後の「深層領域」は層が続いていく作りで、深く届くほど研究の効果が強くなります。`,
     tags: TAGS,
   },
+  {
+    id: 'beyond',
+    // The one cut that has ever been distributed asked whether you know 正.
+    // Nobody can place 正, but everybody has heard 無量大数 — and almost nobody
+    // knows it is the last one. That makes the same move with a bigger handle.
+    hook: {
+      screen: 'play',
+      banner: '“無量大数”の上、あります?',
+      caption: ['日本語の数の単位は<em>17個</em>', '<em>無量大数</em>が最後です'],
+      narration: 'むりょうたいすうの上って、あると思います?',
+      taps: true,
+    },
+    // Verified by running play.html's own generateHugeUnit() rather than by
+    // counting the array: JAPANESE_NUMBER_UNITS holds 17 named units (万 through
+    // 無量大数, plus one empty entry for the ones place), 無量大数 is 10^68, and
+    // level 18 — 10^72 — comes back as 火炉, a name the game composed.
+    body: 'beyond',
+    title: '“無量大数”の上、知ってますか【放置ゲーの桁】',
+    description: `日本語の数の単位は万から無量大数までの17個で、無量大数が10の68乗です。放置クリッカーの所持数はその先まで行くので、単位の名前をゲーム側で作っています。10の72乗は「火炉」でした。`,
+    tags: TAGS,
+  },
 ];
 
 export const byId = id => VARIANTS.find(v => v.id === id);

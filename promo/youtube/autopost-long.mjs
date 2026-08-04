@@ -1,3 +1,8 @@
+// RETIRED 2026-08-04 — do not run this. It publishes 1920x1080, which cannot
+// enter the Shorts feed, and the two videos it published have one view between
+// them. See the header of director-wide.mjs. The daily second slot now renders
+// a second vertical Short through autopost.mjs instead.
+//
 // One scheduled run for the landscape explainers.
 //
 //   node autopost-long.mjs              render and upload

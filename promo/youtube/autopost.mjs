@@ -169,8 +169,13 @@ async function reportRetention(mine) {
 
 // --- render ---------------------------------------------------------------------
 function render(cut) {
-  console.log(`\nrendering cut "${cut.id}" ...`);
-  run('node', ['director.mjs'], { PROMO_VARIANT: cut.id, PROMO_LENGTH: LENGTH, PROMO_BODY: BODY });
+  // A cut may name the body it needs. Some hooks only pay off against one body:
+  // 「無量大数の上、あります?」 followed by the monster-hunting body asks a
+  // question and then changes the subject. An explicit --body still wins, so the
+  // flag can still be used to try a hook against a body it was not written for.
+  const body = bodyAt === -1 ? (cut.body || BODY) : BODY;
+  console.log(`\nrendering cut "${cut.id}" (body: ${body}) ...`);
+  run('node', ['director.mjs'], { PROMO_VARIANT: cut.id, PROMO_LENGTH: LENGTH, PROMO_BODY: body });
   run('node', ['narrate.mjs']);
   run('node', ['encode.mjs']);
   if (!fs.existsSync(MP4)) throw new Error('render finished but no mp4 was produced');

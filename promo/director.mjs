@@ -340,6 +340,51 @@ if (SHORT && BODY === 'scale') {
   await shot('big');
 }
 
+// ---- SHORT body: beyond — what the counter says once Japanese runs out.
+//
+// The only cut that has ever been distributed was 「“正”って単位、知ってますか」,
+// and what it had was a real unit almost nobody can place. This is that same
+// vein one step further along, and the step is the surprising part: 無量大数 is
+// where the standard units stop, and this game needs more of them, so it makes
+// them up. 「火炉」 is not a word — it is what the game printed when it needed a
+// name for 10^72.
+//
+// Every number here was checked by running the game's own generateHugeUnit()
+// out of play.html rather than by reading the table:
+//   JAPANESE_NUMBER_UNITS holds 17 named units, 万 through 無量大数
+//   無量大数 = 10^68   (level 17, and each level is four digits)
+//   level 18 = 10^72 -> 火炉
+// The captions say only those three things. What the game does past 10^72 is a
+// larger claim and is left to the description.
+if (SHORT && BODY === 'beyond') {
+  await flash();
+  await top(null);
+  await toPlayScreen();
+  await setPlayFullscreen(true);
+  await grant('1e68');
+  await cap(['<em>無量大数</em> ＝ 10の<em>68</em>乗', '日本語の単位はここで終わり']);
+  mark('top');
+  cues.push({ mark: 'top', at: 0.20, text: 'むりょうたいすう。日本語の単位はここで終わりです。' });
+  await tapBurst('#cookie', 4, 280);
+  await wait(1000);
+  await shot('top');
+
+  await flash('stamp');
+  await grant('1e72');
+  await setPlayFullscreen(true);
+  await cap(['この先は<em>単位が無い</em>ので', 'ゲームが<em>作ってます</em>']);
+  mark('made');
+  cues.push({ mark: 'made', at: 0.25, text: 'この先は単位が無いので、ゲームが作っています。' });
+  // No ring on #cookies. The invented name is small and easy to miss, which is
+  // the case the ring was built for — but #cookies spans the full width, and a
+  // box that wide reads as a frame rather than a pointer. That was the finding
+  // from idle-trap, and it does not stop applying because this cut would like it
+  // to. If the name turns out to be unreadable in the frames, the fix is a
+  // caption that quotes it, not a ring around the whole counter.
+  await wait(2600);
+  await shot('made');
+}
+
 
 if (!SHORT) {
 // =============================================================== SCENE 5 — 工房
