@@ -283,6 +283,11 @@ await ev(() => { state.huntFocusLv = 0; });
 // is worth a body of its own rather than only a hook.
 if (SHORT && BODY === 'scale') {
   await flash();
+  // Clear the hook's banner. The hunt body does this; leaving it up put
+  // 「転生で消えないもの」 above 「スタートはクッキー25枚」 — two unrelated claims
+  // stacked on one frame, which only showed up when the frames were actually
+  // looked at rather than measured.
+  await top(null);
   await toPlayScreen();
   await setPlayFullscreen(true);
   await setFresh();
