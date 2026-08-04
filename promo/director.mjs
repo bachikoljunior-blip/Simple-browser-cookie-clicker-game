@@ -402,7 +402,11 @@ await ev(() => window.__end(
 mark('cta');
 if (SHORT) cues.push({ mark: 'cta', at: 0.35, text: 'アンドロイドのテスター募集中。リンクはチャンネル概要欄に。' });
 await shot('cta');
-await wait(3900);   // a beat after the last word, so the loop does not cut it off
+// The card is the payload, so it gets room: long enough for the line to finish
+// with margin and for the terms to be read. In short mode that is a third of the
+// runtime, which is the right proportion when the other two thirds exist to earn
+// it. At 3900ms the closing line overran the last frame by 0.13s.
+await wait(SHORT ? 4700 : 3900);
 mark('scene9 / total');
 
 await finish({ variant: VARIANT.id, ...(SHORT ? { narration: cues } : {}) });
