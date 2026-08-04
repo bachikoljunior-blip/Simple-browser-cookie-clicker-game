@@ -369,6 +369,36 @@ export async function videoSources(videoId, days = 28) {
   return (r.rows || []).map(row => Object.fromEntries(cols.map((c, i) => [c, row[i]])));
 }
 
+/**
+ * How stale Analytics actually is, measured rather than assumed.
+ *
+ * Every run of this project has repeated "約2日遅れ" as if it were a property of
+ * the API. On 2026-08-04 the whole record was a single day — 2026-07-31 — while
+ * realtime counts showed two videos published since with 768 and 2 views. The
+ * lag was at least four days, so a plan that said "read the retention curve
+ * tomorrow" was planning against a number that would not exist.
+ *
+ * Returns the newest day Analytics will admit to and how far behind that is, or
+ * `{ latest: null }` when it holds nothing at all. Days come back in the
+ * channel's Analytics timezone (Pacific), not JST — close enough to answer "can
+ * I decide on this today", which is the only question being asked.
+ */
+export async function analyticsLag(lookbackDays = 45) {
+  const end = new Date();
+  const start = new Date(end.getTime() - lookbackDays * 86400_000);
+  const q = new URLSearchParams({
+    ids: 'channel==MINE',
+    startDate: ymd(start), endDate: ymd(end),
+    metrics: 'views', dimensions: 'day', sort: 'day',
+  });
+  const r = await api(`${ANALYTICS_API}?${q}`);
+  const rows = r.rows || [];
+  if (!rows.length) return { latest: null, days: null, rows: [] };
+  const latest = rows[rows.length - 1][0];
+  const days = Math.round((Date.now() - Date.parse(latest + 'T00:00:00Z')) / 86400_000);
+  return { latest, days, rows };
+}
+
 /** Per-video performance over the last `days`, most viewed first. */
 export async function videoStats(days = 28) {
   const end = new Date();
@@ -665,6 +695,19 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.log(manage
         ? '  → 既存動画の編集・再生リスト・固定コメントも可能'
         : '  → 投稿とサムネイルのみ。既存動画の説明欄は編集できない（SETUP.md の「スコープを広げる」）');
+    } else if (cmd === 'lag') {
+      const l = await analyticsLag(Number(rest[0]) || 45);
+      if (!l.latest) {
+        console.log('Analytics にデータが1日もありません。');
+        console.log('  → 視聴率・維持率・流入は使えない。判断は snapshot.mjs の実測再生数で行うこと。');
+      } else {
+        console.log(`Analytics の最新日: ${l.latest}（太平洋時間）— ${l.days}日前`);
+        l.rows.slice(-7).forEach(([d, v]) => console.log(`  ${d}  ${v}回`));
+        if (l.days >= 3) {
+          console.log(`\n  ※ ${l.days}日遅れています。「明日 retention を読む」類の計画は成立しません。`);
+          console.log('     判断は snapshot.mjs の実測再生数で行うこと。');
+        }
+      }
     } else if (cmd === 'stats') {
       console.log(JSON.stringify(await videoStats(Number(rest[0]) || 28), null, 2));
     } else if (cmd === 'hours') {
@@ -677,7 +720,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
           `視聴率 ${r.avgViewPercent === null ? '  —  ' : r.avgViewPercent + '%'}  (${r.n}本)`);
         r.titles.forEach(t => console.log(`         ${t.slice(0, 40)}`));
       });
-      console.log('  ※ 再生数は即時（Data API）、視聴率は約2日遅れ（Analytics）です');
+      console.log('  ※ 再生数は即時（Data API）。視聴率は Analytics で、遅れの実測は ' +
+        '`yt.mjs lag`（2026-08-04 時点で3日）');
       if (rows.length && rows.every(r => r.n < 3)) {
         console.log('  ※ 各時間帯の本数が少なく、差は偶然の範囲です');
       }
@@ -782,7 +826,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       const r = await upload(file, JSON.parse(fs.readFileSync(metaFile, 'utf8')));
       console.log(`uploaded ${r.privacy}: ${r.url}`);
     } else {
-      console.log('usage: yt.mjs check | stats [days] | hours [days] | ' +
+      console.log('usage: yt.mjs check | lag [days] | stats [days] | hours [days] | ' +
+        'sources [videoId] | linkcheck [videoId] | backfill | ' +
         'retention <videoId> | upload <file.mp4> <meta.json>');
     }
   } catch (e) {
