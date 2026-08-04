@@ -254,10 +254,14 @@ async function noteAboutText(links) {
   try {
     const text = await about();
     if (!text.includes(links.groupUrl)) {
-      console.log('\nnote: the tester group link is not in the channel About text.');
-      console.log('      It may still be set in the channel links section, which the');
-      console.log('      API does not return — this is not conclusive either way.');
-      console.log('      The video carries the link in its own description regardless.');
+      // Confirmed on 2026-08-04 by a human actually looking at the channel page:
+      // the link IS there, in the links section. The API only ever returns the
+      // About body, so this check cannot see it and will say this every run.
+      // Kept because it would still catch the link being removed from the body
+      // if it were ever put there — but it is not a reason to stop.
+      console.log('\nnote: 概要欄の本文にテスターグループのリンクはありません（既知）。');
+      console.log('      リンク欄には在ることを 2026-08-04 に目視で確認済み。API は');
+      console.log('      本文しか返さないので、この行は毎回出ます。投稿を止めないこと。');
     }
   } catch (e) {
     console.log(`could not read the channel About: ${e.message.split('\n')[0]}`);
