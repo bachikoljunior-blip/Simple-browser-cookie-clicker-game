@@ -63,8 +63,13 @@ window.__promoInstall = function () {
   #rewardModal{display:none !important}
 
   /* --- end card --- */
+  /* Translucent, not solid. The card is a third of a short video's runtime, and
+     opaque it made that third completely motionless — the worst possible place
+     for a viewer to decide they are done, and a hard cut back to the hook when
+     the Short loops. The terms still have to be readable, so this is judged by
+     looking at the frame, not by reasoning about the number. */
   #pfxEnd{position:absolute;inset:0;opacity:0;transition:opacity .35s ease;
-    background:#120a05;
+    background:rgba(18,10,5,.82);
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3.241vw;
     padding:var(--uiTop) var(--uiRight) var(--uiBottom) 6%}
   #pfxEnd.on{opacity:1}
