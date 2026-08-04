@@ -140,6 +140,42 @@ export const VARIANTS = [
     description: `研究を買うと生産の計算式が変わります。今どの倍率がいくつ乗っているのかは、すべて一覧画面で確認できます。`,
     tags: TAGS,
   },
+  // Added 2026-08-04. The six cuts above were nearly exhausted — five were live
+  // or scheduled — and once the picker runs out of untried angles it starts
+  // repeating them, which is a re-upload. Throughput is bounded by how many
+  // distinct openings exist, so this is where it gets raised.
+  //
+  // Both claims below were checked in play.html itself, not in its comments:
+  // the prestige reset copies s.materials / s.equipment / s.skills across from
+  // the current save, and materials never change hands for cookies (they are a
+  // separate currency by design). Note what is NOT said — "materials only come
+  // from monsters" is false, because the order board grants them too.
+  {
+    id: 'keep',
+    hook: {
+      screen: 'craft',
+      banner: '転生で消えないもの',
+      caption: ['生産はリセットされます', 'でも<em>装備と素材は残る</em>'],
+      narration: '転生すると生産は消えますが、装備と素材は残ります。',
+      taps: false,
+    },
+    title: '転生しても消えないものを作った放置ゲー',
+    description: `転生すると生産まわりはリセットされますが、集めた素材と作った装備、スキルツリーは持ち越します。周回のたびに集め直しになると二周目で飽きるので、捨てるものと残すものを分けています。`,
+    tags: TAGS,
+  },
+  {
+    id: 'nobuy',
+    hook: {
+      screen: 'craft',
+      banner: 'クッキーで買えないもの',
+      caption: ['クッキーがいくらあっても', '<em>素材は買えません</em>'],
+      narration: 'クッキーがいくらあっても、素材は買えません。',
+      taps: false,
+    },
+    title: 'クッキーが何十桁あっても買えないものがある放置ゲー',
+    description: `素材はクッキーで買えず、クッキーに変換することもできない別勘定の資源です。だから数字がいくら伸びても、装備を進めたいなら盤面に出ることになります。`,
+    tags: TAGS,
+  },
 ];
 
 export const byId = id => VARIANTS.find(v => v.id === id);

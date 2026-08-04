@@ -15,6 +15,10 @@
 // explanation actually reads, and it gives the narration room to be a sentence
 // instead of a slogan.
 //
+// 素材の入手先を「モンスターだけ」と書かないこと。gainMaterial は注文報酬からも
+// 呼ばれる（play.html の注文報酬ブロック）。正しく言えるのは「クッキーでは買えない・
+// クッキーに変換できない」ほうで、これは 6747 行の設計コメントと実装の両方で裏が取れる。
+//
 // Numbers quoted in captions are checked against the game, not remembered:
 // SKILLS.length is 71, equip2Items is 486, 正 is the tenth unit above 万 so 100正
 // is 10^42. Anything that cannot be checked does not go in — and neither does
@@ -77,7 +81,7 @@ export const TOPICS = [
         run: async s => { await s.setMaterials(); await s.showTab('workshopTab', true); await s.waitForImages('workshopTab'); },
         lines: [
           { hold: 7500, caption: ['素材が止まる ＝ <em>装備が作れない</em>'],
-            narration: 'ただ、素材が止まると装備が作れません。装備はモンスターから落ちた素材だけで作るので、代わりの入手先がないんです。' },
+            narration: 'ただ、素材が止まると装備が作れません。素材はクッキーでは買えないので、増やしたいなら盤面に出るのが基本になります。' },
           { hold: 7500, caption: ['装備が作れない → <em>次の周回が遅くなる</em>'],
             narration: '装備が揃わないと次の周回が遅くなり、その周回のノルマにも間に合いにくくなります。遅れが後ろに残る形にしてあります。' },
         ] },
@@ -146,7 +150,7 @@ export const TOPICS = [
           { hold: 7000, caption: ['素材 → <em>装備486種類</em>'],
             narration: '集めた素材から装備を作ります。レシピは486種類あります。クリッカーの数としては多いほうだと思います。' },
           { hold: 7500, caption: ['素材の<em>入手先はモンスターだけ</em>'],
-            narration: '素材の入手先はモンスターだけです。買うこともできません。だから討伐を飛ばすと装備が止まります。' },
+            narration: '素材はクッキーで買えません。クッキーに変換することもできない別勘定なので、討伐を飛ばすと装備が止まります。' },
         ] },
       { id: 'loop',
         run: async s => { await s.autoScroll('workshopTab', { by: 1 }, 2800); },
@@ -309,7 +313,7 @@ export const TOPICS = [
         run: async s => { await s.ev(() => { try { showMonster('swarm'); } catch (e) {} state.huntFocusLv = 20; }); await s.hitMonsters(10, 240); },
         lines: [
           { hold: 7000, caption: ['素材は<em>討伐</em>から'],
-            narration: '素材はモンスターから落ちます。買うことはできません。' },
+            narration: '素材はモンスターから落ちます。クッキーで買うことはできません。' },
           { hold: 7500, caption: ['買えないので<em>戦うしかない</em>'],
             narration: 'クッキーがいくらあっても素材は増えないので、装備を進めたいなら盤面に出て戦うことになります。' },
         ] },
