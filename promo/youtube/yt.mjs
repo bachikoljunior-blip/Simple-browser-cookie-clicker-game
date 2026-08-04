@@ -357,19 +357,51 @@ export async function videoStats(days = 28) {
  * see how thin the ground is.
  */
 export async function byHour(days = 90, tzOffsetHours = 9) {
-  const stats = await videoStats(days);
+  // Views come from the Data API, not Analytics. Analytics runs about two days
+  // behind, so on a channel posting daily the newest videos — the ones a decision
+  // is actually about — are absent from it. On 2026-08-03 that gap produced a
+  // real mistake: `check` reported "1 video with data, 208 views" while the video
+  // published that morning was already past 700, and the day's plan was built on
+  // the wrong number. Retention still has to come from Analytics and still lags;
+  // view counts do not have to.
+  const all = await channelVideos();
+  // A scheduled video carries its *upload* time as publishedAt and, of course,
+  // no views. Left in, it lands on the hour it was rendered and reads as that
+  // hour performing at zero — the table would argue against the very slot the
+  // video is waiting to be published into. Only what is actually public counts.
+  let live = new Set(all.map(v => v.id));
+  try {
+    const st = await api(`${DATA_API}/videos?part=status&id=${all.map(v => v.id).join(',')}`);
+    live = new Set((st.items || []).filter(i => i.status.privacyStatus === 'public'
+      && !i.status.publishAt).map(i => i.id));
+  } catch { /* if status is unreadable, better to show everything than nothing */ }
+  const videos = all.filter(v => live.has(v.id));
+  let keep = {};
+  try {
+    keep = Object.fromEntries((await videoStats(days))
+      .filter(s => s.avgViewPercent != null).map(s => [s.id, s.avgViewPercent]));
+  } catch { /* retention is a bonus here, not the point */ }
+
+  const cutoff = Date.now() - days * 86400_000;
   const hours = {};
-  for (const v of stats) {
-    if (!v.publishedAt) continue;
+  for (const v of videos) {
+    if (!v.publishedAt || Date.parse(v.publishedAt) < cutoff) continue;
     const h = new Date(Date.parse(v.publishedAt) + tzOffsetHours * 3600_000).getUTCHours();
-    (hours[h] ||= []).push(v);
+    (hours[h] ||= []).push({ ...v, avgViewPercent: keep[v.id] ?? null });
   }
-  return Object.entries(hours).map(([h, rows]) => ({
-    hour: Number(h),
-    n: rows.length,
-    views: Math.round(rows.reduce((a, r) => a + r.views, 0) / rows.length),
-    avgViewPercent: Math.round(rows.reduce((a, r) => a + r.avgViewPercent, 0) / rows.length * 10) / 10,
-  })).sort((a, b) => b.views - a.views);
+  return Object.entries(hours).map(([h, rows]) => {
+    const scored = rows.filter(r => r.avgViewPercent !== null);
+    return {
+      hour: Number(h),
+      n: rows.length,
+      views: Math.round(rows.reduce((a, r) => a + (r.views || 0), 0) / rows.length),
+      best: Math.max(...rows.map(r => r.views || 0)),
+      avgViewPercent: scored.length
+        ? Math.round(scored.reduce((a, r) => a + r.avgViewPercent, 0) / scored.length * 10) / 10
+        : null,
+      titles: rows.map(r => r.title),
+    };
+  }).sort((a, b) => b.views - a.views);
 }
 
 /**
@@ -582,9 +614,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     } else if (cmd === 'hours') {
       const rows = await byHour(Number(rest[0]) || 90);
       if (!rows.length) console.log('公開時刻ごとのデータがまだありません');
-      rows.forEach(r => console.log(
-        `  ${String(r.hour).padStart(2, '0')}時台  平均 ${String(r.views).padStart(5)}回  ` +
-        `視聴率 ${r.avgViewPercent}%  (${r.n}本)`));
+      rows.forEach(r => {
+        console.log(
+          `  ${String(r.hour).padStart(2, '0')}時台  平均 ${String(r.views).padStart(5)}回  ` +
+          `最良 ${String(r.best).padStart(5)}回  ` +
+          `視聴率 ${r.avgViewPercent === null ? '  —  ' : r.avgViewPercent + '%'}  (${r.n}本)`);
+        r.titles.forEach(t => console.log(`         ${t.slice(0, 40)}`));
+      });
+      console.log('  ※ 再生数は即時（Data API）、視聴率は約2日遅れ（Analytics）です');
       if (rows.length && rows.every(r => r.n < 3)) {
         console.log('  ※ 各時間帯の本数が少なく、差は偶然の範囲です');
       }
