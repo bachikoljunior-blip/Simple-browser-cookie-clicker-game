@@ -158,6 +158,16 @@ await wait(VARIANT.hook.screen === 'play' || VARIANT.hook.screen === 'quota' ? 1
 if (SHORT) {
   await flash();
   await cap([]);
+  // Put the caption layer back on the main host first.
+  //
+  // The tree hook opens the skill view fullscreen and moves the overlay inside
+  // it (nothing outside a fullscreen element renders). Leaving that view without
+  // re-mounting leaves every later caption drawing into a host that is no longer
+  // shown — the body played for eight seconds with no text on it at all, and
+  // nothing in the numbers said so: duration, resolution, audio and the opening
+  // frame were all fine. Scene 2 of the full sequence does this for the same
+  // reason; the short path had not copied it.
+  await ev(() => { try { closeSkillChoiceScreen(); } catch (e) {} window.__mount(); });
   await setMidGame();
   await toPlayScreen();
   await setPlayFullscreen(true);
