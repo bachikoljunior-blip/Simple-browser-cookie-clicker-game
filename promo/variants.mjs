@@ -201,6 +201,10 @@ export const VARIANTS = [
       caption: ['最後のひとつだけ', '<em>層</em>が続いていきます'],
       narration: 'ステージは6つ。最後のひとつだけ、層が続きます。',
       taps: true,
+      // The claim's evidence is the layer counter, which the game draws small at
+      // the right end of the quota bar. Ring it so the sentence and the screen
+      // are pointing at the same thing.
+      spot: '.quotaStageBadge',
     },
     title: '放置ゲーのステージを6つにして、最後だけ終わらなくした',
     description: `ステージは6つ。最後の「深層領域」は層が続いていく作りで、深く届くほど研究の効果が強くなります。`,

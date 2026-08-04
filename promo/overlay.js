@@ -68,6 +68,16 @@ window.__promoInstall = function () {
      for a viewer to decide they are done, and a hard cut back to the hook when
      the Short loops. The terms still have to be readable, so this is judged by
      looking at the frame, not by reasoning about the number. */
+  /* Ring drawn around a live element, so a claim can point at the thing that
+     backs it. The game states plenty in small type at the edge of the HUD — the
+     layer counter, the multipliers — and a caption asserting a number while the
+     number sits unnoticed in a corner is true but not persuasive. */
+  .pfxSpot{position:absolute;border:0.65vw solid #ffd75e;border-radius:2.2vw;
+    box-shadow:0 0 0 0.55vw rgba(0,0,0,.45),0 0 3.5vw rgba(255,215,94,.75);
+    animation:pfxSpotIn .28s ease-out, pfxSpotPulse 1.15s ease-in-out .28s infinite;
+    pointer-events:none}
+  @keyframes pfxSpotIn{from{transform:scale(1.5);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes pfxSpotPulse{0%,100%{opacity:1}50%{opacity:.55}}
   #pfxEnd{position:absolute;inset:0;opacity:0;transition:opacity .35s ease;
     background:rgba(18,10,5,.82);
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3.241vw;
@@ -150,6 +160,29 @@ window.__promoInstall = function () {
 
   // The skill-tree view calls requestFullscreen(), and nothing outside the
   // fullscreen element renders — so the overlay has to move inside it.
+  /**
+   * Ring a live element for `ms`. Returns false when the selector matches
+   * nothing, so the caller can tell "highlighted" from "silently did nothing" —
+   * the game's HUD is rebuilt on a lot of state changes and a stale selector
+   * would otherwise fail invisibly.
+   */
+  window.__spot = (sel, ms) => {
+    const el = document.querySelector(sel);
+    if (!el) return false;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return false;
+    const pad = Math.max(6, r.height * 0.35);
+    const d = document.createElement('div');
+    d.className = 'pfxSpot';
+    d.style.left = (r.left - pad) + 'px';
+    d.style.top = (r.top - pad) + 'px';
+    d.style.width = (r.width + pad * 2) + 'px';
+    d.style.height = (r.height + pad * 2) + 'px';
+    $$('pfxRoot').appendChild(d);
+    setTimeout(() => d.remove(), ms || 2400);
+    return true;
+  };
+
   window.__mount = sel => {
     const host = (sel && document.querySelector(sel)) || document.body;
     host.appendChild(document.getElementById('pfxRoot'));
