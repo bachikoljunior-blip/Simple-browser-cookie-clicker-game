@@ -148,10 +148,17 @@ export async function channel() {
 }
 
 /**
- * The channel's About text. Read-only on purpose: the scopes here cover reading
- * and uploading, not editing the channel, so this can be checked but not fixed
- * from code — which is exactly why the video points at its own description
- * instead.
+ * The channel's About text.
+ *
+ * This used to say the channel could not be edited from here, which was true
+ * under upload-only scopes and stopped being true the moment `youtube.force-ssl`
+ * was added — `channels.update` returns 200 now. A comment describing a limit
+ * that has lifted is worse than no comment: it stops the next run from trying.
+ *
+ * Editing it is still a decision, not a routine: this text is hand-written by
+ * the channel owner. What belongs here is fixing seams the videos create — the
+ * CTA points people at this page, so a pointer on this page that sends them
+ * somewhere useless is ours to repair. Rewriting their copy is not.
  */
 export async function about() {
   const r = await api(`${DATA_API}/channels?part=snippet,brandingSettings&mine=true`);
