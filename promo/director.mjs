@@ -372,9 +372,14 @@ if (SHORT && BODY === 'beyond') {
   await flash('stamp');
   await grant('1e72');
   await setPlayFullscreen(true);
-  await cap(['この先は<em>単位が無い</em>ので', 'ゲームが<em>作ってます</em>']);
+  // The caption quotes 火炉 rather than pointing at it. The counter is the proof
+  // and it renders at 2% from the top — inside the band YouTube draws its own
+  // chrome over — so a viewer may never see it, and the payoff of the whole cut
+  // would be the one thing on screen that got covered. Saying the name in the
+  // caption costs a line and makes the claim survive the crop.
+  await cap(['10の<em>72</em>乗の単位は', 'ゲームが<em>作ります</em>', '＝ <em>火炉</em>']);
   mark('made');
-  cues.push({ mark: 'made', at: 0.25, text: 'この先は単位が無いので、ゲームが作っています。' });
+  cues.push({ mark: 'made', at: 0.25, text: '10の72乗の単位は、ゲームが作ります。かろ、でした。' });
   // No ring on #cookies. The invented name is small and easy to miss, which is
   // the case the ring was built for — but #cookies spans the full width, and a
   // box that wide reads as a frame rather than a pointer. That was the finding

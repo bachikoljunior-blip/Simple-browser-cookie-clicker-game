@@ -233,8 +233,12 @@ export const VARIANTS = [
     // 無量大数, plus one empty entry for the ones place), 無量大数 is 10^68, and
     // level 18 — 10^72 — comes back as 火炉, a name the game composed.
     body: 'beyond',
-    title: '“無量大数”の上、知ってますか【放置ゲーの桁】',
-    description: `日本語の数の単位は万から無量大数までの17個で、無量大数が10の68乗です。放置クリッカーの所持数はその先まで行くので、単位の名前をゲーム側で作っています。10の72乗は「火炉」でした。`,
+    // Mirrors the one title that has been distributed —— 「“正”って単位、知って
+    // ますか【10の42乗】」 —— down to the concrete exponent in the brackets. If
+    // the hook form is what carried it, this is the closest thing to a repeat;
+    // if it is not, keeping everything else the same is what makes that visible.
+    title: '“無量大数”の上、知ってますか【10の68乗】',
+    description: `日本語の数の単位は万から無量大数までの17個で、無量大数が10の68乗です。放置クリッカーの所持数はその先まで行くので、単位の名前をゲーム側で組み立てています。10の72乗は「火炉」でした。華厳経に出てくる無辺・不可説不可説転などの大数も、本来の桁の位置にだけ入るようにしてあります。`,
     tags: TAGS,
   },
 ];
