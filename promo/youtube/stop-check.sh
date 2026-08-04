@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# RETIRED 2026-08-04 — not wired to anything, and the behaviour it enforced is
+# gone. This blocked the Stop event to ask whether ending was really best, back
+# when the mandate said to ask that every single turn. The mandate now says the
+# opposite: one run a day, three steps, then stop. Ending is allowed.
+#
+# It was never registered in .claude/settings.json, so removing it changes
+# nothing at runtime. Kept only so that a future reader who finds it does not
+# wire it back up.
 # Asks, at the moment of stopping, whether stopping is the best move.
 #
 # The instruction to ask that lives in CLAUDE.md, and instructions fade — that is
