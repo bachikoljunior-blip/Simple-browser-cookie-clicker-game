@@ -332,6 +332,36 @@ export async function descriptionLinksLive(videoId) {
   };
 }
 
+/**
+ * Where one video's views came from.
+ *
+ * The channel-level breakdown says 98% of everything arrives from the Shorts
+ * feed, but that is dominated by the one video that worked. Per video it answers
+ * a different and sharper question: did this one reach the feed at all? A Short
+ * whose handful of views came from the channel page was never put in front of
+ * anyone, and no amount of hook or title work would have changed that — the
+ * thing to fix is upstream. A Short that did reach the feed and still went
+ * nowhere is the opposite case, and is worth rewriting.
+ *
+ * Impressions would settle it outright, but the API does not expose them
+ * (`metrics=impressions` is rejected), so this is the closest available.
+ */
+export async function videoSources(videoId, days = 28) {
+  const end = new Date();
+  const start = new Date(end.getTime() - days * 86400_000);
+  const q = new URLSearchParams({
+    ids: 'channel==MINE',
+    startDate: ymd(start), endDate: ymd(end),
+    metrics: 'views,estimatedMinutesWatched',
+    dimensions: 'insightTrafficSourceType',
+    filters: `video==${videoId}`,
+    sort: '-views',
+  });
+  const r = await api(`${ANALYTICS_API}?${q}`);
+  const cols = (r.columnHeaders || []).map(h => h.name);
+  return (r.rows || []).map(row => Object.fromEntries(cols.map((c, i) => [c, row[i]])));
+}
+
 /** Per-video performance over the last `days`, most viewed first. */
 export async function videoStats(days = 28) {
   const end = new Date();
@@ -692,8 +722,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         console.log(`  ${v.id}  説明欄を追加  ${v.title}`);
       }
     } else if (cmd === 'sources') {
-      const days = Number(rest[0]) || 28;
-      const rows = await trafficSources(days);
+      // `sources <videoId>` narrows to one video — see videoSources().
+      const vid = rest.find(a => a && !/^\d+$/.test(a));
+      const days = Number(rest.find(a => /^\d+$/.test(a))) || 28;
+      const rows = vid ? await videoSources(vid, days) : await trafficSources(days);
+      if (vid) console.log(`video ${vid}:`);
       if (!rows.length) { console.log('流入のデータがまだありません'); }
       const total = rows.reduce((a, r) => a + r.views, 0) || 1;
       // Plain-language names: the raw enum reads like a database column, and the
