@@ -52,5 +52,47 @@ const fmt = t => t.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '
 console.log(`${fmt(first)} → ${fmt(last)}  応答${n}回`);
 for (const [k, v] of Object.entries(tot)) console.log(`  ${k.padEnd(11)} ${v.toLocaleString().padStart(12)}`);
 console.log(`\n  キャッシュ読込 / 出力 = ${(tot.cacheRead / (tot.out || 1)).toFixed(0)}倍`);
-console.log('  ※ ドル換算はしない。2026-08-05 に公開API価格で換算して桁を外した（下記）。');
-console.log('     実際の消費はユーザーのプラン残量でしか分からない。聞けたら日誌に記録すること。');
+
+// --- 予算に対する位置 -----------------------------------------------------------
+// The budget is denominated in a share of the user's weekly plan allowance, and
+// on 2026-08-05 they supplied a provisional conversion — 1% = 47M tokens — which
+// is the first figure here that can be checked against something. It is written
+// to budget.json rather than into this file so the next run reads a number
+// instead of remembering one: the remaining share moves every conversation, and
+// a container rebuild takes memory with it.
+//
+// Still no dollars. Percent of plan is the unit the instruction is written in;
+// dollars is the unit that was guessed at and came out wrong by an unknown
+// factor.
+const bPath = new URL('./budget.json', import.meta.url);
+let b = null;
+try { b = JSON.parse(readFileSync(bPath, 'utf8')); } catch {}
+if (b) {
+  const since = new Date(b.since);
+  const s = { in: 0, out: 0, cw: 0, cr: 0 };
+  for (const f of readdirSync(dir).filter(f => f.endsWith('.jsonl'))) {
+    for (const line of readFileSync(path.join(dir, f), 'utf8').split('\n')) {
+      if (!line) continue;
+      let d; try { d = JSON.parse(line); } catch { continue; }
+      const u = d.message?.usage;
+      if (!u || !d.timestamp || new Date(d.timestamp) < since) continue;
+      s.in += u.input_tokens || 0; s.out += u.output_tokens || 0;
+      s.cw += u.cache_creation_input_tokens || 0; s.cr += u.cache_read_input_tokens || 0;
+    }
+  }
+  // Cache reads are counted. They are 300-400x the output tokens here, so a
+  // total that leaves them out would say almost nothing was spent.
+  const used = s.in + s.out + s.cw + s.cr;
+  const cap = b.limitPct * b.tokensPerPct;
+  const pct = used / b.tokensPerPct;
+  const left = Math.max(0, cap - used);
+  console.log(`\n── 予算 ${b.limitPct}% (${b.sinceLabel} から) ──`);
+  console.log(`  使った   ${used.toLocaleString().padStart(13)} tok = ${pct.toFixed(2)}%`);
+  console.log(`  残り     ${left.toLocaleString().padStart(13)} tok = ${(b.limitPct - pct).toFixed(2)}%  (${(100 * used / cap).toFixed(0)}% 消化)`);
+  if (b.tokensPerPctProvisional) {
+    console.log(`  ※ 1% = ${(b.tokensPerPct / 1e6)}M はユーザーの暫定値。実測が出たら budget.json を直すこと。`);
+  }
+  if (used >= cap) console.log('  ※ 超過。畳んで終わること。');
+} else {
+  console.log('  ※ budget.json が読めないので残量は出せない。ドル換算はしないこと。');
+}

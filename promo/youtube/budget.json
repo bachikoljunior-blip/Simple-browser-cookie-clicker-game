@@ -1,0 +1,9 @@
+{
+  "since": "2026-08-05T10:31:00Z",
+  "sinceLabel": "2026-08-05 19:31 JST（ユーザーが「今から1.5%」と言った時点）",
+  "limitPct": 1.5,
+  "tokensPerPct": 47000000,
+  "tokensPerPctProvisional": true,
+  "weekEnds": "2026-08-08T22:00:00Z",
+  "note": "tokensPerPct はユーザーの暫定値（2026-08-05「1%はとりあえず暫定で47Mトークンとして」）。実測が出たら直すこと。週が変わったら since を土07:00に、limitPct を 30 にする。"
+}
