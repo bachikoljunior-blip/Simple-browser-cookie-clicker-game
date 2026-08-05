@@ -268,6 +268,63 @@ export const VARIANTS = [
     description: `転生に要るクッキーは周回が進むほど上がります。1回目は500万、116回目は10の131乗。その先も上がり続ける作りです。`,
     tags: TAGS,
   },
+  // Added 2026-08-05, because the eleven cuts above were all spent — every one
+  // of them live or scheduled — and reservations were down to 2.1 days. The
+  // count of distinct openings is what bounds throughput, and the view data says
+  // throughput is the binding constraint right now: seven Shorts, five in three
+  // digits, the last three consecutive ones all landing.
+  {
+    id: 'order',
+    // Every other cut says something about scale — how many nodes, how large a
+    // number, how many recipes. This one says the opposite thing, and it is the
+    // only claim in the set that contradicts what "放置ゲー" promises: there is a
+    // clock, and it does not wait. Contradiction is a stronger opening than
+    // another count would be, and the screen states the terms itself.
+    hook: {
+      screen: 'order',
+      banner: '放置ゲーなんですが',
+      caption: ['依頼に<em>制限時間</em>があります', '<em>選び直しは不可</em>'],
+      narration: '放置ゲーなんですが、制限時間のある依頼が来ます。',
+      taps: false,
+      // The countdown is the evidence and the game draws it as a thin bar in the
+      // middle of the card, which is exactly the size of thing __spot is for.
+      spot: '.orderTimeBar',
+    },
+    // Read out of play.html rather than remembered: renderOrder() prints
+    // 「依頼が1件ずつ届く。制限時間内に達成で報酬。時間切れは次へ、選び直し不可。」
+    // above the card, ORDER_DEFS holds seven kinds, v4 §19 removed the reroll,
+    // and 制限時間 = 240+4×√総プレイ秒. Note what is NOT claimed: nothing here
+    // says orders are the only way to get materials, because the monsters drop
+    // them too.
+    title: '放置ゲーに制限時間のある依頼を入れた【選び直し不可】',
+    description: `注文ボードには依頼が1件ずつ届きます。制限時間内に達成すれば報酬、時間切れならそのまま次の依頼へ。選び直しはできません。依頼は7種類で、内容は倒す・タップする・設備を増やす・ノルマを維持するなど、ふだんの遊び方に重なるものです。`,
+    tags: TAGS,
+  },
+  {
+    id: 'costs',
+    // This started out as 「研究を21種類作りました」 and the frame killed it. RESEARCH
+    // holds 21 entries, but the 研究タブ is not a list of them: it is a shop, and
+    // by late game the bought ones are gone and what remains is 熟練I/II cards,
+    // 段階2 cards and 深層踏破 — dozens of differently-named rows. Saying "21種類"
+    // over that picture is the EQUIPMENT=7 mistake again (array length read as
+    // an on-screen count), and it only surfaced because the frame was opened.
+    //
+    // What the frame does show, in one screenful, is the price column climbing
+    // 64兆 → 165兆 → 9800兆 → 7.6京 → 455京 → 1.05垓 → 4150垓. That is the same
+    // material as the cut that has travelled furthest on this channel (正/10の42乗,
+    // 744回) — Japanese magnitude units nobody can place — except here the units
+    // are attached to something the viewer is being asked to afford.
+    hook: {
+      screen: 'research',
+      banner: '研究の値段です',
+      caption: ['<em>兆 → 京 → 垓</em>', '買うほど単位が上がります'],
+      narration: '放置ゲーの研究の値段です。買うほど、単位のほうが上がっていきます。',
+      taps: false,
+    },
+    title: '放置ゲーの研究、値段が兆から垓まで上がる',
+    description: `研究を買うと生産の計算式が変わります。安いものから順に並ぶので、進めるほど値段の単位のほうが先に上がっていきます。兆、京、垓、その先も続きます。`,
+    tags: TAGS,
+  },
 ];
 
 export const byId = id => VARIANTS.find(v => v.id === id);

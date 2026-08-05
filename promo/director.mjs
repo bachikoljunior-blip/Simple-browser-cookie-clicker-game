@@ -87,6 +87,49 @@ const hookScreen = {
     });
     await page.waitForTimeout(400);
   },
+  // The order board is the one screen in the game that runs a clock. It prints
+  // its own terms — 「依頼が1件ずつ届く。制限時間内に達成で報酬。時間切れは次へ、
+  // 選び直し不可。」 — above a card with a draining 残り時間 bar, which is what
+  // makes a cut about deadlines something the frame can show rather than
+  // something the narration has to assert.
+  //
+  // The order is placed deliberately rather than left to whatever the sim rolls:
+  // createOrderSnapshot() picks at random from whatever is currently available,
+  // so an unseeded take would open on a different card every render and the
+  // caption could not name what is on screen. 討伐依頼 is chosen because its
+  // progress reads as a count of monsters, which the body then goes and shows.
+  order: async () => {
+    await setPlayFullscreen(false);
+    await ev(() => {
+      try {
+        state.activeOrder = createOrderSnapshot('monsterOrder');
+        // Mid-progress, not zero: a bar at 0% and a bar that does not exist look
+        // the same at Shorts size, and the point of the shot is that something
+        // is being counted against a clock.
+        state.activeOrder.progress = Math.max(1, Math.floor(state.activeOrder.need * 0.45));
+        state.completedOrders = 37;
+        renderOrder();
+      } catch (e) {}
+    });
+    await showTab('orderTab', true);
+    await waitForImages('orderTab');
+    // Left at native size on purpose. The card sits in the top quarter and the
+    // rest of the frame is background art, which is tempting to fix with a CSS
+    // scale — and that was tried: transform:scale(1.45) on #orderPanel overflows
+    // the viewport, so the box borders leave the frame and both ends of every
+    // line get clipped ("…制限時間内に達成で報酬" with its opening cut off, and the
+    // 7/17体 counter gone entirely). Bigger and cropped is worse than smaller and
+    // whole, because the lines are the evidence. The ring on .orderTimeBar is
+    // what carries the eye instead.
+  },
+  // The research list is 21 cards deep and the count is the claim, so this opens
+  // at the top and lets hookMotion scroll — a still frame of three cards cannot
+  // carry "21種類" on its own.
+  research: async () => {
+    await setPlayFullscreen(false);
+    await showTab('researchTab', true);
+    await waitForImages('researchTab');
+  },
   // The prestige screen states its own cost and says, in the game's words, that
   // it rises every run. Opening on run 0 is deliberate: the number that makes
   // the hook work is the first one, and setLateGame leaves the save at run 14.
@@ -161,6 +204,11 @@ const hookMotion = {
     if (f) f.scrollTo({ top: f.scrollTop + f.clientHeight * 0.35, behavior: 'smooth' });
   }),
   prestige: () => autoScroll('prestigeTab', 0.12, 1500),
+  // The order card is the whole shot and it already animates its own countdown,
+  // so scrolling would only push the evidence out of frame. Hold still and let
+  // the 残り時間 bar do the moving.
+  order: () => wait(400),
+  research: () => autoScroll('researchTab', 0.12, 1500),
 };
 // Ring first, then move. Called after the motion it only appeared 1.6s in — past
 // the window the whole hook exists to win. The point of pointing at the evidence

@@ -60,6 +60,8 @@ import('./youtube/yt.mjs').then(async m => {
   const last = new Date(q[q.length-1]);
   const days = ((last - Date.now()) / 86400000).toFixed(1);
   console.log(\`予約        : \${q.length}本、最後は \${last.toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'})}（あと\${days}日）\`);
+  console.log('              ※ 直後にアップした分は検索索引の遅れで数分間ここに出ない。');
+  console.log('                 足りないように見えても、作り直す前に videos?id=<id> で直接見ること。');
 }).catch(e => console.log('予約        : 取得できず —', String(e.message||e).slice(0,60)));
 " 2>/dev/null
 echo "───────────────────────────────────────────"
