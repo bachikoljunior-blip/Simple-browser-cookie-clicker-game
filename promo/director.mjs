@@ -127,7 +127,7 @@ await ev(() => {
 const SHORT = process.env.PROMO_LENGTH === 'short';
 const cues = [];
 
-await top(VARIANT.hook.banner);
+await top(VARIANT.hook.banner, VARIANT.hook.bannerPos);
 await cap(VARIANT.hook.caption);
 await page.waitForTimeout(350);   // let the text animate in behind the cover
 await begin();
@@ -430,9 +430,14 @@ if (SHORT && BODY === 'prestige') {
   });
   await showTab('prestigeTab', true);
   await scrollToHeading('prestigeTab', '転生');
-  await cap(['<em>116回目</em>は', '10の<em>131</em>乗']);
+  // Quote the screen, then give the value — not the other way round. The game
+  // prints 1e131 as 「1000劫火極」, using a unit name it composed itself, so a
+  // caption that only said 「10の131乗」 asserted a number the viewer cannot find
+  // anywhere in the shot. Both lines are true and now both are checkable: the
+  // first is what the screen says, the second is what it means.
+  await cap(['<em>116回目</em>は', '<em>1000劫火極</em>', '＝ 10の<em>131</em>乗']);
   mark('last');
-  cues.push({ mark: 'last', at: 0.25, text: '116回目は、10の131乗です。' });
+  cues.push({ mark: 'last', at: 0.25, text: '116回目は、10の131乗。単位の名前も変わります。' });
   await wait(2800);
   await shot('last');
 }

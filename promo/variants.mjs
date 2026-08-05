@@ -250,6 +250,10 @@ export const VARIANTS = [
     hook: {
       screen: 'prestige',
       banner: '転生1回目、いくらだと思います?',
+      // Up at the top, or it lands squarely on the line that answers the
+      // question — the game's own 「転生で所持クッキー 500万 を消費」 row, which is
+      // the whole reason this cut opens on this screen.
+      bannerPos: 'hi',
       caption: ['転生に必要なクッキー'],
       narration: '転生1回目って、クッキー何枚だと思います?',
       taps: false,
