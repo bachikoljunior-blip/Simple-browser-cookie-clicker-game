@@ -241,6 +241,29 @@ export const VARIANTS = [
     description: `日本語の数の単位は万から無量大数までの17個で、無量大数が10の68乗です。放置クリッカーの所持数はその先まで行くので、単位の名前をゲーム側で組み立てています。10の72乗は「火炉」でした。華厳経に出てくる無辺・不可説不可説転などの大数も、本来の桁の位置にだけ入るようにしてあります。`,
     tags: TAGS,
   },
+  {
+    id: 'prestige',
+    // Same shape as the one cut that has been distributed: a question whose
+    // answer the viewer cannot guess, answered by a number the screen is already
+    // showing. 転生 is the loop the whole game is built around, and its price is
+    // the one number a player meets on day one.
+    hook: {
+      screen: 'prestige',
+      banner: '転生1回目、いくらだと思います?',
+      caption: ['転生に必要なクッキー'],
+      narration: '転生1回目って、クッキー何枚だと思います?',
+      taps: false,
+    },
+    // Checked by reading play.html's PRESTIGE_COST_TABLE, not from memory: 116
+    // entries, [0] = 5,000,000 and [115] = 1e131. Past the table the cost keeps
+    // extending three digits a run (capped at 10^300), so there is no cap on the
+    // number of runs — which is why nothing here says "116回まで". Both prices
+    // are printed on the prestige screen the shot is pointing at.
+    body: 'prestige',
+    title: '転生1回目のねだん、当てられますか【放置ゲー】',
+    description: `転生に要るクッキーは周回が進むほど上がります。1回目は500万、116回目は10の131乗。その先も上がり続ける作りです。`,
+    tags: TAGS,
+  },
 ];
 
 export const byId = id => VARIANTS.find(v => v.id === id);

@@ -87,6 +87,20 @@ const hookScreen = {
     });
     await page.waitForTimeout(400);
   },
+  // The prestige screen states its own cost and says, in the game's words, that
+  // it rises every run. Opening on run 0 is deliberate: the number that makes
+  // the hook work is the first one, and setLateGame leaves the save at run 14.
+  prestige: async () => {
+    await setPlayFullscreen(false);
+    await ev(() => {
+      state.prestigeRuns = 0;
+      state.prestigeUnlockedEver = true;
+      try { renderActiveTab(); } catch (e) {}
+    });
+    await showTab('prestigeTab', true);
+    await waitForImages('prestigeTab');
+    await scrollToHeading('prestigeTab', '転生');
+  },
 };
 await (hookScreen[VARIANT.hook.screen] || hookScreen.play)();
 await page.waitForTimeout(400);
@@ -146,6 +160,7 @@ const hookMotion = {
     const f = document.querySelector('.skillMapFrame');
     if (f) f.scrollTo({ top: f.scrollTop + f.clientHeight * 0.35, behavior: 'smooth' });
   }),
+  prestige: () => autoScroll('prestigeTab', 0.12, 1500),
 };
 // Ring first, then move. Called after the motion it only appeared 1.6s in — past
 // the window the whole hook exists to win. The point of pointing at the evidence
@@ -390,6 +405,37 @@ if (SHORT && BODY === 'beyond') {
   await shot('made');
 }
 
+
+// ---- SHORT body: prestige — the same screen, a hundred runs apart.
+//
+// Verified against play.html rather than described from memory: PRESTIGE_COST_TABLE
+// holds 116 entries, [0] is 5,000,000 and [115] is 1e131, and past the table the
+// cost keeps extending three digits a run. So the claim is not "there are 116
+// runs" — there is no cap, and saying there was one would be false. The claim is
+// that the price of the first is 500万 and the price of the 116th is 10^131, and
+// both of those are printed on the screen the shot is pointing at.
+if (SHORT && BODY === 'prestige') {
+  await flash();
+  await top(null);
+  await cap(['1回目は<em>500万</em>クッキー']);
+  mark('first');
+  cues.push({ mark: 'first', at: 0.20, text: '1回目は、500万クッキー。' });
+  await wait(2200);
+  await shot('first');
+
+  await flash('stamp');
+  await ev(() => {
+    state.prestigeRuns = 115;
+    try { renderActiveTab(); } catch (e) {}
+  });
+  await showTab('prestigeTab', true);
+  await scrollToHeading('prestigeTab', '転生');
+  await cap(['<em>116回目</em>は', '10の<em>131</em>乗']);
+  mark('last');
+  cues.push({ mark: 'last', at: 0.25, text: '116回目は、10の131乗です。' });
+  await wait(2800);
+  await shot('last');
+}
 
 if (!SHORT) {
 // =============================================================== SCENE 5 — 工房
