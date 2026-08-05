@@ -25,9 +25,26 @@ file="${CLAUDE_PROJECT_DIR:-.}/CLAUDE.md"
 [ -f "$file" ] || file="CLAUDE.md"
 [ -f "$file" ] || file="$(dirname "$0")/../../CLAUDE.md"
 
+# Part 1 only, and deliberately.
+#
+# This used to inject everything from the heading to end of file — part 1 (the
+# user's instructions) and part 2 (my own working notes) together. Two problems.
+# It grows without bound as part 2 accumulates findings, and it is re-sent on
+# every single prompt, which spends the weekly budget on re-reading my own notes.
+# And it flattens the distinction the file exists to draw: instructions and
+# inferences arriving as one undifferentiated block is how my own decisions
+# started reading like rules nobody could revise.
+#
+# What must survive summarisation, a new session, and a rebuilt container is
+# part 1. Part 2 stays in CLAUDE.md and gets read while working; the pointer
+# below is enough to find it.
 body=""
 if [ -f "$file" ]; then
-  body="$(sed -n '/^# YouTube 投稿の恒久指令/,$p' "$file" 2>/dev/null || true)"
+  body="$(sed -n '/^# YouTube 投稿の恒久指令/,/^# 第2部/p' "$file" 2>/dev/null \
+          | sed '$d' || true)"
+  [ -n "$body" ] && body="$body
+（第2部「私が決めたこと」は CLAUDE.md にある。**恒久指示ではないので、
+根拠が変われば自分の判断で変えてよい**——— 指示13。作業前に読むこと。）"
 fi
 
 # jq -Rs is what makes this safe: the mandate is Japanese prose full of quotes,
