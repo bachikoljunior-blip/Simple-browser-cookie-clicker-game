@@ -64,9 +64,19 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const r = rates();
     if (!r) { console.log('(履歴が足りない。次の記録を待つ)'); }
     else {
-      console.log(`\n${r.hours}時間で 合計 +${r.totalGained} (${r.totalPerHour}/h)`);
+      // Signed, because the total genuinely goes down. YouTube audits view
+      // counts after the fact and removes ones it decides were not real: on
+      // 2026-08-05 a video dropped 768 -> 751 with nothing published in between.
+      // A hard-coded "+" printed that as "+-17", which reads as a glitch rather
+      // than as the measurement it is.
+      const sgn = n => (n >= 0 ? '+' : '') + n;
+      console.log(`\n${r.hours}時間で 合計 ${sgn(r.totalGained)} (${r.totalPerHour}/h)`);
+      if (r.totalGained < 0) {
+        console.log('  ※ 合計が減っています。YouTube の再生数の事後監査（無効な再生の取り消し）です。');
+        console.log('     成長率は投稿と無関係に負になりうるので、1回の負の値で判断を変えないこと。');
+      }
       for (const [id, p] of Object.entries(r.per)) {
-        if (p.gained) console.log(`  ${id}  ${p.views}v  +${p.gained}  ${p.perHour}/h`);
+        if (p.gained) console.log(`  ${id}  ${p.views}v  ${sgn(p.gained)}  ${p.perHour}/h`);
       }
     }
   }
