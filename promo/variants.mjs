@@ -301,6 +301,35 @@ export const VARIANTS = [
     tags: TAGS,
   },
   {
+    id: 'quest',
+    // The two videos that have travelled furthest on this channel (744 and 298)
+    // are the same move: ask something the viewer cannot guess, and answer it
+    // with a number the screen is already displaying. Both used magnitude units.
+    // This applies the form to material that is not a unit at all, which is the
+    // point -- if the form is what carries, it should carry here too, and if it
+    // only worked because 正 and 無量大数 are inherently interesting, that shows up
+    // as a miss. Either answer is worth more than a third unit cut.
+    hook: {
+      screen: 'quest',
+      banner: '次のステージ、何体だと思います?',
+      caption: ['<em>205体</em>倒すと', '次のステージが開きます'],
+      narration: '次のステージって、モンスター何体倒すと開くと思います?',
+      taps: false,
+      // The quest box is the second .orderBoardBox on the page; the first is the
+      // timed-request half, which this cut is not about.
+      spot: '.orderBoardBox:nth-of-type(2)',
+    },
+    // QUEST_KILLS_NEED = [205, 190, 250, 350, 410] in play.html, so 205 is the
+    // first stage's requirement and the counts do not simply climb -- stage 2
+    // asks for fewer. The board prints the whole sentence itself, stage names
+    // included: 「バター草原」でモンスターを 205 体討伐(0/205) → 「チョコレート火山」解放.
+    // Note what is NOT claimed: nothing about the sixth stage, whose layers do
+    // not work this way.
+    title: '次のステージ、何体倒すと開くと思いますか【放置ゲー】',
+    description: `ステージはクエストで開きます。最初は「バター草原」でモンスターを205体。次からは190体、250体、350体、410体と、まっすぐには増えません。倒した数は転生をまたいで積み上がるので、周回の途中で止まっても消えません。`,
+    tags: TAGS,
+  },
+  {
     id: 'costs',
     // This started out as 「研究を21種類作りました」 and the frame killed it. RESEARCH
     // holds 21 entries, but the 研究タブ is not a list of them: it is a shop, and

@@ -122,6 +122,37 @@ const hookScreen = {
     // whole, because the lines are the evidence. The ring on .orderTimeBar is
     // what carries the eye instead.
   },
+  // Same board as `order`, opposite half of it. renderOrder() draws the quest box
+  // under the timed request, and with no active order the timed half collapses to
+  // one waiting line — which leaves the quest sitting near the top of the frame
+  // where its number can be read. Deliberately not a second shot of the order
+  // card: two cuts back to back on the same picture is a re-upload with different
+  // words on it.
+  quest: async () => {
+    await setPlayFullscreen(false);
+    await ev(() => {
+      try {
+        // Clearing activeOrder alone does not hold: the sim spawns a
+        // replacement on the next tick (the first take came back with a fresh
+        // 0/17体 card, near-identical to the `order` cut's frame). nextOrderAt
+        // is what actually gates the spawn, so push it out — which puts the
+        // board in its genuine 「次の注文まで」 waiting state rather than hiding
+        // anything, and leaves the quest as the only thing being counted.
+        state.activeOrder = null;
+        // Inside the interval the screen itself states, not past it. A 20-minute
+        // push put 「次の注文まで 19:59」 directly above the game's own
+        // 「現在の間隔 3:05」 — a contradiction the viewer can read, in a frame
+        // whose whole job is to be checkable. 175s at 14 runs is consistent
+        // (1800 × 0.85^14 = 185s) and the take is 13 seconds long.
+        state.nextOrderAt = Date.now() + 175 * 1000;
+        state.stageUnlocked = 1;
+        state.questKills = { 1: 0 };
+        renderOrder();
+      } catch (e) {}
+    });
+    await showTab('orderTab', true);
+    await waitForImages('orderTab');
+  },
   // The research list is 21 cards deep and the count is the claim, so this opens
   // at the top and lets hookMotion scroll — a still frame of three cards cannot
   // carry "21種類" on its own.
@@ -208,6 +239,7 @@ const hookMotion = {
   // so scrolling would only push the evidence out of frame. Hold still and let
   // the 残り時間 bar do the moving.
   order: () => wait(400),
+  quest: () => wait(400),
   research: () => autoScroll('researchTab', 0.12, 1500),
 };
 // Ring first, then move. Called after the motion it only appeared 1.6s in — past
