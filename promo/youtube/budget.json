@@ -2,8 +2,9 @@
   "since": "2026-08-05T10:31:00Z",
   "sinceLabel": "2026-08-05 19:31 JST（ユーザーが「今から1.5%」と言った時点）",
   "limitPct": 1.5,
-  "tokensPerPct": 47000000,
-  "tokensPerPctProvisional": true,
+  "tokensPerPct": 37800000,
+  "tokensPerPctProvisional": false,
   "weekEnds": "2026-08-08T22:00:00Z",
-  "note": "tokensPerPct はユーザーの暫定値（2026-08-05「1%はとりあえず暫定で47Mトークンとして」）。実測が出たら直すこと。週が変わったら since を土07:00に、limitPct を 30 にする。"
+  "note": "tokensPerPct はユーザーの暫定値（2026-08-05「1%はとりあえず暫定で47Mトークンとして」）。実測が出たら直すこと。週が変わったら since を土07:00に、limitPct を 30 にする。",
+  "tokensPerPctBasis": "2026-08-06 実測: 09:00-09:21 JST の 7,564,779 tok をユーザーが 0.2% と申告 → 1% = 37.8M。それ以前の 47M はユーザーの暫定値で、20%楽観的だった。0.2% が丸めなら真値は 30M〜50M の幅にある（下振れ側を採る＝早く止まるほうに倒す）。"
 }
