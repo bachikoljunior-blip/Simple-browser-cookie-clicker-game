@@ -18,9 +18,13 @@
 // As of 2026-08-06 the two observations DO NOT AGREE -- not under raw token
 // totals, not under API-style weighting, not under any of the four models
 // tested. They are ~10x apart. That disagreement is printed rather than
-// averaged away, because an averaged number would look like knowledge. The
-// working rate is the smallest implied one: being wrong in that direction costs
-// an at-bat, being wrong the other way breaks instruction 4.
+// averaged away, because an averaged number would look like knowledge.
+//
+// And the reports themselves are not ground truth. The user said so directly:
+// 「私の実測もズレてる可能性もあります」. So there is no correct rate to find here,
+// only a range -- which is why the balance prints as a range. Acting on the
+// conservative end costs an at-bat if it is wrong; acting on the optimistic end
+// breaks instruction 4 if it is wrong, and those are not the same size.
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
@@ -113,7 +117,10 @@ if (b?.observations?.length) {
     console.log('     どちらかの申告か、窓の解釈か、「トークン数に比例する」という前提が誤り。');
     console.log('     → 保守側（いちばん小さい値）を採る。ユーザーが次の数字を出したら再検算すること。');
   }
-  rate = Math.min(...implied.map(x => x.lo));
+  rate = Math.min(...implied.map(x => x.lo));            // 保守端＝行動を決める側
+  var rateOpt = Math.max(...implied.map(x => x.hi));     // 楽観端＝幅を示す側
+  console.log('  ※ ユーザー自身が「私の実測もズレてる可能性もある」と述べている。');
+  console.log('     どれも真値ではなく申告。正解は無く、あるのは幅だけ。');
 }
 
 if (b && rate) {  const since = new Date(b.since);
@@ -137,7 +144,14 @@ if (b && rate) {  const since = new Date(b.since);
   console.log(`\n── 予算 ${b.limitPct}% (${b.sinceLabel} から) ──`);
   console.log(`  使った   ${used.toLocaleString().padStart(13)} tok = ${pct.toFixed(2)}%`);
   console.log(`  残り     ${left.toLocaleString().padStart(13)} tok = ${(b.limitPct - pct).toFixed(2)}%  (${(100 * used / cap).toFixed(0)}% 消化)`);
-  console.log(`  ※ 1% = ${(rate / 1e6).toFixed(1)}M を使用（上の材料のうち最小＝保守側）。`);
+  if (typeof rateOpt === 'number' && rateOpt > rate) {
+    const pctOpt = used / rateOpt;
+    console.log(`\n  幅で言うと: 使ったのは ${pctOpt.toFixed(2)}% 〜 ${pct.toFixed(2)}%、`
+      + ` 残りは ${(b.limitPct - pct).toFixed(2)}% 〜 ${(b.limitPct - pctOpt).toFixed(2)}%。`);
+    console.log(`  上の行は保守端（1% = ${(rate / 1e6).toFixed(1)}M）で出している。行動はこちらで決める。`);
+    console.log('  幅が広いあいだは、%を当てにせず「会話を短く畳む」ほうで効かせること');
+    console.log(`  （キャッシュ読込は出力の${(tot.cacheRead / (tot.out || 1)).toFixed(0)}倍。どのモデルでもこの向きは同じ）。`);
+  }
   if (used >= cap) console.log('  ※ 超過。畳んで終わること。');
 } else {
   console.log('  ※ budget.json が読めないので残量は出せない。ドル換算はしないこと。');
