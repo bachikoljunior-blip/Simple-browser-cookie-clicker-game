@@ -4,16 +4,23 @@
 //   node youtube/usage.mjs            since midnight JST
 //   node youtube/usage.mjs 16:00      since 16:00 JST today
 //
-// Reports tokens only, and deliberately stops there. On 2026-08-05 the same
-// numbers were multiplied by list API prices and came out at ~$58 for 69
-// minutes; the user's actual subscription meter had moved 1-2%. The token
-// counts were right and the conversion was wrong by an unknown factor, so a
-// dollar figure printed here would be a guess wearing a decimal point.
+// Still no dollars. On 2026-08-05 these same numbers were multiplied by list
+// API prices and came out at ~$58 for 69 minutes, against a subscription meter
+// that had moved 1-2%. The token counts were right; the conversion was wrong by
+// an unknown factor.
 //
-// What the counts are good for is the shape, which does not depend on the
-// conversion: on that day cache reads were 419x the output tokens, meaning
-// almost nothing was driven by how much was written and almost everything by
-// how long the conversation had grown.
+// The budget is denominated in a share of the weekly plan allowance, so what is
+// needed is tokens -> percent. Every percentage the user has ever reported is
+// kept in budget.json under `observations`, and this file re-derives the implied
+// rate from each one against the transcript rather than trusting a single
+// remembered figure.
+//
+// As of 2026-08-06 the two observations DO NOT AGREE -- not under raw token
+// totals, not under API-style weighting, not under any of the four models
+// tested. They are ~10x apart. That disagreement is printed rather than
+// averaged away, because an averaged number would look like knowledge. The
+// working rate is the smallest implied one: being wrong in that direction costs
+// an at-bat, being wrong the other way breaks instruction 4.
 import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
@@ -67,8 +74,49 @@ console.log(`\n  キャッシュ読込 / 出力 = ${(tot.cacheRead / (tot.out ||
 const bPath = new URL('./budget.json', import.meta.url);
 let b = null;
 try { b = JSON.parse(readFileSync(bPath, 'utf8')); } catch {}
-if (b) {
-  const since = new Date(b.since);
+
+// Re-derive tokens-per-percent from every figure the user has ever given, by
+// re-counting that window out of the transcript. Adding a new report means
+// editing budget.json, not this file.
+const window = (from, to) => {
+  const a = Date.parse(from), z = Date.parse(to);
+  const w = { in: 0, out: 0, cw: 0, cr: 0, n: 0 };
+  for (const f of readdirSync(dir).filter(f => f.endsWith('.jsonl')))
+    for (const line of readFileSync(path.join(dir, f), 'utf8').split('\n')) {
+      if (!line) continue;
+      let d; try { d = JSON.parse(line); } catch { continue; }
+      const u = d.message?.usage, t = Date.parse(d.timestamp || '');
+      if (!u || !(t >= a && t <= z)) continue;
+      w.in += u.input_tokens || 0; w.out += u.output_tokens || 0;
+      w.cw += u.cache_creation_input_tokens || 0; w.cr += u.cache_read_input_tokens || 0; w.n++;
+    }
+  return w;
+};
+const total = w => w.in + w.out + w.cw + w.cr;
+
+let rate = b?.tokensPerPct;
+if (b?.observations?.length) {
+  console.log('\n── 較正の材料（ユーザーが実際に言った%）──');
+  const implied = [];
+  for (const o of b.observations) {
+    const w = window(o.from, o.to);
+    const hi = total(w) / o.pctLo, lo = total(w) / o.pctHi;
+    implied.push({ o, lo, hi });
+    const r = lo === hi ? `${(lo / 1e6).toFixed(1)}M` : `${(lo / 1e6).toFixed(0)}M〜${(hi / 1e6).toFixed(0)}M`;
+    console.log(`  ${o.label}`);
+    console.log(`    応答${w.n}回 / ${total(w).toLocaleString()} tok → 1% = ${r}`);
+  }
+  // Overlap test. Two windows that describe the same meter should agree.
+  const lo = Math.max(...implied.map(x => x.lo)), hi = Math.min(...implied.map(x => x.hi));
+  if (implied.length > 1 && lo > hi) {
+    console.log('  ★ 一致しない。同じ計器を測っているなら重なるはずの範囲が重なっていない。');
+    console.log('     どちらかの申告か、窓の解釈か、「トークン数に比例する」という前提が誤り。');
+    console.log('     → 保守側（いちばん小さい値）を採る。ユーザーが次の数字を出したら再検算すること。');
+  }
+  rate = Math.min(...implied.map(x => x.lo));
+}
+
+if (b && rate) {  const since = new Date(b.since);
   const s = { in: 0, out: 0, cw: 0, cr: 0 };
   for (const f of readdirSync(dir).filter(f => f.endsWith('.jsonl'))) {
     for (const line of readFileSync(path.join(dir, f), 'utf8').split('\n')) {
@@ -83,15 +131,13 @@ if (b) {
   // Cache reads are counted. They are 300-400x the output tokens here, so a
   // total that leaves them out would say almost nothing was spent.
   const used = s.in + s.out + s.cw + s.cr;
-  const cap = b.limitPct * b.tokensPerPct;
-  const pct = used / b.tokensPerPct;
+  const cap = b.limitPct * rate;
+  const pct = used / rate;
   const left = Math.max(0, cap - used);
   console.log(`\n── 予算 ${b.limitPct}% (${b.sinceLabel} から) ──`);
   console.log(`  使った   ${used.toLocaleString().padStart(13)} tok = ${pct.toFixed(2)}%`);
   console.log(`  残り     ${left.toLocaleString().padStart(13)} tok = ${(b.limitPct - pct).toFixed(2)}%  (${(100 * used / cap).toFixed(0)}% 消化)`);
-  if (b.tokensPerPctProvisional) {
-    console.log(`  ※ 1% = ${(b.tokensPerPct / 1e6)}M はユーザーの暫定値。実測が出たら budget.json を直すこと。`);
-  }
+  console.log(`  ※ 1% = ${(rate / 1e6).toFixed(1)}M を使用（上の材料のうち最小＝保守側）。`);
   if (used >= cap) console.log('  ※ 超過。畳んで終わること。');
 } else {
   console.log('  ※ budget.json が読めないので残量は出せない。ドル換算はしないこと。');
