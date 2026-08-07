@@ -28,7 +28,7 @@ const {
   tapAt, tapEl, tapBurst, hitMonsters,
   setLateGame, setFresh, setMidGame, grant,
   showTab, setPlayFullscreen, waitForImages, toPlayScreen, hideRewardModal,
-  autoScroll, scrollToHeading, begin, finish,
+  autoScroll, scrollToHeading, showCooking, begin, finish,
 } = stage;
 if (SAFE) await ev(() => window.__safeZones());
 
@@ -121,6 +121,33 @@ const hookScreen = {
     // 7/17体 counter gone entirely). Bigger and cropped is worse than smaller and
     // whole, because the lines are the evidence. The ring on .orderTimeBar is
     // what carries the eye instead.
+  },
+  // The workshop's cooking half, which nothing had used -- `recipes` and the two
+  // craft cuts all open on the equipment list. showCooking() already exists in
+  // stage.mjs (it grants skills, opens the workshop, then clicks the dish switch
+  // by data attribute rather than by label, because the panel prints 料理 as a
+  // heading in the locked box too).
+  //
+  // showCooking() alone is not enough here: the take came back with the 作成/料理
+  // switch still on 作成 and the 装備の作成 heading in shot, under a caption saying
+  // 料理. So the switch is clicked again after the panel has finished rendering,
+  // and the heading is read back and printed -- a silent failure here is a
+  // constraint-11 violation that verify() cannot see.
+  cook: async () => {
+    await showCooking();
+    // The 作成/料理 switch is wired with the game's addTap, not a click listener,
+    // so b.click() does nothing — two takes came back with 装備の作成 still in
+    // shot under a caption saying 料理. renderWorkshop() reads state.wsSubTab
+    // (play.html:10336), so set that and re-render instead.
+    await ev(() => { try { state.wsSubTab = 'dish'; renderWorkshop(); } catch (e) {} });
+    await waitForImages('workshopTab');
+    // Read the heading back and print it. A silent failure here is a
+    // constraint-11 violation, and verify() cannot see one.
+    const head = await ev(() => {
+      const h = document.querySelector('#workshopPanel h3, #workshopPanel .sectionTitle');
+      return h ? h.textContent.trim() : '(見出しが無い)';
+    });
+    console.log(`  cook 見出し: ${head}${head.includes('料理') ? '' : '  ← 料理になっていない。投稿しないこと'}`);
   },
   // Same board as `order`, opposite half of it. renderOrder() draws the quest box
   // under the timed request, and with no active order the timed half collapses to
@@ -240,6 +267,11 @@ const hookMotion = {
   // the 残り時間 bar do the moving.
   order: () => wait(400),
   quest: () => wait(400),
+  // No scroll here, unlike the other list screens. showCooking() positions the
+  // panel on the dish section and a scroll walks straight off it into the
+  // equipment rows below — the first take opened on a wall of unnamed flasks
+  // with 作成 buttons, under a caption that said 料理.
+  cook:  () => wait(400),
   research: () => autoScroll('researchTab', 0.12, 1500),
 };
 // Ring first, then move. Called after the motion it only appeared 1.6s in — past

@@ -150,7 +150,11 @@ if (b && rate) {  const since = new Date(b.since);
       + ` 残りは ${(b.limitPct - pct).toFixed(2)}% 〜 ${(b.limitPct - pctOpt).toFixed(2)}%。`);
     console.log(`  上の行は保守端（1% = ${(rate / 1e6).toFixed(1)}M）で出している。行動はこちらで決める。`);
     console.log('  幅が広いあいだは、%を当てにせず「会話を短く畳む」ほうで効かせること');
-    console.log(`  （キャッシュ読込は出力の${(tot.cacheRead / (tot.out || 1)).toFixed(0)}倍。どのモデルでもこの向きは同じ）。`);
+    // Ratio from the budget window, not the since-midnight window: run early in
+    // a session the latter is empty and printed "0倍", which says the opposite of
+    // what the line is for.
+    const w = window(b.since, new Date().toISOString());
+    console.log(`  （キャッシュ読込は出力の${(w.cr / (w.out || 1)).toFixed(0)}倍。どのモデルでもこの向きは同じ）。`);
   }
   if (used >= cap) console.log('  ※ 超過。畳んで終わること。');
 } else {

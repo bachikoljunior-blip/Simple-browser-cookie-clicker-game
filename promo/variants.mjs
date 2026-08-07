@@ -330,6 +330,31 @@ export const VARIANTS = [
     tags: TAGS,
   },
   {
+    id: 'cook',
+    // Same shape as the two cuts in the "a clicker should not have this" family
+    // that both landed -- ボスが出てきた (175) and 装備が486種類 (165). Seven is a
+    // small number and it is deliberately not the hook: nobody is surprised by
+    // seven, they are surprised that a cookie-tapping game has a kitchen at all.
+    hook: {
+      screen: 'cook',
+      banner: 'クッキーをタップするゲームです',
+      caption: ['<em>料理</em>が作れます'],
+      narration: 'クッキーをタップするゲームで、料理が作れます。',
+      taps: false,
+    },
+    // DISHES holds 7 entries (butterCookie 〜 voidTart), read out of play.html
+    // rather than counted on screen -- the array length and the on-screen count
+    // have disagreed before. The count stays in the description because the
+    // frame shows six of the seven.
+    //
+    // The rest of the description quotes the panel's own words rather than
+    // paraphrasing: it heads the section 「料理(時限バフ・最大3品)」 and prints
+    // 効果時間 600秒 on every card.
+    title: 'クッキーをタップするゲームで料理が作れる',
+    description: `工房では装備のほかに料理も作れます。素材を使って7種類、同時に持てるのは3品まで、効果時間は600秒です。全生産アップ、金クッキーが出やすくなる、モンスターが出やすくなるなど、狙いに合わせて選ぶ作りにしています。`,
+    tags: TAGS,
+  },
+  {
     id: 'costs',
     // This started out as 「研究を21種類作りました」 and the frame killed it. RESEARCH
     // holds 21 entries, but the 研究タブ is not a list of them: it is a shop, and
