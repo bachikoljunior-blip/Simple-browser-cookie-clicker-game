@@ -1,6 +1,18 @@
 #!/usr/bin/env node
 // Token usage for this session, read out of Claude Code's own transcript.
 //
+// *** 2026-08-08: これは使用量の測定ではない。 ***
+// オーナーが名指しで「なんの当てにもならない」と明言した。**残量を根拠に何かを
+// 決めるとき、この数字を使わないこと。** 予算判断に使うと必ず外す。
+//
+// 正本は bachikoljunior-blip/-chatgpt-usage-monitorPrivate の
+// state/claude-usage.json（実トークンで実メーターを読む）。読み方:
+//   node <checkout>/-chatgpt-usage-monitorPrivate/scripts/show-usage.mjs
+//
+// 下の説明は「なぜ換算が決まらないか」の記録として残す。読む価値はあるが、
+// 出てくる数字は残量ではない。登録簿は note の state/watchdogs.json
+// （claude_usage の not_a_source）。
+//
 //   node youtube/usage.mjs            since midnight JST
 //   node youtube/usage.mjs 16:00      since 16:00 JST today
 //
