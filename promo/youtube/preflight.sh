@@ -64,6 +64,8 @@ import('./youtube/yt.mjs').then(async m => {
   console.log('                 足りないように見えても、作り直す前に videos?id=<id> で直接見ること。');
 }).catch(e => console.log('予約        : 取得できず —', String(e.message||e).slice(0,60)));
 " 2>/dev/null
-# The one thing that used to be carried in memory and was always wrong.
-node youtube/usage.mjs 2>/dev/null | sed -n '/── 予算/,$p' | sed 's/^/  /'
+# Tokens only. The %-conversion this used to print was retired 2026-08-08: the
+# cap counts every session on the account and the others live in other
+# containers, so no honest remaining-balance can be computed here.
+node youtube/usage.mjs 2>/dev/null | tail -8 | sed 's/^/  /'
 echo "───────────────────────────────────────────"
