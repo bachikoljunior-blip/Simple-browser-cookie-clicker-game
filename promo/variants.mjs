@@ -27,7 +27,21 @@ const TAGS = ['Shorts', '放置ゲーム', 'クリッカー', 'インクリメ�
   '個人開発', 'インディーゲーム', 'Androidゲーム', 'クッキーストラテジャー'];
 
 /**
- * The recruitment block every description ends with.
+ * The browser build. Free, no install, and it runs on the phone the viewer is
+ * already holding — which is the whole reason it leads.
+ */
+const PLAY_URL = 'https://cookiestrateger.com/play.html';
+
+/**
+ * The call to action every description carries.
+ *
+ * The browser link goes first, and that ordering is the point. Measured
+ * 2026-08-08: 2,435 lifetime views, 1 subscriber. Every description asked for
+ * a 14-day Android closed test — three steps, an install, and a fortnight of
+ * commitment — off a 13-second Short. The note below correctly observed that
+ * most Shorts viewers are on a phone that cannot take part; the response was to
+ * tell them so sooner. Telling half the audience "not you" faster is not a
+ * funnel. They now get the thing they can actually do, in one tap, first.
  *
  * Two things this has to get right, because the video makes promises the
  * description has to keep:
@@ -38,7 +52,8 @@ const TAGS = ['Shorts', '放置ゲーム', 'クリッカー', 'インクリメ�
  *     different deal than the one waiting for them.
  *   * Most Shorts viewers are on a phone that cannot take part at all. Saying
  *     "Android" is not the same as saying "not iPhone"; the second one is what
- *     stops someone spending a tap finding out.
+ *     stops someone spending a tap finding out — and it must hand them the
+ *     browser build in the same breath, or it is just a dead end stated early.
  *
  * Step ① is not decoration. Play's opt-in page turns away anyone who is not
  * already in the group, and that rejection reads like the test being closed.
@@ -50,13 +65,16 @@ const TAGS = ['Shorts', '放置ゲーム', 'クリッカー', 'インクリメ�
  * viewer who taps a URL, gets nothing, and concludes the test is closed.
  */
 const cta = ({ groupUrl, optInUrl, contact }) => `
+▶ ブラウザ版をいますぐ無料で遊べます（インストール不要・iPhone でも遊べます）
+${PLAY_URL}
+
 ■ テスターを募集しています（Android専用・無料）
 
 ※ 下のURLがタップできない場合は、チャンネルの概要欄にリンクがあります。
 
 Google Play で公開するのに、14日間のクローズドテストが必要です。
 その期間つきあってくださる方を探しています。
-※ iPhone / iPad からは参加できません。Android 端末のみです。
+※ テストへの参加は Android 端末のみです。iPhone / iPad の方は上のブラウザ版をどうぞ。
 
 【お願いすること】
 ・14日間、アンインストールせずに置いておく
