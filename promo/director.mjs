@@ -122,6 +122,44 @@ const hookScreen = {
     // whole, because the lines are the evidence. The ring on .orderTimeBar is
     // what carries the eye instead.
   },
+  // Same skill screen as `tree`, but zoomed into one node instead of showing the
+  // whole map. The claim -- that the idle cap can be removed outright -- exists
+  // as text in exactly one place, the 終わらぬ焼窯 node's own description, so the
+  // detail panel has to be on that node or the frame does not back the caption.
+  //
+  // selectedSkillId is what the panel reads (play.html:13709), and it is set
+  // directly rather than by clicking the node: the same lesson as the workshop
+  // dish switch, where a synthetic click did nothing three takes running.
+  skill: async () => {
+    await setPlayFullscreen(false);
+    await ev(() => { try { closeTabPageFullscreen(); openSkillTreeView(); } catch (e) {} });
+    await page.waitForTimeout(900);
+    await ev(() => window.__mount('#skillChoiceScreen'));
+    // No #skillTreeOnlyBtn here, unlike `tree`. That button switches to the
+    // map-only view, which is what `tree` wants and is exactly wrong for this
+    // cut: it hides the detail panel, and the panel is the only place in the
+    // game where 「放置生産の時間上限を撤廃。」 is written down.
+    // The readback below asks whether the text is IN THE FRAME, not whether it
+    // is in the DOM. The first version asked the DOM and said 終わらぬ焼窯 while
+    // the take showed nothing but the map — every node label is in that
+    // textContent, so the check passed on a frame with no panel in it at all.
+    const seen = await ev(() => {
+      try {
+        selectedSkillId = 'endless_oven';
+        renderSkillChoiceScreen();
+      } catch (e) { return '(描画に失敗: ' + e.message + ')'; }
+      const hit = [...document.querySelectorAll('#skillChoiceScreen *')]
+        .filter(n => n.children.length === 0 && /時間上限を撤廃/.test(n.textContent || ''))
+        .pop();
+      if (!hit) return '(その文が無い)';
+      hit.scrollIntoView({ block: 'center' });
+      const r = hit.getBoundingClientRect();
+      const vis = r.top >= 0 && r.bottom <= window.innerHeight && r.width > 0;
+      return vis ? `見えている (y=${Math.round(r.top)})` : `画面外 (y=${Math.round(r.top)})`;
+    });
+    await page.waitForTimeout(500);
+    console.log(`  skill 文言: ${seen}${seen.startsWith('見えている') ? '' : '  ← 投稿しないこと'}`);
+  },
   // The workshop's cooking half, which nothing had used -- `recipes` and the two
   // craft cuts all open on the equipment list. showCooking() already exists in
   // stage.mjs (it grants skills, opens the workshop, then clicks the dish switch
@@ -272,6 +310,7 @@ const hookMotion = {
   // equipment rows below — the first take opened on a wall of unnamed flasks
   // with 作成 buttons, under a caption that said 料理.
   cook:  () => wait(400),
+  skill: () => wait(400),
   research: () => autoScroll('researchTab', 0.12, 1500),
 };
 // Ring first, then move. Called after the motion it only appeared 1.6s in — past

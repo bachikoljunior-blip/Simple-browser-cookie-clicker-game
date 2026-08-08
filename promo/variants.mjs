@@ -330,6 +330,32 @@ export const VARIANTS = [
     tags: TAGS,
   },
   {
+    id: 'offline',
+    // The question form is now three for three at the top of the channel --
+    // unit 740, beyond 287, prestige 237 -- against a ~170 baseline for the
+    // statement-form cuts. prestige is the one that matters most here, because
+    // its subject is not a magnitude unit, so the form carries on its own.
+    //
+    // This asks about the one number every idle game has and nobody expects to
+    // be zero: the offline cap. The honest answer is that there isn't one, which
+    // is a better payoff than any figure would be.
+    hook: {
+      screen: 'skill',
+      banner: '放置ゲーの放置上限、何時間?',
+      caption: ['<em>上限そのものを</em>', '<em>撤廃できます</em>'],
+      narration: '放置ゲーの放置上限って、何時間あると思います?',
+      taps: false,
+    },
+    // Not a number pulled from a constant: OFFLINE_LIMIT_SECONDS and the
+    // offlineHours skills only matter while a cap exists, and the 終わらぬ焼窯
+    // node removes the branch entirely (play.html:16963 -- with it, the elapsed
+    // time is used unclamped). The node states this itself in the words the
+    // frame shows: 「放置生産の時間上限を撤廃。」
+    title: '放置ゲーの放置上限、何時間だと思いますか',
+    description: `放置生産には時間の上限があって、スキルで伸ばせます。さらに「終わらぬ焼窯」を取ると上限そのものが無くなり、離れていた時間がそのまま生産になります。どこまで伸ばすかを取り方で決められるようにしています。`,
+    tags: TAGS,
+  },
+  {
     id: 'cook',
     // Same shape as the two cuts in the "a clicker should not have this" family
     // that both landed -- ボスが出てきた (175) and 装備が486種類 (165). Seven is a
