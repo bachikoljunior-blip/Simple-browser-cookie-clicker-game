@@ -383,6 +383,30 @@ export const VARIANTS = [
   // screen, different hook shape: the one comparison in this whole set where
   // only the form moves.
   {
+    id: 'formula',
+    // The untried combination the retention data pointed at. `numbers` opens on
+    // this same screen with a statement hook — 「効いてる倍率が全部見られる」 —
+    // and holds 84.3% of a 14s watch, the highest on the channel, for 184 views.
+    // Highest retention, near-bottom reach. If the first second is what decides
+    // distribution, then this subject has been carrying a hook that never
+    // stopped anyone, and the question form is exactly what is missing from it.
+    //
+    // Deliberately the same screen as `numbers`, not a new one. Holding the
+    // subject fixed is what makes the comparison mean anything -- the same test
+    // `layers` was meant to be before its evidence turned out not to render.
+    hook: {
+      screen: 'info',
+      banner: '生産の式、見せてもらえます?',
+      caption: ['効いている倍率が', '<em>全部この画面に出ます</em>'],
+      narration: '放置ゲーの生産の式って、見せてもらえると思います?',
+      taps: false,
+      expect: { text: '現在の倍率', root: '#infoPanel' },
+    },
+    title: '放置ゲーの生産の式、全部見せてもらえると思いますか',
+    description: `研究や設備を買うと生産の計算式そのものが変わります。いまどの倍率が何倍で乗っているのかは、隠さず一覧画面に全部出しています。何を買えば伸びるのかを推測ではなく確認して決められるようにしたかったからです。`,
+    tags: TAGS,
+  },
+  {
     id: 'restart',
     hook: {
       screen: 'skill',

@@ -25,10 +25,20 @@ const n = Number(process.argv[2] || 6);
 
 try {
   const all = (await videoStats(28)).filter(v => v.views > 20);
-  all.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+  // Newest first. (I briefly thought this was unsorted and "fixed" it — it was
+  // not; the view counts jump around, which reads as disorder. The fallback is
+  // kept, the claim of a bug is not.)
+  all.sort((a, b) => (Date.parse(b.publishedAt || 0) || 0) - (Date.parse(a.publishedAt || 0) || 0)
+    || b.views - a.views);
   const rows = all.slice(0, n);
   if (rows.length) {
-    console.log('診断        : 直近 ' + rows.length + '本（再生 / 維持% / いいね / 登録者増）');
+    // Analytics runs about two days behind, so the newest uploads are not in
+    // here yet. Saying so on the line itself stops this being misread as "the
+    // latest videos" — the realtime counts come from snapshot.mjs instead.
+    const newest = rows[0]?.publishedAt ? new Date(rows[0].publishedAt)
+      .toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' }) : '?';
+    console.log(`診断        : Analytics 上位 ${rows.length}本（最新は ${newest} 公開。約2日遅れ）`);
+    console.log('              再生   維持%  いいね 登録者増');
     for (const v of rows) {
       console.log('              '
         + String(v.views).padStart(5)
