@@ -155,6 +155,16 @@ const hookScreen = {
     // whole, because the lines are the evidence. The ring on .orderTimeBar is
     // what carries the eye instead.
   },
+  // The play field sharing the frame with the shop list, which is the only
+  // arrangement where the quota bar — and the 第52層 badge at its right end —
+  // is actually drawn. On the fullscreen play screen .quotaStageBadge exists in
+  // the DOM at zero size, which is why `layers` was refused twice before this
+  // screen existed. Do not move that cut back to `play`.
+  board: async () => {
+    await setPlayFullscreen(false);
+    await showTab('shopTab', false);
+    await waitForImages('shopTab');
+  },
   // The shop list, which no cut had opened on -- `play` hides it by going
   // full-bleed. The claim is the escalation at the bottom of it, so the list is
   // scrolled to the end and the last row is checked against the viewport before
@@ -340,6 +350,7 @@ const hookMotion = {
   cook:  () => wait(400),
   skill: () => wait(400),
   shop:  () => wait(400),
+  board: () => tapBurst('#cookie', 4, 340),
   research: () => autoScroll('researchTab', 0.12, 1500),
 };
 // Ring first, then move. Called after the motion it only appeared 1.6s in — past

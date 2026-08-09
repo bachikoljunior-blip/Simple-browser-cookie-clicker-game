@@ -43,7 +43,7 @@ pgrep -x sh   >/dev/null && echo "サンプラー  : 生存" \
 
 code=$(curl -sf -o /dev/null -w '%{http_code}' http://localhost:8765/play.html 2>/dev/null || echo 000)
 [ "$code" = "200" ] && echo "ローカル鯖  : 200" \
-                    || echo "ローカル鯖  : 落ちている（$code）← setup.sh を背後で起動する"
+                    || echo "ローカル鯖  : 落ちている（$code）（autopost が必要なとき自分で起動します。手で起動しないこと）"
 
 for v in YT_CLIENT_ID YT_CLIENT_SECRET YT_REFRESH_TOKEN GOOGLE_TTS_API_KEY; do
   [ -n "${!v:-}" ] || echo "認証        : $v が無い ← 投稿できない"

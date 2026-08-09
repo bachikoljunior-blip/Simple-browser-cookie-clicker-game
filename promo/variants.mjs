@@ -423,14 +423,21 @@ export const VARIANTS = [
     description: `研究は買って終わりではありません。対応するスキルを取ると段階2、さらに段階3の購入カードが出てきて、同じ研究の効果が作り変わります。21種類のうち13種類が段階3まで伸びます。`,
     tags: TAGS,
   },
-  // `layers` was going to sit here: the same claim as `endless`（層が続く）in
-  // question form, which would have been the one comparison where only the hook
-  // shape moves. It is not shipped, because the evidence is not on the frame.
-  // .quotaStageBadge exists in the DOM on the fullscreen play screen but renders
-  // at zero size, so 「第52層」 is not visible — mustSee refused the take twice
-  // (once as "not found", once as 画面外 y=0 after the selector was widened).
-  // Re-try it only from a screen where the badge is actually drawn; do not
-  // re-add it by loosening the check.
+  // `layers` belongs here and is still not shipped. It would be the one
+  // comparison where only the hook shape moves — `endless` made this same claim
+  // in statement form and took 127 — so it is worth getting right rather than
+  // forcing.
+  //
+  // Three refusals so far, all from mustSee, all correct:
+  //   play  + root .quotaStageBadge  → その文が画面のどこにも無い
+  //   play  + root body              → 画面外 y=0（DOM にはあるがサイズ0）
+  //   board + root #quotaBox,.quotaStageBadge → その文が画面のどこにも無い
+  //
+  // The badge IS drawn in other takes (it reads 第52層 in the `facilities`
+  // frame), so the question is what actually renders it — a tick, a different
+  // container, or text split across nodes that a leaf-only regex cannot match.
+  // **Probe that before writing another variant.** Do not reach the shipped
+  // state by relaxing the check; the check has been right every time.
   {
     id: 'offline',
     // The question form is now three for three at the top of the channel --
