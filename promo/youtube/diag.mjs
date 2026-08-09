@@ -13,7 +13,7 @@
 //
 // Deliberately small. Six rows and one line of traffic split; this is read
 // hourly, and a diagnosis nobody can take in at a glance stops being read.
-import { videoStats, trafficSources } from './yt.mjs';
+import { videoStats, trafficSources, retention } from './yt.mjs';
 
 const LABEL = {
   SHORTS: 'Shortsフィード', YT_SEARCH: '検索', SUBSCRIBER: '登録者フィード',
@@ -47,6 +47,29 @@ try {
         + String(v.subscribersGained ?? 0).padStart(5)
         + '  ' + (v.title || '').slice(0, 22));
     }
+    // Opening and ending audienceWatchRatio for the three newest. The average
+    // retention column above cannot distinguish "held the first second" from
+    // "held the last one", and the first second is what every hook argument
+    // here rests on -- so it gets measured rather than assumed.
+    //
+    // Above 1.00 means the segment was rewatched (Shorts loop).
+    const curves = [];
+    for (const v of rows.slice(0, 3)) {
+      try {
+        const c = await retention(v.id);
+        // `watch`, not `ratio`. Each point is {at, ratio, watch} — ratio is the
+        // position along the video, watch is the audience share. Reading `ratio`
+        // printed 開始0.01→終了1.00 for every video, which is the timeline, not
+        // the audience. Guessed a field name again instead of reading the
+        // function; that is twice in one evening.
+        const pts = (c?.points || []).filter(p => typeof p.watch === 'number');
+        if (!pts.length) continue;
+        const first = pts[0].watch, last = pts[pts.length - 1].watch;
+        curves.push(`${(v.title || '').slice(0, 12)} 開始${first.toFixed(2)}→終了${last.toFixed(2)}`);
+      } catch {}
+    }
+    if (curves.length) console.log('              曲線: ' + curves.join(' / '));
+
     const subs = rows.reduce((a, v) => a + (v.subscribersGained || 0), 0);
     const likes = rows.reduce((a, v) => a + (v.likes || 0), 0);
     // The two numbers that say whether anything compounds. Flat zero here means
