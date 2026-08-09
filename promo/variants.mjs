@@ -383,6 +383,28 @@ export const VARIANTS = [
   // screen, different hook shape: the one comparison in this whole set where
   // only the form moves.
   {
+    id: 'drops',
+    // A rule rather than a quantity, and one nobody would guess: what drops
+    // depends on how the monster died. The 一覧 panel writes the table out —
+    // 通常撃破＝基本素材 / 金ブースト中＝黄金粉 / オーバーキル＝レア素材 /
+    // 3体連続＝ボス核 / ノルマに余裕＝発酵系 — so the frame carries all of it
+    // and the caption only has to point.
+    hook: {
+      screen: 'drops',
+      banner: '素材、倒し方で変わると思います?',
+      caption: ['<em>倒し方ごとに</em>', '出る素材が違います'],
+      narration: '素材って、倒し方で変わると思います?',
+      taps: false,
+      // Captions over the play field, clear of the table they are describing.
+      capPos: 'high',
+      motion: 'still',
+      expect: { text: 'オーバーキル', root: '#infoPanel' },
+    },
+    title: '素材、倒し方で変わると思いますか【放置ゲー】',
+    description: `モンスターの倒し方で落ちる素材が変わります。普通に倒せば基本素材、金ブースト中なら黄金粉、残りHPの5倍ダメージで倒すレア素材、3体連続ならボス核、ノルマに余裕を持って倒すと発酵系。狙った素材があるなら倒し方を変えることになります。`,
+    tags: TAGS,
+  },
+  {
     id: 'craftcap',
     // A limit is a stranger thing to find in an idle game than any quantity, and
     // this one the panel prints on itself: 「装備の作成（この周回あと 5/5 個）」.

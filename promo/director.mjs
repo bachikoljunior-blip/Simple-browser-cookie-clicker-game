@@ -65,8 +65,12 @@ const mustSee = async (label, pattern, root = 'body') => {
     // the case where the text lives on the root element itself, which is how
     // .quotaStageBadge (a leaf carrying 「第52層」) came back as "not on screen"
     // on a frame that was showing it.
+    // "Leaf" has to allow <br>. The drop table in the 一覧 panel is one <div>
+    // with <br>-separated lines, so a strict children.length===0 test skipped it
+    // and reported 「オーバーキル」 as absent from a screen that was showing it.
+    const leafish = n => [...n.children].every(c => c.tagName === 'BR');
     const hit = [...document.querySelectorAll(sel), ...document.querySelectorAll(sel + ' *')]
-      .filter(n => n.children.length === 0 && re.test(n.textContent || '')).pop();
+      .filter(n => leafish(n) && re.test(n.textContent || '')).pop();
     if (!hit) return { ok: false, why: 'その文が画面のどこにも無い' };
     hit.scrollIntoView({ block: 'center' });
     const b = hit.getBoundingClientRect();
@@ -127,6 +131,15 @@ const hookScreen = {
     await showTab('infoTab', true);
     await waitForImages('infoTab');
     await scrollToHeading('infoTab', '現在の倍率・状態');
+  },
+  // The same 一覧 panel as `info`, parked on a different heading. 素材の入手
+  // prints the whole drop table — which kill gives which material — and that is
+  // a rule a viewer cannot guess, written out by the game itself.
+  drops: async () => {
+    await setPlayFullscreen(false);
+    await showTab('infoTab', true);
+    await waitForImages('infoTab');
+    await scrollToHeading('infoTab', '素材の入手');
   },
   tree: async () => {
     await setPlayFullscreen(false);
@@ -354,6 +367,7 @@ const hookMotion = {
   hunt:  () => tapBurst('#cookie', 3, 300),
   craft: () => autoScroll('workshopTab', 0.14, 1500),
   info:  () => autoScroll('infoTab', 0.12, 1500),
+  drops: () => wait(400),
   tree:  () => ev(() => {
     const f = document.querySelector('.skillMapFrame');
     if (f) f.scrollTo({ top: f.scrollTop + f.clientHeight * 0.35, behavior: 'smooth' });
