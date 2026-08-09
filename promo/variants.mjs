@@ -348,6 +348,30 @@ export const VARIANTS = [
     tags: TAGS,
   },
   {
+    id: 'facilities',
+    // Question form, because the split is no longer subtle: the three question
+    // hooks sit at 740 / 287 / 237 and the nine statement hooks at 126-193
+    // (order 193 and costs 144 came in on 8/9 and landed in that band again).
+    // Roughly double, on n=3 against n=9 -- and doubling per-video views raises
+    // the growth rate rather than just the total, which is what instruction 1
+    // asks for. New cuts use the question form until that stops holding.
+    hook: {
+      screen: 'shop',
+      banner: 'クッキーを焼く設備、最後は何?',
+      caption: ['<em>反物質オーブン</em>', '設備は<em>16種類</em>あります'],
+      narration: 'クッキーを焼く設備、最後は何だと思います?',
+      taps: false,
+    },
+    // UPGRADES holds 16, read out of play.html: 強い指 → おばあちゃん → オーブン →
+    // 工場 → クッキー銀行 → 香料棚 → 異世界クッキー炉 → 月面ベーカリー → 時空オーブン
+    // → 銀河工場 → ブラックホールミキサー → 宇宙焼成炉 → 神の指 → クッキー特異点 →
+    // 量子ベーカリー → 反物質オーブン. The shot scrolls to the last row so the
+    // answer is on screen, and the director refuses to post if it is not.
+    title: 'クッキーを焼く設備、最後は何だと思いますか【放置ゲー】',
+    description: `設備は16種類あります。強い指、おばあちゃん、オーブン、工場……と増えていって、最後は反物質オーブンです。どれも買うほど安くならないので、どこで次の段に移るかを選ぶことになります。`,
+    tags: TAGS,
+  },
+  {
     id: 'offline',
     // The question form is now three for three at the top of the channel --
     // unit 740, beyond 287, prestige 237 -- against a ~170 baseline for the

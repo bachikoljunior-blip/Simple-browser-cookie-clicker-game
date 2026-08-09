@@ -122,6 +122,26 @@ const hookScreen = {
     // whole, because the lines are the evidence. The ring on .orderTimeBar is
     // what carries the eye instead.
   },
+  // The shop list, which no cut had opened on -- `play` hides it by going
+  // full-bleed. The claim is the escalation at the bottom of it, so the list is
+  // scrolled to the end and the last row is checked against the viewport before
+  // the take is allowed to stand.
+  shop: async () => {
+    await setPlayFullscreen(false);
+    await showTab('shopTab', false);
+    await waitForImages('shopTab');
+    const seen = await ev(() => {
+      const hit = [...document.querySelectorAll('#shopTab *, #shop *')]
+        .filter(n => n.children.length === 0 && /反物質オーブン/.test(n.textContent || '')).pop();
+      if (!hit) return '(その行が無い)';
+      hit.scrollIntoView({ block: 'center' });
+      const r = hit.getBoundingClientRect();
+      return (r.top >= 0 && r.bottom <= window.innerHeight && r.width > 0)
+        ? `見えている (y=${Math.round(r.top)})` : `画面外 (y=${Math.round(r.top)})`;
+    });
+    await page.waitForTimeout(400);
+    console.log(`  shop 最終行: ${seen}${seen.startsWith('見えている') ? '' : '  ← 投稿しないこと'}`);
+  },
   // Same skill screen as `tree`, but zoomed into one node instead of showing the
   // whole map. The claim -- that the idle cap can be removed outright -- exists
   // as text in exactly one place, the 終わらぬ焼窯 node's own description, so the
@@ -311,6 +331,7 @@ const hookMotion = {
   // with 作成 buttons, under a caption that said 料理.
   cook:  () => wait(400),
   skill: () => wait(400),
+  shop:  () => wait(400),
   research: () => autoScroll('researchTab', 0.12, 1500),
 };
 // Ring first, then move. Called after the motion it only appeared 1.6s in — past
