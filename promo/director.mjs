@@ -201,6 +201,112 @@ const hookScreen = {
     await showTab('shopTab', false);
     await waitForImages('shopTab');
   },
+  // (`bake` の画面はここに在ったが、焼き加減がプレイヤーに解放されない死んだ
+  //  機能だと分かったので消した。経緯は variants.mjs の「棄却: `bake`」。)
+  // The reward modal, which no cut had opened. Every entry in REWARD_POOL has its
+  // own illustration (images/37..54_reward_*.png), so this is one of the two
+  // screens in the game that is mostly picture — the other is the cooking panel,
+  // and that cut is the highest-reaching statement hook on the channel.
+  //
+  // The three risk-category perks are placed directly rather than fought for:
+  // buildMonsterRewardChoices() draws from the whole unlocked pool weighted by
+  // category, so the odds of all three landing in one roll are poor, and a take
+  // that comes back with three ordinary perks under a caption about drawbacks is
+  // a constraint-11 violation. The shape copied from the same function
+  // (play.html:18078) so the panel renders them as it would its own.
+  risk: async () => {
+    // Full-bleed behind the modal. Sharing the frame with the shop list put a
+    // wall of upgrade rows behind a translucent panel, and the first frame read
+    // as two screens on top of each other rather than one.
+    await setPlayFullscreen(true);
+    const why = await ev(() => {
+      try {
+        // `body.skillChoiceMode #rewardModal { display: none !important }`
+        // (play.html:138). setLateGame grants every skill, which can leave the
+        // save paused on the skill-choice screen — and there the modal is in the
+        // DOM at zero size, so the second refusal read 「画面外 y=0」 rather than
+        // 「その文が画面のどこにも無い」. Same distinction the `layers` cut hit.
+        document.body.classList.remove('skillChoiceMode', 'titleScreenMode');
+        // stage.mjs's hideRewardModal() pins this modal to `display: none`
+        // with !important, because on every other cut it is an obstruction —
+        // it dims the screen and its backdrop eats the taps aimed at the next
+        // monster. This is the one cut where the modal is the subject, so the
+        // pin comes off. showRewardChoices() only sets the inline display, so
+        // without this the modal stayed hidden with all three cards built:
+        // cards=3, modal=none, every card 0x0.
+        document.getElementById('rewardModal').style.removeProperty('display');
+        // Two cards, not three. Three fitted only by running the panel from 25%
+        // to 80% of the frame, and Shorts reserves the bottom 20% for its own
+        // chrome — so the caption's own slot landed on the third card and the
+        // occlusion check refused the take at 73%. Both of these print 「反動」,
+        // so the claim is still carried twice.
+        pendingRewardChoices = ['deepPursuit', 'chainPrep']
+          .map(id => REWARD_POOL.find(x => x.id === id))
+          .filter(Boolean)
+          .map(r => ({
+            kind: 'perk', id: r.id, key: 'perk:' + r.id,
+            name: r.name, category: r.category, count: 1, desc: r.desc,
+          }));
+        showRewardChoices(20, []);
+        // showRewardChoices() opens the modal in its rewardLocked state, where
+        // the game hides #rewardChoices behind the 「報酬を手に入れた！」 notice
+        // (play.html:2887) — the first take was refused with the cards present
+        // in the DOM and nothing on screen. This is the step the player's own
+        // OK tap performs.
+        revealRewardChoices();
+        // Re-asserted after the fact, not just cleared before it. Clearing the
+        // pin ahead of showRewardChoices() was not enough — the probe still
+        // read modal=none with all three cards built — so the last word on this
+        // property belongs to the cut that needs the modal visible.
+        document.getElementById('rewardModal').style.setProperty('display', 'flex', 'important');
+        // .rewardPanel is width: min(420px, 100%) — sized for a phone, where 420
+        // CSS px is the whole screen. The capture viewport is wider than that,
+        // so the panel came out occupying about a third of the frame with the
+        // card text too small to read at Shorts size.
+        //
+        // zoom, not transform: scale(). Scaling #orderPanel by 1.45 clipped every
+        // line in it, because a transform leaves the layout box the old size and
+        // paints outside it. zoom re-lays-out at the new size, so the text stays
+        // whole — which is the property this frame is judged on.
+        //
+        // 1.75 rather than the 2.2 the first readable take used: at 2.2 the
+        // panel ran 13%–88% of the frame and left nowhere for the overlay, so
+        // the banner landed in the gap between two cards and the caption sat on
+        // the first card's name. 1.75 keeps the card text legible at Shorts size
+        // and clears a band top and bottom for the banner and the caption.
+        document.getElementById('rewardModal').style.setProperty('zoom', '1.6');
+        // The modal centres its panel, so shrinking it moved both edges inward
+        // and the cards stayed in the middle of the frame — where the caption's
+        // own slot is. Shorts reserves the bottom 20% for its chrome, which puts
+        // the caption's top edge near 63% of the frame, so the evidence has to
+        // live above that. Anchoring the panel to the top and pushing it clear of
+        // the banner leaves the cards in the 16%–55% band, between the two
+        // overlays rather than under one of them.
+        const rm = document.getElementById('rewardModal');
+        rm.style.setProperty('align-items', 'flex-start', 'important');
+        // 21%, not 9%: at 9% the panel's first card sat directly under the
+        // banner's slot and the banner covered 深追いの契約's name. The occlusion
+        // check passed — it guards the 反動 line, not the card's title — so this
+        // one came from opening the frame. 15% still clipped the title; the
+        // banner occupies roughly 11%–17% of the frame, so the panel has to
+        // start below that.
+        rm.style.setProperty('padding-top', '21%', 'important');
+        const b = document.querySelector('#rewardChoices .rewardBtn');
+        const r = b && b.getBoundingClientRect();
+        const cs = el => el ? getComputedStyle(el).display : 'なし';
+        return `body="${document.body.className}" cards=${document.querySelectorAll('#rewardChoices .rewardBtn').length}`
+          + ` modal=${cs(document.getElementById('rewardModal'))}`
+          + ` panel=${cs(document.querySelector('.rewardPanel'))}`
+          + ` choices=${cs(document.getElementById('rewardChoices'))}`
+          + ` locked=${document.getElementById('rewardModal').classList.contains('rewardLocked')}`
+          + ` 1枚目=${r ? Math.round(r.width) + 'x' + Math.round(r.height) + ' @y' + Math.round(r.top) : 'なし'}`;
+      } catch (e) { return String(e); }
+    });
+    // Reported rather than assumed: a modal that is present but zero-sized looks
+    // identical to a healthy one from the setup code's side.
+    console.log('  報酬モーダル:', why);
+    await page.waitForTimeout(600);
+  },
   // The shop list, which no cut had opened on -- `play` hides it by going
   // full-bleed. The claim is the escalation at the bottom of it, so the list is
   // scrolled to the end and the last row is checked against the viewport before
@@ -387,6 +493,10 @@ const hookMotion = {
   shop:  () => wait(400),
   board: () => tapBurst('#cookie', 4, 340),
   research: () => autoScroll('researchTab', 0.12, 1500),
+  // The modal covers the play field, so a tap burst would be both invisible and
+  // aimed at an element the overlay is blocking. The panel's own entry animation
+  // is the movement here.
+  risk:  () => wait(400),
 };
 // Ring first, then move. Called after the motion it only appeared 1.6s in — past
 // the window the whole hook exists to win. The point of pointing at the evidence
@@ -442,6 +552,22 @@ if (SHORT) {
   // frame were all fine. Scene 2 of the full sequence does this for the same
   // reason; the short path had not copied it.
   await ev(() => { try { closeSkillChoiceScreen(); } catch (e) {} window.__mount(); });
+  // The `risk` hook opens the reward modal and leaves it open — and the modal
+  // pauses the game and covers the play field, so the 討伐 beat played behind a
+  // dimmed panel with no monsters in it, under a caption saying 群れもボスも来ます.
+  // verify() saw nothing wrong: right length, right resolution, right audio.
+  // Undo everything that hook set, not just the display, or the zoom and the
+  // top-anchoring survive into the rest of the video.
+  await ev(() => {
+    const rm = document.getElementById('rewardModal');
+    if (!rm) return;
+    ['zoom', 'align-items', 'padding-top'].forEach(k => rm.style.removeProperty(k));
+    rm.style.setProperty('display', 'none', 'important');
+    try { pendingRewardChoices = []; } catch (e) {}
+    // finishQuotaPause, not endQuotaPause — the latter does not exist, and a
+    // wrong name inside this try would have been swallowed silently.
+    try { finishQuotaPause(); } catch (e) {}
+  });
   await setMidGame();
   await toPlayScreen();
   await setPlayFullscreen(true);
