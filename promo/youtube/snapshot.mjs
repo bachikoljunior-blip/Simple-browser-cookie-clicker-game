@@ -81,3 +81,39 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     }
   }
 }
+
+// --- the file commits itself -----------------------------------------------
+// views.jsonl is appended every ten minutes by the sampler, so a run that
+// changes nothing still ends with a dirty tree. Three runs in a row ended with
+// the stop hook asking for the same commit, and preflight printing 未コミット
+// did not help — printing a problem and leaving it to whoever reads the line is
+// the shape instruction 7 rules out.
+//
+// So the sampler commits its own data. Once an hour at most: this file grows by
+// six lines an hour and a commit per append would bury the branch, while an
+// hourly one keeps the tree clean at every point a run could stop.
+//
+// Only ever stages views.jsonl. A blanket `git add -A` here would sweep up
+// whatever else happened to be in flight, which is how automation starts
+// committing things nobody looked at.
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+
+function autoCommit() {
+  const repo = path.resolve(import.meta.dirname, '../..');
+  const git = (...a) => execFileSync('git', ['-C', repo, ...a], { encoding: 'utf8' }).trim();
+  try {
+    if (!git('status', '--porcelain', '--', 'promo/youtube/views.jsonl')) return;
+    const last = Number(git('log', '-1', '--format=%ct', '--', 'promo/youtube/views.jsonl') || 0);
+    if (Date.now() / 1000 - last < 55 * 60) return;      // at most hourly
+    git('add', '--', 'promo/youtube/views.jsonl');
+    git('commit', '-q', '-m', 'Record the view samples\n\nAppended by the sampler and committed by it, so a run that changes\nnothing still leaves a clean tree.');
+    git('push', '-q', 'origin', 'HEAD');
+    console.log('  views.jsonl をコミットして push した');
+  } catch (e) {
+    // Never let bookkeeping break the measurement: the sample is already on
+    // disk, and a push can fail for reasons that have nothing to do with it.
+    console.log('  views.jsonl の自動コミットに失敗（測定自体は済んでいる）:', String(e.message || e).slice(0, 60));
+  }
+}
+autoCommit();
