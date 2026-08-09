@@ -175,6 +175,13 @@ function render(cut) {
   // flag can still be used to try a hook against a body it was not written for.
   const body = bodyAt === -1 ? (cut.body || BODY) : BODY;
   console.log(`\nrendering cut "${cut.id}" (body: ${body}) ...`);
+  // The local server has to be serving the REPOSITORY ROOT, not promo/. Started
+  // from the wrong directory it answers 200 for its own index and 404s
+  // play.html, and the render then dies inside the game with
+  // "freshState is not defined" -- an error wearing the game's face for a
+  // mistake made in the shell. Asserting it here costs one request and removes
+  // the whole confusion.
+  ensureServerRoot();
   run('node', ['director.mjs'], { PROMO_VARIANT: cut.id, PROMO_LENGTH: LENGTH, PROMO_BODY: body });
   run('node', ['narrate.mjs']);
   run('node', ['encode.mjs']);
@@ -188,6 +195,35 @@ function render(cut) {
  * produces a file, and a Short that opens on black or plays silent is worse than
  * one that never went up.
  */
+// Starting the server was a manual step in the run instructions, and manual
+// steps are where this project keeps losing: it has been started from promo/
+// (play.html 404s and the render dies inside the game with "freshState is not
+// defined", an error wearing the game's face) and it dies with the container
+// between runs. So this owns it -- checks the port, checks that what answers is
+// actually play.html, and starts it at the repository root if not. The run
+// instructions no longer need to mention it, which is the point: a step nobody
+// has to remember cannot be forgotten.
+function ensureServerRoot() {
+  const ok = () => {
+    try {
+      const b = execFileSync('curl', ['-sf', '-m', '3', 'http://localhost:8765/play.html'],
+        { maxBuffer: 1 << 28 }).toString('utf8', 0, 4000);
+      return /<title>|クッキーストラテジャー/.test(b);
+    } catch { return false; }
+  };
+  if (ok()) return;
+  const repo = path.dirname(PROMO);
+  execFileSync('sh', ['-c',
+    `cd ${JSON.stringify(repo)} && (nohup python3 -m http.server 8765 >/dev/null 2>&1 &)`],
+    { detached: true });
+  for (let i = 0; i < 20; i++) {
+    execFileSync('sleep', ['0.5']);
+    if (ok()) { console.log(`  ローカル鯖: ${repo} で起動した`); return; }
+  }
+  throw new Error(`8765 で play.html を出せない。${repo} に play.html があるか確認すること。`
+    + ' 別ルート（promo/ など）で誰かが 8765 を掴んでいる可能性もある。');
+}
+
 function verify(file) {
   const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-print_format', 'json',
     '-show_format', '-show_streams', file], { encoding: 'utf8' }));

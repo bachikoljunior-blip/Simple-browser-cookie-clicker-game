@@ -47,6 +47,35 @@ await setPlayFullscreen(true);
 
 // Whatever the cut opens on is built here, while the cover is still down, so the
 // first frame is already the finished picture however long it took to arrange.
+
+// A check that only prints is not a mechanism -- it is a note asking someone to
+// be careful, and instruction 7 says care is not the fix. Three hook screens had
+// readbacks that printed 「投稿しないこと」 and then carried on rendering, which
+// leaves the refusal to whoever reads the log. This throws instead: autopost runs
+// director through execFileSync, so a non-zero exit kills the run before the
+// upload rather than after it.
+//
+// It asks whether the text is IN THE FRAME, not whether it is in the document.
+// The DOM version passed on a take whose panel was entirely off-screen, because
+// every node label lives in that textContent.
+const mustSee = async (label, pattern, root = 'body') => {
+  const r = await ev(([sel, src]) => {
+    const re = new RegExp(src);
+    const hit = [...document.querySelectorAll(sel + ' *')]
+      .filter(n => n.children.length === 0 && re.test(n.textContent || '')).pop();
+    if (!hit) return { ok: false, why: 'その文が画面のどこにも無い' };
+    hit.scrollIntoView({ block: 'center' });
+    const b = hit.getBoundingClientRect();
+    const ok = b.top >= 0 && b.bottom <= window.innerHeight && b.width > 0 && b.height > 0;
+    return { ok, why: ok ? `y=${Math.round(b.top)}` : `画面外 y=${Math.round(b.top)}` };
+  }, [root, pattern.source ?? String(pattern)]);
+  console.log(`  ${label}: ${r.ok ? '見えている' : '✗ ' + r.why} (${pattern})`);
+  if (!r.ok) {
+    throw new Error(`掴みの根拠が画面に映っていない: ${label} — ${r.why}. `
+      + 'テロップが画面と食い違う take なので、投稿せずにここで止める。');
+  }
+};
+
 const hookScreen = {
   play: async () => {},
   quota: async () => { await setMidGame(); },
@@ -130,17 +159,7 @@ const hookScreen = {
     await setPlayFullscreen(false);
     await showTab('shopTab', false);
     await waitForImages('shopTab');
-    const seen = await ev(() => {
-      const hit = [...document.querySelectorAll('#shopTab *, #shop *')]
-        .filter(n => n.children.length === 0 && /反物質オーブン/.test(n.textContent || '')).pop();
-      if (!hit) return '(その行が無い)';
-      hit.scrollIntoView({ block: 'center' });
-      const r = hit.getBoundingClientRect();
-      return (r.top >= 0 && r.bottom <= window.innerHeight && r.width > 0)
-        ? `見えている (y=${Math.round(r.top)})` : `画面外 (y=${Math.round(r.top)})`;
-    });
-    await page.waitForTimeout(400);
-    console.log(`  shop 最終行: ${seen}${seen.startsWith('見えている') ? '' : '  ← 投稿しないこと'}`);
+    await mustSee('shop 最終行', /反物質オーブン/, '#shopTab, #shop');
   },
   // Same skill screen as `tree`, but zoomed into one node instead of showing the
   // whole map. The claim -- that the idle cap can be removed outright -- exists
@@ -159,26 +178,9 @@ const hookScreen = {
     // map-only view, which is what `tree` wants and is exactly wrong for this
     // cut: it hides the detail panel, and the panel is the only place in the
     // game where 「放置生産の時間上限を撤廃。」 is written down.
-    // The readback below asks whether the text is IN THE FRAME, not whether it
-    // is in the DOM. The first version asked the DOM and said 終わらぬ焼窯 while
-    // the take showed nothing but the map — every node label is in that
-    // textContent, so the check passed on a frame with no panel in it at all.
-    const seen = await ev(() => {
-      try {
-        selectedSkillId = 'endless_oven';
-        renderSkillChoiceScreen();
-      } catch (e) { return '(描画に失敗: ' + e.message + ')'; }
-      const hit = [...document.querySelectorAll('#skillChoiceScreen *')]
-        .filter(n => n.children.length === 0 && /時間上限を撤廃/.test(n.textContent || ''))
-        .pop();
-      if (!hit) return '(その文が無い)';
-      hit.scrollIntoView({ block: 'center' });
-      const r = hit.getBoundingClientRect();
-      const vis = r.top >= 0 && r.bottom <= window.innerHeight && r.width > 0;
-      return vis ? `見えている (y=${Math.round(r.top)})` : `画面外 (y=${Math.round(r.top)})`;
-    });
+    await ev(() => { try { selectedSkillId = 'endless_oven'; renderSkillChoiceScreen(); } catch (e) {} });
     await page.waitForTimeout(500);
-    console.log(`  skill 文言: ${seen}${seen.startsWith('見えている') ? '' : '  ← 投稿しないこと'}`);
+    await mustSee('skill 文言', /時間上限を撤廃/, '#skillChoiceScreen');
   },
   // The workshop's cooking half, which nothing had used -- `recipes` and the two
   // craft cuts all open on the equipment list. showCooking() already exists in
@@ -194,18 +196,12 @@ const hookScreen = {
   cook: async () => {
     await showCooking();
     // The 作成/料理 switch is wired with the game's addTap, not a click listener,
-    // so b.click() does nothing — two takes came back with 装備の作成 still in
-    // shot under a caption saying 料理. renderWorkshop() reads state.wsSubTab
+    // so b.click() does nothing -- two takes came back with 装備の作成 in shot
+    // under a caption saying 料理. renderWorkshop() reads state.wsSubTab
     // (play.html:10336), so set that and re-render instead.
     await ev(() => { try { state.wsSubTab = 'dish'; renderWorkshop(); } catch (e) {} });
     await waitForImages('workshopTab');
-    // Read the heading back and print it. A silent failure here is a
-    // constraint-11 violation, and verify() cannot see one.
-    const head = await ev(() => {
-      const h = document.querySelector('#workshopPanel h3, #workshopPanel .sectionTitle');
-      return h ? h.textContent.trim() : '(見出しが無い)';
-    });
-    console.log(`  cook 見出し: ${head}${head.includes('料理') ? '' : '  ← 料理になっていない。投稿しないこと'}`);
+    await mustSee('cook 見出し', /料理\(時限バフ/, '#workshopPanel');
   },
   // Same board as `order`, opposite half of it. renderOrder() draws the quest box
   // under the timed request, and with no active order the timed half collapses to
@@ -262,6 +258,12 @@ const hookScreen = {
   },
 };
 await (hookScreen[VARIANT.hook.screen] || hookScreen.play)();
+// Any cut may declare its own evidence, so a new one does not have to edit this
+// file to be checkable. Same abort as the screen-level checks above.
+if (VARIANT.hook.expect) {
+  const e = VARIANT.hook.expect;
+  await mustSee('掴みの根拠', new RegExp(e.text || e), e.root || 'body');
+}
 await page.waitForTimeout(400);
 // Lift the music bed well above the game's own ceiling. Without it the take is
 // mostly silence with occasional spikes: quiet enough that YouTube's loudness
