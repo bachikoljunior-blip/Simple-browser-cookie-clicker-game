@@ -57,17 +57,43 @@ if (stats.length) {
   // 40 columns of ▁▂▃▄▅▆▇█ over the whole video, scaled to that video's own
   // maximum so the shape reads regardless of level. Above 1.00 is loop
   // rewatching, which is why the scale is printed rather than assumed to be 1.
-  const BLOCKS = '▁▂▃▄▅▆▇█';
-  const spark = (pts, cols = 40) => {
-    const hi = Math.max(...pts.map(p => p.watch)) || 1;
-    let out = '';
-    for (let i = 0; i < cols; i++) {
-      const a = Math.floor(i * pts.length / cols), b = Math.max(a + 1, Math.floor((i + 1) * pts.length / cols));
-      const seg = pts.slice(a, b);
-      const v = seg.reduce((x, p) => x + p.watch, 0) / seg.length;
-      out += BLOCKS[Math.min(7, Math.max(0, Math.round(v / hi * 7)))];
-    }
-    return out;
+  // A plotted curve, not a one-row sparkline.
+  //
+  // The sparkline was the second version of this. The first reduced the whole
+  // curve to 開始→終了, which threw away the only thing a curve says that an
+  // average does not: WHERE people leave. The sparkline kept the shape but put
+  // each video on its own row, scaled to its own maximum — so two curves could
+  // not be compared, which is the question actually being asked ("which cut
+  // holds better, and from when"). Two rows of ▂▃▄ next to each other look
+  // similar whatever they are.
+  //
+  // This draws one grid with a real y axis in retention units and a real x axis
+  // in seconds, and overlays the videos on it. Shared axes are the whole point:
+  // the comparison is read off the picture instead of off my summary of it.
+  const MARKS = ['#', 'o', 'x', '+'];
+  const plot = (series, rows = 14, cols = 56) => {
+    const hi = Math.max(1, ...series.flatMap(s => s.pts.map(p => p.watch)));
+    const maxT = Math.max(...series.map(s => s.seconds || 1));
+    const grid = Array.from({ length: rows }, () => Array(cols).fill(' '));
+    series.forEach((s, si) => {
+      const ch = MARKS[si % MARKS.length];
+      for (const p of s.pts) {
+        const x = Math.min(cols - 1, Math.round((p.at / maxT) * (cols - 1)));
+        const y = Math.min(rows - 1, Math.max(0, Math.round((1 - p.watch / hi) * (rows - 1))));
+        // First writer wins, so an earlier (higher-placed in the legend) series
+        // is never erased by a later one drawing over the same cell. Overlap is
+        // reported in the legend order rather than hidden.
+        if (grid[y][x] === ' ') grid[y][x] = ch;
+      }
+    });
+    const lines = grid.map((r, i) => {
+      const v = hi * (1 - i / (rows - 1));
+      const label = (i === 0 || i === rows - 1 || i % 3 === 0) ? v.toFixed(2).padStart(5) : '     ';
+      return `            ${label} │${r.join('')}`;
+    });
+    lines.push(`                  └${'─'.repeat(cols)}`);
+    lines.push(`                   0s${' '.repeat(Math.max(1, cols - 10))}${maxT.toFixed(0)}s`);
+    return lines;
   };
   // Where the audience actually goes, expressed as the steepest fall between
   // adjacent columns and the second it happens at.
@@ -81,16 +107,40 @@ if (stats.length) {
     return { d, at };
   };
 
-  for (const v of stats.slice(0, 3)) {
+  const series = [];
+  for (const v of stats.slice(0, 4)) {
     try {
       const c = await retention(v.id);
       const p = (c.points || []).filter(x => typeof x.watch === 'number');
-      if (!p.length) continue;
-      const w = worstDrop(p, c.seconds);
-      out.push(`  ${pad('維持曲線', 8)}: ${(v.title || '').slice(0, 10)}  ${spark(p)}`);
-      out.push(`            開始 ${p[0].watch.toFixed(2)} → 終了 ${p[p.length - 1].watch.toFixed(2)}`
-        + `  最大の落ち ${w.d.toFixed(2)} @ ${w.at.toFixed(1)}s / 全長 ${c.seconds}s`);
+      if (p.length) series.push({ title: v.title || '', views: v.views, seconds: c.seconds, pts: p });
     } catch {}
+  }
+  if (series.length) {
+    row('維持曲線', `直近${series.length}本を同じ軸に重ねたもの（縦=維持率・1.00超はループ再視聴、横=秒）`);
+    out.push(...plot(series));
+    for (const [i, s] of series.entries()) {
+      const w = worstDrop(s.pts, s.seconds);
+      // The reading, not just the picture. A curve I print and do not conclude
+      // from is the same failure as a check that prints instead of stopping:
+      // it leaves the work to whoever reads the log. 0.15 over one sampling
+      // step is the line between "a beat lost them" and "they bled out evenly"
+      // — every curve measured so far has come in at 0.12–0.18, which is why
+      // 「離脱しているビートを直す」 is not currently an available move.
+      const shape = w.d >= 0.15 ? `崖あり @${w.at.toFixed(1)}s ← ここは直せる場所` : '崖なし（全体で薄く漏れている）';
+      out.push(`            ${MARKS[i % MARKS.length]} ${(s.title || '').slice(0, 14).padEnd(16)}`
+        + `${String(s.views).padStart(4)}回 ${s.seconds}s  `
+        + `開始 ${s.pts[0].watch.toFixed(2)} → 終了 ${s.pts[s.pts.length - 1].watch.toFixed(2)}  `
+        + `最大の落ち ${w.d.toFixed(2)}  ${shape}`);
+    }
+    // The comparison the shared axis exists to make, stated in one line so it
+    // cannot be skipped: retention and reach have not tracked each other on
+    // this channel, and that fact is easy to forget while looking at a curve.
+    const best = [...series].sort((a, b) => b.pts.reduce((x, p) => x + p.watch, 0) / b.pts.length
+      - a.pts.reduce((x, p) => x + p.watch, 0) / a.pts.length)[0];
+    const most = [...series].sort((a, b) => b.views - a.views)[0];
+    out.push(`            ※ いちばん見られたのは「${(most.title || '').slice(0, 12)}」(${most.views}回)、`
+      + `いちばん維持が高いのは「${(best.title || '').slice(0, 12)}」`
+      + `${best === most ? ' —— 今回は一致した' : ' —— 一致していない。維持を上げても配信は増えていない'}`);
   }
 }
 
