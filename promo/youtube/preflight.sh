@@ -64,6 +64,11 @@ import('./youtube/yt.mjs').then(async m => {
   console.log('                 足りないように見えても、作り直す前に videos?id=<id> で直接見ること。');
 }).catch(e => console.log('予約        : 取得できず —', String(e.message||e).slice(0,60)));
 " 2>/dev/null
+# The diagnosis, every run. Retention, likes and subscribers gained sat unread
+# for five days because reading them was a note in a journal rather than a line
+# in this file. Anything decided to be checked every run belongs here.
+node youtube/diag.mjs 2>/dev/null
+
 # Tokens only. The %-conversion this used to print was retired 2026-08-08: the
 # cap counts every session on the account and the others live in other
 # containers, so no honest remaining-balance can be computed here.
