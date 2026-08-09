@@ -70,8 +70,31 @@ const mustSee = async (label, pattern, root = 'body') => {
     if (!hit) return { ok: false, why: 'その文が画面のどこにも無い' };
     hit.scrollIntoView({ block: 'center' });
     const b = hit.getBoundingClientRect();
-    const ok = b.top >= 0 && b.bottom <= window.innerHeight && b.width > 0 && b.height > 0;
-    return { ok, why: ok ? `y=${Math.round(b.top)}` : `画面外 y=${Math.round(b.top)}` };
+    const onScreen = b.top >= 0 && b.bottom <= window.innerHeight && b.width > 0 && b.height > 0;
+    if (!onScreen) return { ok: false, why: `画面外 y=${Math.round(b.top)}` };
+    // Being in the viewport is not the same as being visible. Twice in one run
+    // the evidence was inside the frame and covered by my own overlay — first
+    // the banner sitting on 「この周回あと 5/5 個」, then the caption doing it
+    // again after the banner moved. Both passed a viewport-only check.
+    //
+    // Rect intersection against the overlay's own boxes, not elementFromPoint:
+    // the caption layer sets pointer-events:none, so hit-testing passes straight
+    // through it and reported "visible" on a frame where the caption was sitting
+    // on the evidence.
+    //
+    // #pfxTop is the banner and #pfxCap the caption lines (overlay.js). Measure
+    // the leaf spans inside them — the containers are full-width and would
+    // report a collision with anything on their row.
+    const boxes = [...document.querySelectorAll('#pfxTop *, #pfxCap *')]
+      .filter(n => n.getClientRects().length && n.textContent.trim())
+      .map(n => n.getBoundingClientRect());
+    const overlapX = boxes.map(o => Math.max(0, Math.min(b.right, o.right) - Math.max(b.left, o.left))
+      * (o.top < b.bottom && o.bottom > b.top ? 1 : 0));
+    const worst = Math.max(0, ...overlapX) / (b.width || 1);
+    if (worst > 0.25) {
+      return { ok: false, why: `テロップが根拠の${Math.round(worst * 100)}%を覆っている` };
+    }
+    return { ok: true, why: `y=${Math.round(b.top)}` };
   }, [root, pattern.source ?? String(pattern)]);
   console.log(`  ${label}: ${r.ok ? '見えている' : '✗ ' + r.why} (${pattern})`);
   if (!r.ok) {
@@ -274,12 +297,7 @@ const hookScreen = {
   },
 };
 await (hookScreen[VARIANT.hook.screen] || hookScreen.play)();
-// Any cut may declare its own evidence, so a new one does not have to edit this
-// file to be checkable. Same abort as the screen-level checks above.
-if (VARIANT.hook.expect) {
-  const e = VARIANT.hook.expect;
-  await mustSee('掴みの根拠', new RegExp(e.text || e), e.root || 'body');
-}
+
 await page.waitForTimeout(400);
 // Lift the music bed well above the game's own ceiling. Without it the take is
 // mostly silence with occasional spikes: quiet enough that YouTube's loudness
@@ -305,7 +323,10 @@ const SHORT = process.env.PROMO_LENGTH === 'short';
 const cues = [];
 
 await top(VARIANT.hook.banner, VARIANT.hook.bannerPos);
-await cap(VARIANT.hook.caption);
+// Captions can be moved off the evidence, same as the banner. #pfxCap defaults
+// to the lower area, which on the panel screens lands on the panel's own
+// headings — the line `craftcap` exists to show.
+await cap(VARIANT.hook.caption, VARIANT.hook.capPos);
 await page.waitForTimeout(350);   // let the text animate in behind the cover
 await begin();
 console.log(`  cut: ${VARIANT.id}`);
@@ -367,12 +388,31 @@ if (VARIANT.hook.spot) {
   const hit = await ev(sel => window.__spot(sel, 2600), VARIANT.hook.spot);
   console.log(`  spot ${VARIANT.hook.spot}: ${hit === true ? 'ok' : `失敗 (${hit})`}`);
 }
-const moved = hookMotion[VARIANT.hook.screen] || hookMotion.play;
+// A cut can hold still. The screen-level motions scroll their lists, which is
+// right when the claim is "there is a lot of this" and wrong when the claim is
+// one line near the top — `craftcap` had its evidence scrolled out of frame by
+// the shared craft motion.
+const moved = VARIANT.hook.motion === 'still'
+  ? (() => wait(300))
+  : (hookMotion[VARIANT.hook.screen] || hookMotion.play);
 await moved();
 // The hold has to leave room for the hook line to finish, not just for the
 // motion to play. Cutting it to 900ms made the tree hook overrun by 0.73s: the
 // movement was added by taking away the time the sentence needed.
 await wait(VARIANT.hook.screen === 'play' || VARIANT.hook.screen === 'quota' ? 1100 : 1800);
+
+// Checked here, not during setup. The first version ran before hookMotion and
+// therefore certified a frame that the motion then scrolled away from —
+// `craftcap` passed with 「この周回あと 5/5 個」 centred and filmed with it off
+// screen. The check has to measure the state that is actually recorded.
+//
+// Any cut may declare its own evidence, so a new one does not need to edit this
+// file to be checkable. Same abort as the screen-level checks: a throw here
+// exits non-zero and autopost dies before the upload.
+if (VARIANT.hook.expect) {
+  const e = VARIANT.hook.expect;
+  await mustSee('掴みの根拠', new RegExp(e.text || e), e.root || 'body');
+}
 
 // ---- SHORT: jump straight to the kinetic beat, on the board scene 3 sets up
 if (SHORT) {

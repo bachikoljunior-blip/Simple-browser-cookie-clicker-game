@@ -383,6 +383,41 @@ export const VARIANTS = [
   // screen, different hook shape: the one comparison in this whole set where
   // only the form moves.
   {
+    id: 'craftcap',
+    // A limit is a stranger thing to find in an idle game than any quantity, and
+    // this one the panel prints on itself: 「装備の作成（この周回あと 5/5 個）」.
+    // The number is small enough to guess, which is why the hook asks whether
+    // there is a cap at all rather than how big it is.
+    hook: {
+      screen: 'craft',
+      banner: '装備、いくつでも作れると思います?',
+      // Up over the play field. At the default position the banner sat exactly
+      // on 「装備の作成（この周回あと 5/5 個）」 — the line this cut exists to
+      // show. mustSee passed, because it asks the DOM whether the element is in
+      // the viewport and knows nothing about my own overlay covering it.
+      // Both overlays pushed clear of 「装備の作成（この周回あと 5/5 個）」, which
+      // sits mid-frame where the panel meets the play field. The banner covered
+      // it at the default position; moving the banner up left the caption
+      // covering it instead (87%, caught by the occlusion check). Captions go
+      // over the play field; the banner takes the default slot, where it lands
+      // on the 工房 heading and nothing that matters.
+      capPos: 'high',
+      // No scroll: the shared craft motion walks down the recipe list and takes
+      // the header line with it.
+      motion: 'still',
+      caption: ['作れるのは', '<em>1周に5個まで</em>'],
+      narration: '装備って、いくつでも作れると思います?',
+      taps: false,
+      // Guards the digit too, not just the phrase — the caption says 5.
+      expect: { text: 'この周回あと\\s*5/5', root: '#workshopPanel' },
+    },
+    // EQUIP2_CFG.craftPerRunCap（既定5）。上限に当たると
+    // 「装備の作成はこの周回あと0個(上限5個/周回)」とゲーム自身が言う。
+    title: '装備、いくつでも作れると思いますか【放置ゲー】',
+    description: `装備の作成は1周につき5個までです。レシピは486種類あるので、周回ごとに何を作るかを選ぶことになります。素材と装備は転生しても持ち越すので、選び直しは次の周回でききます。`,
+    tags: TAGS,
+  },
+  {
     id: 'formula',
     // The untried combination the retention data pointed at. `numbers` opens on
     // this same screen with a statement hook — 「効いてる倍率が全部見られる」 —
