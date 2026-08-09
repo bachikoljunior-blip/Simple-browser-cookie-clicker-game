@@ -49,17 +49,49 @@ if (stats.length) {
   if (!subs) out.push('            ※ 登録者増 0 —— 前の動画が次を助けていない。伸びは線形のまま');
   if (!likes) out.push('            ※ いいね 0 —— 戻ってくる理由が作れていない');
 
-  // The curve, not just the average: the average cannot tell "held the opening"
-  // from "held the ending", and a theory about hooks lives or dies on that.
-  // 1.00 超はループ再視聴。
-  const curves = [];
+  // The curve as a curve, not two endpoints. Reducing it to 開始→終了 was my
+  // own shortcut and it threw away the only thing a curve says that an average
+  // does not: WHERE people leave. A beat that loses a third of the audience is
+  // a beat that can be rewritten; "51.2% on average" is not.
+  //
+  // 40 columns of ▁▂▃▄▅▆▇█ over the whole video, scaled to that video's own
+  // maximum so the shape reads regardless of level. Above 1.00 is loop
+  // rewatching, which is why the scale is printed rather than assumed to be 1.
+  const BLOCKS = '▁▂▃▄▅▆▇█';
+  const spark = (pts, cols = 40) => {
+    const hi = Math.max(...pts.map(p => p.watch)) || 1;
+    let out = '';
+    for (let i = 0; i < cols; i++) {
+      const a = Math.floor(i * pts.length / cols), b = Math.max(a + 1, Math.floor((i + 1) * pts.length / cols));
+      const seg = pts.slice(a, b);
+      const v = seg.reduce((x, p) => x + p.watch, 0) / seg.length;
+      out += BLOCKS[Math.min(7, Math.max(0, Math.round(v / hi * 7)))];
+    }
+    return out;
+  };
+  // Where the audience actually goes, expressed as the steepest fall between
+  // adjacent columns and the second it happens at.
+  const worstDrop = (pts, seconds) => {
+    let at = 0, d = 0;
+    const step = Math.max(1, Math.floor(pts.length / 40));
+    for (let i = step; i < pts.length; i += step) {
+      const f = pts[i - step].watch - pts[i].watch;
+      if (f > d) { d = f; at = pts[i].at ?? (i / pts.length) * seconds; }
+    }
+    return { d, at };
+  };
+
   for (const v of stats.slice(0, 3)) {
     try {
-      const p = (await retention(v.id)).points.filter(x => typeof x.watch === 'number');
-      if (p.length) curves.push(`${(v.title || '').slice(0, 10)} ${p[0].watch.toFixed(2)}→${p[p.length - 1].watch.toFixed(2)}`);
+      const c = await retention(v.id);
+      const p = (c.points || []).filter(x => typeof x.watch === 'number');
+      if (!p.length) continue;
+      const w = worstDrop(p, c.seconds);
+      out.push(`  ${pad('維持曲線', 8)}: ${(v.title || '').slice(0, 10)}  ${spark(p)}`);
+      out.push(`            開始 ${p[0].watch.toFixed(2)} → 終了 ${p[p.length - 1].watch.toFixed(2)}`
+        + `  最大の落ち ${w.d.toFixed(2)} @ ${w.at.toFixed(1)}s / 全長 ${c.seconds}s`);
     } catch {}
   }
-  curves.length ? row('維持曲線', '開始→終了  ' + curves.join(' / ')) : gap('維持曲線', '取れなかった');
 }
 
 try {
