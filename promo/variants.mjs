@@ -371,6 +371,66 @@ export const VARIANTS = [
     description: `設備は16種類あります。強い指、おばあちゃん、オーブン、工場……と増えていって、最後は反物質オーブンです。どれも買うほど安くならないので、どこで次の段に移るかを選ぶことになります。`,
     tags: TAGS,
   },
+  // Added 2026-08-09. quest came in at 228 — the question form applied to a
+  // subject that is not a magnitude unit — which settles what prestige only
+  // suggested: the form carries, not the subject.
+  //
+  //   問い     740 / 287 / 236 / 228
+  //   言い切り 126 〜 193（9本）
+  //
+  // So every cut below is a question, and `layers` deliberately re-asks the
+  // subject `endless` already covered in statement form (127). Same claim, same
+  // screen, different hook shape: the one comparison in this whole set where
+  // only the form moves.
+  {
+    id: 'restart',
+    hook: {
+      screen: 'skill',
+      skillId: 'start_2',
+      banner: '転生したらゼロからだと思います?',
+      caption: ['スキルを取ると', '<em>1475万</em>から始まります'],
+      narration: '転生したら、クッキーはゼロからだと思います?',
+      taps: false,
+      // The node writes it out: 「転生後 計1475万クッキーで開始、放置上限+4時間。」
+      expect: { text: '1475万クッキーで開始', root: '#skillChoiceScreen' },
+    },
+    title: '転生したらゼロからだと思いますか【放置ゲー】',
+    description: `転生すると生産はリセットされますが、スキル「帰還神殿」を取ると次の周回を1475万クッキーから始められます。周回のたびに序盤をやり直す時間が短くなっていく作りです。`,
+    tags: TAGS,
+  },
+  {
+    id: 'stages',
+    hook: {
+      screen: 'research',
+      banner: '研究って買ったら終わり?',
+      // 段階3 was in this line and had to come out: the frame shows 段階2 rows
+      // (銀行クリック配当 段階2, 工場ネットワーク 段階2) and no 段階3 card at all,
+      // so saying both asserted something the picture does not carry. It stays
+      // in the description, where it is explained rather than pointed at.
+      //
+      // The abort did not catch this, and that is the lesson: expect declared
+      // 段階2 while the caption claimed more. **expect has to cover everything
+      // the caption asserts**, or the check guards a subset and passes a take
+      // that overstates.
+      caption: ['スキルを取ると', '<em>段階2</em>が出てきます'],
+      narration: '放置ゲーの研究って、買ったら終わりだと思います?',
+      taps: false,
+      expect: { text: '段階2', root: '#research' },
+    },
+    // RESEARCH の13件が s2/s3 を持つ。画面に出るのは購入カードの「段階2」なので、
+    // 数は説明欄に置き、テロップは画面が出している語だけにしてある。
+    title: '研究って買ったら終わりだと思いますか【放置ゲー】',
+    description: `研究は買って終わりではありません。対応するスキルを取ると段階2、さらに段階3の購入カードが出てきて、同じ研究の効果が作り変わります。21種類のうち13種類が段階3まで伸びます。`,
+    tags: TAGS,
+  },
+  // `layers` was going to sit here: the same claim as `endless`（層が続く）in
+  // question form, which would have been the one comparison where only the hook
+  // shape moves. It is not shipped, because the evidence is not on the frame.
+  // .quotaStageBadge exists in the DOM on the fullscreen play screen but renders
+  // at zero size, so 「第52層」 is not visible — mustSee refused the take twice
+  // (once as "not found", once as 画面外 y=0 after the selector was widened).
+  // Re-try it only from a screen where the badge is actually drawn; do not
+  // re-add it by loosening the check.
   {
     id: 'offline',
     // The question form is now three for three at the top of the channel --

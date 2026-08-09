@@ -61,7 +61,11 @@ await setPlayFullscreen(true);
 const mustSee = async (label, pattern, root = 'body') => {
   const r = await ev(([sel, src]) => {
     const re = new RegExp(src);
-    const hit = [...document.querySelectorAll(sel + ' *')]
+    // Both the roots and their descendants. Querying only `sel + ' *'` misses
+    // the case where the text lives on the root element itself, which is how
+    // .quotaStageBadge (a leaf carrying 「第52層」) came back as "not on screen"
+    // on a frame that was showing it.
+    const hit = [...document.querySelectorAll(sel), ...document.querySelectorAll(sel + ' *')]
       .filter(n => n.children.length === 0 && re.test(n.textContent || '')).pop();
     if (!hit) return { ok: false, why: 'その文が画面のどこにも無い' };
     hit.scrollIntoView({ block: 'center' });
@@ -178,9 +182,11 @@ const hookScreen = {
     // map-only view, which is what `tree` wants and is exactly wrong for this
     // cut: it hides the detail panel, and the panel is the only place in the
     // game where 「放置生産の時間上限を撤廃。」 is written down.
-    await ev(() => { try { selectedSkillId = 'endless_oven'; renderSkillChoiceScreen(); } catch (e) {} });
+    // Which node, from the cut. The screen is the same one `offline` uses; only
+    // the selected node differs, so a new skill-based cut needs no code here.
+    await ev(id => { try { selectedSkillId = id; renderSkillChoiceScreen(); } catch (e) {} },
+      VARIANT.hook.skillId || 'endless_oven');
     await page.waitForTimeout(500);
-    await mustSee('skill 文言', /時間上限を撤廃/, '#skillChoiceScreen');
   },
   // The workshop's cooking half, which nothing had used -- `recipes` and the two
   // craft cuts all open on the equipment list. showCooking() already exists in
