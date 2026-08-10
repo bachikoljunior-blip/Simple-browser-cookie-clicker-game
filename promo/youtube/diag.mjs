@@ -193,7 +193,10 @@ try {
 // reminder that distribution is unmeasured, which is the gap most likely to be
 // filled with a story.
 row('配信量', '取得不可 —— impressions / impressionsCtr は Analytics API に無い（8/9 実測）');
-row('同ジャンル', '未着手 —— 他チャンネルの Shorts を一度も見ていない（API 外・要 WebSearch）');
+// 8/10 に一度測った（rivals.mjs / 75本）。search.list は1回100 units 使うので
+// 毎回は撃たない。数字が古くなったと感じたら探索の回で撃ち直すこと。
+row('同ジャンル', '8/10 実測: 上位75本の尺の中央値 28s（全20本が11〜15秒の私たちは最も薄い帯）'
+  + '／参加型は同じ題材でコメント1000〜2800（私たちは0）。再測は node promo/youtube/rivals.mjs');
 
 console.log('── 材料（全部読む）─────────────────────');
 console.log(out.join('\n'));
