@@ -12,7 +12,7 @@
 // Privacy defaults to `private`, so the automation cannot publish to the channel
 // until someone deliberately passes --public (or sets YT_PRIVACY). That is the
 // same kind of act as providing the credentials: a decision, not a default.
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { VARIANTS, MARK, describe } from '../variants.mjs';
@@ -182,6 +182,7 @@ function render(cut) {
   // mistake made in the shell. Asserting it here costs one request and removes
   // the whole confusion.
   ensureServerRoot();
+  ensureTools();
   run('node', ['director.mjs'], { PROMO_VARIANT: cut.id, PROMO_LENGTH: LENGTH, PROMO_BODY: body });
   run('node', ['narrate.mjs']);
   run('node', ['encode.mjs']);
@@ -222,6 +223,29 @@ function ensureServerRoot() {
   }
   throw new Error(`8765 で play.html を出せない。${repo} に play.html があるか確認すること。`
     + ' 別ルート（promo/ など）で誰かが 8765 を掴んでいる可能性もある。');
+}
+
+// Same shape as ensureServerRoot, for the same reason. A fresh container has no
+// system ffmpeg and no open_jtalk, and encode.mjs silently degrades when it finds
+// only the bundled ffmpeg: no narration mixed in, no MP4 written. The run then
+// died forty seconds later on 「render finished but no mp4 was produced」 — an
+// error naming the encoder for a container that had never been set up.
+//
+// README said 「新しいコンテナでは毎回必要」 and setup.sh existed. That is the
+// exact form instruction 7 rejects: a step written down for someone to remember.
+// It is not remembered — it was missed here, on a fresh container, by a run that
+// had read the README in the same session. So the step moves into the code that
+// needs it, and nobody has to know about it.
+function ensureTools() {
+  const have = t => spawnSync(t, ['-version']).status === 0
+    || spawnSync('sh', ['-c', `command -v ${t}`]).status === 0;
+  if (have('ffmpeg') && have('open_jtalk')) return;
+  console.log('  ffmpeg/open_jtalk が無いので setup.sh を走らせる（新しいコンテナ）...');
+  execFileSync('bash', [path.join(PROMO, 'youtube', 'setup.sh')], { stdio: 'inherit' });
+  if (!have('ffmpeg')) {
+    throw new Error('setup.sh のあとも ffmpeg が無い。ここで止める —— '
+      + '同梱の ffmpeg では音声コーデックが無く、ナレーション無し・mp4 無しの take になる。');
+  }
 }
 
 function verify(file) {

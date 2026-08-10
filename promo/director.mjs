@@ -65,12 +65,22 @@ const mustSee = async (label, pattern, root = 'body') => {
     // the case where the text lives on the root element itself, which is how
     // .quotaStageBadge (a leaf carrying 「第52層」) came back as "not on screen"
     // on a frame that was showing it.
-    // "Leaf" has to allow <br>. The drop table in the 一覧 panel is one <div>
-    // with <br>-separated lines, so a strict children.length===0 test skipped it
-    // and reported 「オーバーキル」 as absent from a screen that was showing it.
-    const leafish = n => [...n.children].every(c => c.tagName === 'BR');
-    const hit = [...document.querySelectorAll(sel), ...document.querySelectorAll(sel + ' *')]
-      .filter(n => leafish(n) && re.test(n.textContent || '')).pop();
+    // What is wanted is the SMALLEST element that carries the text, so the
+    // rectangle measured below is the evidence and not a panel wrapping it.
+    //
+    // That used to be spelled "a leaf, or a leaf with <br>s in it" — the drop
+    // table in the 一覧 panel is one <div> of <br>-separated lines, and a strict
+    // children.length===0 test had reported 「オーバーキル」 as absent from a
+    // screen that was showing it. The tag whitelist was the wrong repair: the
+    // 記録 rows are `<div class="infoRow"><img><b>名前</b> 累計… / 次の記録 …</div>`,
+    // where the sentence sits in a text node beside an <img> and a <b>, and the
+    // check again called it absent from a screen that had it on it.
+    //
+    // Asked directly instead: keep the matches none of whose children match. No
+    // tag list to keep extending, and it says what "smallest" actually means.
+    const all = [...document.querySelectorAll(sel), ...document.querySelectorAll(sel + ' *')]
+      .filter(n => re.test(n.textContent || ''));
+    const hit = all.filter(n => ![...n.children].some(c => re.test(c.textContent || ''))).pop();
     if (!hit) return { ok: false, why: 'その文が画面のどこにも無い' };
     hit.scrollIntoView({ block: 'center' });
     const b = hit.getBoundingClientRect();
@@ -414,6 +424,122 @@ const hookScreen = {
     await waitForImages('prestigeTab');
     await scrollToHeading('prestigeTab', '転生');
   },
+  // 周回方針の選択画面。`cook` が言い切りの帯(126〜193)を341で破ったとき、
+  // 効いたのが文の形なのか画の強さなのかを分けられなかった —— cook だけが
+  // 「絵が大きく並ぶ画面」で、他は全部 UI かテキストだった。ここはその軸の
+  // 2本目で、しかも料理と違って画面が自分で規則を書いている
+  // (「この周回の方針を1つ選択(途中変更不可)」)ので、問いの形とも両立する。
+  //
+  // play.html:4856 が #policyChoiceRow 限定で画像を大きくしているので、
+  // 5枚が上3・下2で並ぶ。ここを選ばず prestigeTab を使うと、方針は
+  // 「周回方針：標準」という1行のテキストにしかならない。
+  policy: async () => {
+    await setPlayFullscreen(true);
+    await ev(() => {
+      try {
+        // risk と同じ理由。setLateGame が全スキルを与えるので、セーブが
+        // スキル選択画面で止まっていることがあり、そのとき body の
+        // skillChoiceMode が別のオーバーレイを出したままになる。
+        document.body.classList.remove('skillChoiceMode', 'titleScreenMode');
+        // 素材との相性文は workshopTabUnlocked() でしか出ない(play.html:13598)。
+        // setLateGame は工房を解放済みにするので5枚とも bias 行つきで並ぶ。
+        openPolicyChoiceScreen();
+      } catch (e) {}
+    });
+    await page.waitForTimeout(400);
+    // 素で撮ると縦の上半分が空いた背景のままで、5枚は画面の中〜下段に小さく
+    // 収まる —— この切り口は「絵が大きく並ぶ画面」の軸を試すために在るのに、
+    // 絵が小さいままでは軸そのものが試せていない。
+    //
+    // transform:scale ではなく zoom。scale はレイアウトを動かさずに描画だけ
+    // 拡げるので、`order` で枠外へ溢れて両端が切れた。zoom はレイアウトごと
+    // 組み直すので、中身は枠の中に収まったまま大きくなる。
+    await ev(() => {
+      const inner = document.querySelector('#policyChoiceScreen .policyChoiceInner');
+      if (inner) inner.style.zoom = '1.32';
+    });
+    await page.waitForTimeout(400);
+    await mustSee('方針 途中変更不可', /途中変更不可/, '#policyChoiceScreen');
+  },
+  // 討伐マイルストーン。「同じ種類を倒し続けると恒久ボーナスが付く」という、
+  // 放置ゲーの見た目からは出てこない規則。25体で1段、以降4倍ごと
+  // (play.html killRecordTier)。
+  //
+  // 置き場所を最初 一覧タブだと読み違えた。recordRows は renderWorkshop の中に
+  // あり(play.html:10355)、工房タブの「料理」サブタブ側にしか描かれない
+  // —— つまり `cook` と同じ画面の下端。infoTab を開いて撮ろうとした take は
+  // 掴みの検査に「その文が画面のどこにも無い」で落とされた。仕組みのほうが
+  // 私の記憶より正しかった。
+  //
+  // setLateGame は killRecords を触らないので、素で撮ると全17行が
+  // 「累計0体 / 次の記録25体 / 記録0段：ボーナスなし」になる —— 規則は
+  // 書いてあるのに効いている例が1つも無い画面で、テロップだけが倍率を
+  // 語ることになる。これは指示11に触れるので、記録のほうを実際に積む。
+  record: async () => {
+    await setPlayFullscreen(false);
+    await ev(() => {
+      try {
+        // 段がばらける値を入れる。全部同じ数だと「種類ごとに別々に数えている」
+        // という主張のほうが画面から読めない。25/100/400/1600 が段の境目。
+        const n = [1740, 430, 118, 96, 27, 512, 63, 210, 31, 88, 1210, 44, 150, 26, 340, 72, 19];
+        state.killRecords = state.killRecords && typeof state.killRecords === 'object'
+          ? state.killRecords : {};
+        Object.keys(MONSTER_TYPES).forEach((id, i) => {
+          state.killRecords[id] = n[i % n.length];
+        });
+        renderActiveTab();
+      } catch (e) {}
+    });
+    // cook と同じ経路で料理サブタブへ。b.click() は効かない（工房のサブタブは
+    // addTap で配線されている）ので、state を書いて描き直す。
+    await showCooking();
+    await ev(() => { try { state.wsSubTab = 'dish'; renderWorkshop(); } catch (e) {} });
+    await waitForImages('workshopTab');
+    // 料理の棚は cook が使った絵なので、そこは通過して記録欄で止める。
+    //
+    // ただし記録欄はパネルの最下部にあるので、素の scrollToHeading では
+    // スクロール上限に当たって画面の下半分にしか来ない —— 最初の take は
+    // 帯もテロップも料理の写真の上に乗り、記録の行はその下に切れて並んだ。
+    // 検査は通る（根拠は映っている）が、掴みとしては焦点が2つある絵になる。
+    // パネルの末尾に空きを足して、記録欄を上まで送れるようにする。映るものは
+    // ゲームが描いたそのままで、足したのは何も書いていない余白だけ。
+    await ev(() => {
+      const box = document.getElementById('workshopPanel') || document.getElementById('workshopTab');
+      if (!box || box.querySelector('#pfxSpacer')) return;
+      const sp = document.createElement('div');
+      sp.id = 'pfxSpacer';
+      sp.style.height = '900px';
+      box.appendChild(sp);
+      // policy でやった zoom はここでは効かない。試したら見出しごと枠の上へ
+      // 流れて行数も減った —— あちらは中身が枠に収まっている画面、こちらは
+      // スクロールする一覧で、zoom がスクロール量のほうを変えてしまう。
+      // 下半分が工房の背景になるのは受け入れる（この切り口は「絵の強さ」では
+      // なく「当てられない問い」の側で出している）。
+    });
+    // 見出しの文字は完全一致で探される（stage.mjs の scrollToHeading）。
+    // '記録' だけ渡した take は head=false を返して黙って何もせず、料理の棚の
+    // まま撮れていた —— 戻り値を誰も見ていなかったので、失敗が静かに通った。
+    // 見出しの全文を渡し、'ok' でなければここで落とす。
+    const sc = await scrollToHeading('workshopTab', '記録(討伐マイルストーン)');
+    if (sc !== 'ok') throw new Error(`記録欄までスクロールできなかった: ${sc}`);
+  },
+  // 周回開始前のステージ選択。`endless` が「ステージを6つにして最後だけ
+  // 終わらなくした」を言い切りで扱ったが、選べること自体は扱っていない
+  // —— 解放済みなら第1に戻れる。renderStageChoiceScreen は
+  // maxUnlockedStageNo() までしか描かないので、解放数を入れないと1枚しか出ず、
+  // 「選ぶ」という主張の根拠が画面に無くなる。
+  stagepick: async () => {
+    await setPlayFullscreen(true);
+    await ev(() => {
+      try {
+        document.body.classList.remove('skillChoiceMode', 'titleScreenMode');
+        state.stageUnlocked = 5;
+        openStageChoiceScreen();
+      } catch (e) {}
+    });
+    await page.waitForTimeout(700);
+    await mustSee('ステージ 第5', /星屑の銀河/, '#stageChoiceScreen');
+  },
 };
 await (hookScreen[VARIANT.hook.screen] || hookScreen.play)();
 
@@ -497,6 +623,12 @@ const hookMotion = {
   // aimed at an element the overlay is blocking. The panel's own entry animation
   // is the movement here.
   risk:  () => wait(400),
+  // どちらも選択肢が画面いっぱいに並ぶ専用画面で、スクロールする先が無い。
+  policy: () => wait(400),
+  stagepick: () => wait(400),
+  // 記録は見出しに合わせてあるので、共通の info スクロールを流すと
+  // `craftcap` と同じで根拠が枠外へ出る。
+  record: () => wait(400),
 };
 // Ring first, then move. Called after the motion it only appeared 1.6s in — past
 // the window the whole hook exists to win. The point of pointing at the evidence
@@ -559,6 +691,12 @@ if (SHORT) {
   // Undo everything that hook set, not just the display, or the zoom and the
   // top-anchoring survive into the rest of the video.
   await ev(() => {
+    // 方針選択・ステージ選択も、開いたままだと risk のモーダルと同じことになる
+    // —— 画面いっぱいの .policyChoiceScreen.active が討伐ビートを覆い、
+    // 「群れもボスも来ます」の下に選択画面が映る。verify() は長さも解像度も
+    // 音声も正常と言うので、ここで確実に閉じる。
+    try { closePolicyChoiceScreen(); } catch (e) {}
+    try { closeStageChoiceScreen(); } catch (e) {}
     const rm = document.getElementById('rewardModal');
     if (!rm) return;
     ['zoom', 'align-items', 'padding-top'].forEach(k => rm.style.removeProperty(k));
