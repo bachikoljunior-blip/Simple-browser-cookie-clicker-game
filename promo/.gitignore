@@ -21,3 +21,9 @@ beat_*.png
 # the picker would find no history, fall back to the first cut, and post the same
 # one every day. It is committed for the same reason it exists.
 youtube/snapshot.log
+
+# 外部レビューが開くフレームと、その判定。どちらもこの take 限りのもの。
+# 判定は mp4 の sha256 に焼き付いているので、次の take では無効になる ——
+# 追跡すると「前回の合格」が残っているように見えて紛らわしい。
+review/
+youtube/review-verdict.json

@@ -377,6 +377,12 @@ try {
 }
 
 verify(file);
+// verify() only asks whether the render is broken. Whether it is worth watching
+// has never been asked by anyone but the process that made it — 19 videos, 1
+// subscriber, 0 comments, growth flat. So an outside reviewer has to have passed
+// this exact file, and this throws if it has not (review.mjs binds the verdict
+// to the mp4's sha256, so a pass from an earlier take cannot authorise this one).
+run('node', ['youtube/review.mjs', 'check']);
 await noteAboutText(links);
 
 const c = await channel();
