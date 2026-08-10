@@ -86,7 +86,10 @@ import('./youtube/yt.mjs').then(async m => {
     rows.push(\`\${d.slice(5)}:\${byDay.get(d) || 0}\`);
     if (d === day(last)) break;
   }
-  const holes = rows.filter(r => r.endsWith(':0'));
+  // 今日は数えない。**公開済みの本は予約の一覧から出ていく**ので、その日の分が
+  // 出たあとの今日は必ず 0本に見える。入れたままだと毎回「穴がある」と言い続けて、
+  // 本物の穴と区別がつかなくなる（印字が狼少年になったら、それは検査ではない）。
+  const holes = rows.slice(1).filter(r => r.endsWith(':0'));
   console.log(\`              日ごと \${rows.join(' ')}\`);
   if (holes.length) console.log(\`              ← 公開が0本の日が \${holes.length}日ある（\${holes.map(h=>h.split(':')[0]).join(', ')}）。RUNBOOK §2(1) に当たる\`);
   console.log('              ※ 直後にアップした分は検索索引の遅れで数分間ここに出ない。');
