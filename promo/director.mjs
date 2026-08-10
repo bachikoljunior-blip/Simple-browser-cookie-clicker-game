@@ -568,12 +568,25 @@ const SHORT = process.env.PROMO_LENGTH === 'short';
 const cues = [];
 
 await top(VARIANT.hook.banner, VARIANT.hook.bannerPos);
-// Captions can be moved off the evidence, same as the banner. #pfxCap defaults
-// to the lower area, which on the panel screens lands on the panel's own
-// headings — the line `craftcap` exists to show.
-await cap(VARIANT.hook.caption, VARIANT.hook.capPos);
+// The question goes up alone. The answer comes later — see `capAt` below.
+//
+// 2026-08-10. Two outside reviewers, on two unrelated cuts (`restart`, `stages`),
+// independently gave the same top reason for swiping: the hook asks a question
+// and the caption underneath it answers the question in the same frame. "問いを
+// 出した0.1秒後に答えを見せたら、続きを見る理由がゼロになる." Neither reviewer was
+// told anything about how the cut was built, and neither was told what the other
+// said. That is two blind hits on one mechanism.
+//
+// It was already written down as the untested experiment in CLAUDE.md 第2部 —
+// `cook`'s 341 could be explained either by its picture being the strongest of
+// the 26 hooks, or by it being the only cut that does NOT answer itself up
+// front. The two hypotheses were tangled because no cut had ever separated them.
+// Delaying only the caption separates them: the picture does not change, the
+// wording does not change, the only thing that moves is when the answer arrives.
+await cap([], VARIANT.hook.capPos);
 await page.waitForTimeout(350);   // let the text animate in behind the cover
 await begin();
+const recStart = Date.now();
 console.log(`  cut: ${VARIANT.id}`);
 console.log('  audio:', await ev(() => window.__startRec()));
 await shot('hook');
@@ -669,10 +682,32 @@ const moved = VARIANT.hook.motion === 'still'
 // expected to move, and autopost throws on a take that did not.
 const hookAsksToMove = VARIANT.hook.motion !== 'still';
 await moved();
+// The answer lands here, measured from the moment recording started rather than
+// from this line — `moved()` runs 400ms on the still screens and 1500ms on the
+// scrolling ones, so timing it from here would put the answer at a different
+// second on every cut and the experiment would measure the wrong thing.
+//
+// A cut can set `hook.capAt: 0` to keep the old simultaneous form (some hooks
+// are a statement, not a question, and have no answer to withhold), or raise it.
+// Default 1500ms: `restart`'s reviewer swiped at 1.5s and `stages`'s at 1.2s, so
+// the answer now arrives after the frame where both of them had already left —
+// it has to buy the stop, not reward it.
+const capAt = VARIANT.hook.capAt ?? 1500;
+const late = Math.max(0, capAt - (Date.now() - recStart));
+if (late) await wait(late);
+// Captions can be moved off the evidence, same as the banner. #pfxCap defaults
+// to the lower area, which on the panel screens lands on the panel's own
+// headings — the line `craftcap` exists to show.
+await cap(VARIANT.hook.caption, VARIANT.hook.capPos);
 // The hold has to leave room for the hook line to finish, not just for the
 // motion to play. Cutting it to 900ms made the tree hook overrun by 0.73s: the
 // movement was added by taking away the time the sentence needed.
-await wait(VARIANT.hook.screen === 'play' || VARIANT.hook.screen === 'quota' ? 1100 : 1800);
+//
+// Whatever the delay above spent comes out of this hold, so the hook keeps its
+// total length and the beats after it do not shift. The floor is 500ms: the
+// answer still has to be readable before the flash cuts away from it.
+const hold = VARIANT.hook.screen === 'play' || VARIANT.hook.screen === 'quota' ? 1100 : 1800;
+await wait(Math.max(500, hold - late));
 
 // Checked here, not during setup. The first version ran before hookMotion and
 // therefore certified a frame that the motion then scrolled away from —
