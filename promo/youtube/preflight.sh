@@ -27,11 +27,22 @@ echo "cwd(promo)  : $(pwd)"
 echo "時刻        : $(TZ=Asia/Tokyo date '+%m/%d %H:%M JST')"
 
 # Local vs origin, because the local log alone has lied here before.
+# The hourly runs check out on a detached HEAD, so `git branch --show-current`
+# is empty and this printed '? ← ズレている' every time — a warning that said
+# nothing about whether the branch was actually behind. When detached, the
+# branch is the single local ref HEAD descends from (the checkout's origin).
+branch=$(git branch --show-current 2>/dev/null)
+if [ -z "$branch" ]; then
+  branch=$(git for-each-ref --format='%(refname:short)' refs/heads 2>/dev/null \
+    | while read -r b; do git merge-base --is-ancestor "$b" HEAD 2>/dev/null && echo "$b"; done)
+  [ "$(echo "$branch" | wc -w)" = 1 ] || branch=''
+fi
 head=$(git rev-parse --short HEAD 2>/dev/null || echo '?')
-git fetch -q origin "$(git branch --show-current)" 2>/dev/null
-remote=$(git rev-parse --short "origin/$(git branch --show-current)" 2>/dev/null || echo '?')
-dirty=$(git status --porcelain 2>/dev/null | wc -l)
+[ -n "$branch" ] && git fetch -q origin "$branch" 2>/dev/null
+remote=$(git rev-parse --short "origin/$branch" 2>/dev/null || echo '?')
 echo "git HEAD    : $head"
+echo "git 枝      : ${branch:-?（detached で特定できない。push は refs/heads/<枝> を明示すること）}"
+dirty=$(git status --porcelain 2>/dev/null | wc -l)
 echo "git origin  : $remote  $([ "$head" = "$remote" ] && echo '(一致)' || echo '← ズレている。fetch して確かめること')"
 echo "未コミット  : ${dirty}件"
 

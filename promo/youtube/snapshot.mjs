@@ -99,6 +99,27 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
+// The hourly runs check the repository out on a detached HEAD, so
+// `push origin HEAD` fails ("not a full refname") and every sample commit
+// stays in a container that is thrown away an hour later. Measured 2026-08-10:
+// one commit was sitting unpushed for exactly that reason.
+//
+// So resolve the branch instead of assuming HEAD is on one. When detached,
+// the branch is the single local one HEAD descends from — the ref the
+// checkout was made from. Ambiguity throws rather than guessing a branch to
+// push to.
+function targetBranch(git) {
+  const current = git('branch', '--show-current');
+  if (current) return current;
+  const candidates = git('for-each-ref', '--format=%(refname:short)', 'refs/heads')
+    .split('\n').filter(Boolean)
+    .filter((b) => {
+      try { git('merge-base', '--is-ancestor', b, 'HEAD'); return true; } catch { return false; }
+    });
+  if (candidates.length !== 1) throw new Error(`detached HEAD, 枝を特定できない (${candidates.length}件)`);
+  return candidates[0];
+}
+
 function autoCommit() {
   const repo = path.resolve(import.meta.dirname, '../..');
   const git = (...a) => execFileSync('git', ['-C', repo, ...a], { encoding: 'utf8' }).trim();
@@ -108,7 +129,7 @@ function autoCommit() {
     if (Date.now() / 1000 - last < 55 * 60) return;      // at most hourly
     git('add', '--', 'promo/youtube/views.jsonl');
     git('commit', '-q', '-m', 'Record the view samples\n\nAppended by the sampler and committed by it, so a run that changes\nnothing still leaves a clean tree.');
-    git('push', '-q', 'origin', 'HEAD');
+    git('push', '-q', 'origin', `HEAD:refs/heads/${targetBranch(git)}`);
     console.log('  views.jsonl をコミットして push した');
   } catch (e) {
     // Never let bookkeeping break the measurement: the sample is already on
