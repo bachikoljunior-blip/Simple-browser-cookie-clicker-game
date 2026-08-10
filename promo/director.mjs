@@ -629,8 +629,79 @@ if (SHORT) cues.push({ mark: 'hook', at: 0.30, text: VARIANT.hook.narration });
 //
 // 6発200ms でおよそ1.2秒。証拠が出そろうのは 1.8〜2.8秒あたりで、
 // capAt の既定はそのぶん後ろへずらしてある。
+//
+// **2026-08-10: そのタップ連打では足りなかった。** PREROLL を入れた後の take
+// （`restart` 2本目）でも外部レビュアーは 1.5秒でスワイプし、理由を
+// 「クッキーが脈打つだけで**出来事が起きず**、1.5秒で見る理由が尽きる」と書いた。
+// 掴みの動きの検査（フレーム間差分 0.5）はその take を 2.88 で通している ——
+// **検査はピクセルの差分を測り、視聴者は出来事を見ている。** 脈動と浮き数字は
+// 差分を作るが、出来事ではない。しきい値を上げても測っているものは変わらない。
+//
+// なので開幕に置くものを、動きではなく**出来事**に替える。モンスターが湧いて、
+// HPが減って、死んで、素材が落ちる —— これは差分ではなく事象で、
+// **何のゲームかも同時に答えている。**
+// 素材は外から来た: 落ちた5本のレビューのうち2本が、頼んでもいないのに
+// 「モンスターの群れの絵(t9)で始めろ」「冒頭を金のクッキーの画面と入れ替えろ」と
+// 書いた。5本全部に共通していた*理由*のほうは「最初の1.5秒に出来事がゼロ」で、
+// ここで直しているのはその理由。**絵の選択は、たまたま重なった彼らの案を借りた。**
+//
+// **見直す条件**: これ以降の本が外部レビューを通るか、通っても再生数が
+// 変わらないか。**通らなければ「開幕の出来事」も主因ではない**ので、
+// 掴みそのものより後ろ（本編・尺・題材）を疑うこと。
+// 個別の切り口は `hook.opening: 'taps'` で元のタップ連打に戻せる。
+// **群れは一度試して外した（2026-08-10、同じ回で）。** `showMonster('swarm')` を
+// 開幕に置いた take のフレームを開いたら、t0.8 と t1.5 が**ほぼ同一**だった:
+// モンスターは枠の右端に小さく2体、HP は 41.977万 のまま両フレームで変わらない。
+// **打撃は数えられていたのに、画面では何も起きていなかった。**
+// （`hitMonster()` を6回呼んで hits=6 で通っている ——「呼んだ回数」は
+// 「起きた出来事」ではない。指示7の5つ目の形を、検査を足したその場で踏んだ。）
+//
+// なので開幕を**金のクッキー**にした。理由は3つとも検証可能な側にある:
+// (1) 現れる／消えるという**二値の事象**なので、起きたかどうかを状態で判定できる
+//     （下の before/after。差分でも呼び出し回数でもない）
+// (2) 画が大きい —— 群れは枠の端の小さな2体だったが、金は中央付近に置ける
+// (3) 取ると中央のクッキーが目に見えて膨らむ。scene 4 が既にこの順で撮っている
+const OPENING = VARIANT.hook.opening ?? 'golden';
+async function openingEvent() {
+  if (OPENING === 'taps') { await tapBurst('#cookie', 6, 200); return 'taps'; }
+  // 置き場所は scene 4 と同じ理由 —— ゲームは金を画面のどこにでも落とすので、
+  // 「どこにでも」には下端（小さく、YouTube のUIの下、誰も見ないうち消える）が入る。
+  const born = await ev(() => {
+    try { showGoldenCookie(); } catch (e) { return String(e); }
+    const btn = document.getElementById('goldenCookie');
+    const host = document.querySelector('.top');
+    if (!btn || getComputedStyle(btn).display === 'none') return 'なし';
+    if (host) {
+      btn.style.right = 'auto';
+      btn.style.bottom = 'auto';
+      btn.style.left = Math.round(host.clientWidth * 0.55) + 'px';
+      btn.style.top = Math.round(host.clientHeight * 0.20) + 'px';
+    }
+    return 'あり';
+  });
+  await wait(650);          // 現れたことが読める間。ここが「前」の状態
+  await tapEl('#goldenCookie');
+  await wait(450);          // 取った反応（中央のクッキーが膨らむ）が出るまで
+  // 存在ではなく**表示**で見る。#goldenCookie は常設のボタンで、ゲームは
+  // style.display を切り替えるだけ ——「要素があるか」で見た最初の版は、
+  // 取っても消えない（あり→あり）と報告して自分で自分を止めた。
+  const gone = await ev(() => {
+    const b = document.getElementById('goldenCookie');
+    return (b && getComputedStyle(b).display !== 'none') ? 'あり' : 'なし';
+  });
+  return `金=${born}→${gone}`;
+}
 if (PREROLL) {
-  await tapBurst('#cookie', 6, 200);
+  const what = await openingEvent();
+  console.log(`  開幕の出来事: ${OPENING} ${what}`);
+  // 印字ではなく停止（指示7）。**「あり→なし」以外は事象が起きていない。**
+  // 現れなかった（なし→なし）なら開幕は素のクッキー画面のままで、それは直前に
+  // 5本続けて落ちた型そのもの。消えなかった（あり→あり）ならタップが外れていて、
+  // 画には金が置いてあるだけ ——「置いた」は出来事ではない。
+  if (OPENING !== 'taps' && what !== '金=あり→なし') {
+    throw new Error(`掴みの開幕に出来事が起きていない（${what}）。`
+      + '期待は「金=あり→なし」（現れて、取られて、消える）。');
+  }
   await setupHookScreen();
 }
 await shot('hook');
