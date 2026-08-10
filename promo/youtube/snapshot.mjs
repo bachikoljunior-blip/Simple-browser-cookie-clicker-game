@@ -78,6 +78,19 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       for (const [id, p] of Object.entries(r.per)) {
         if (p.gained) console.log(`  ${id}  ${p.views}v  ${sgn(p.gained)}  ${p.perHour}/h`);
       }
+      // The one-hour window is noise. On 2026-08-10 it read +1 (0.98/h) while
+      // the same history over 24h read 35.8/h — the sampler had simply landed
+      // in a lull between two Shorts being served. A turn that reads only the
+      // top line concludes "growth is dying" and spends itself changing an
+      // angle that is working. 成長率(指示1)は率なので、窓を1つしか出さない
+      // 表示は率を出していないのと同じ。
+      const wide = [6, 24, 72].map(h => [h, rates(h)]).filter(([, x]) => x);
+      if (wide.length) {
+        console.log('\n長い窓（判断はこちらで。上の1時間窓は単独では読めない）');
+        for (const [h, w] of wide) {
+          console.log(`  ${String(h).padStart(2)}h窓 → 実測${w.hours}h  ${sgn(w.totalGained)}  ${w.totalPerHour}/h`);
+        }
+      }
     }
   }
 }
