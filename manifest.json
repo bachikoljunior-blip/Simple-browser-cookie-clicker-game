@@ -7,10 +7,25 @@
   "start_url": "play.html",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
   "background_color": "#1d130d",
   "theme_color": "#1d130d",
   "categories": ["games"],
+  "shortcuts": [
+    {
+      "name": "ゲームをつづける",
+      "short_name": "つづきから",
+      "url": "play.html",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "遊び方を見る",
+      "short_name": "遊び方",
+      "url": "guide.html",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

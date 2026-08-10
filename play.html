@@ -2,10 +2,16 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>ゲームを遊ぶ｜クッキーストラテジャー</title>
   <meta name="description" content="クッキーストラテジャーのプレイ画面です。クッキーをタップして強化・研究を進め、金のクッキーやクッキーモンスター、転生スキルツリーでどこまでも生産量を伸ばそう。インストール不要・無料でブラウザから遊べます。">
   <meta name="theme-color" content="#1d130d">
+  <meta name="color-scheme" content="dark">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="クキスト">
+  <meta name="format-detection" content="telephone=no">
   <meta property="og:type" content="website">
   <meta property="og:title" content="ゲームを遊ぶ｜クッキーストラテジャー">
   <meta property="og:description" content="インストール不要・無料でブラウザから遊べるクッキークリッカー系放置ゲーム。強化・研究・転生スキルツリーでクッキー生産を極めよう。">
@@ -94,6 +100,12 @@
       --line: rgba(255, 211, 138, 0.30);
       --lineDone: rgba(156, 255, 178, 0.85);
       --lineReady: rgba(255, 211, 138, 0.9);
+    }
+
+    :focus-visible {
+      outline: 3px solid #fff0a8;
+      outline-offset: 3px;
+      box-shadow: 0 0 0 6px rgba(105, 197, 255, 0.42) !important;
     }
 
     html,
@@ -4463,6 +4475,149 @@
       gap: 8px;
     }
 
+    .settingSection {
+      margin-top: 12px;
+      padding: 10px;
+      border: 1px solid rgba(255, 213, 138, 0.18);
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.16);
+    }
+
+    .settingSection h3 {
+      margin: 0 0 4px;
+      color: #ffe2a0;
+      font-size: 13px;
+    }
+
+    .settingToggle {
+      min-height: 44px;
+      cursor: pointer;
+    }
+
+    .settingToggle input {
+      width: 22px;
+      height: 22px;
+      flex: 0 0 auto;
+    }
+
+    .settingStatus {
+      min-height: 1.5em;
+      margin-top: 8px;
+      color: #bcefc7;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .settingStatus.error {
+      color: #ffb0a8;
+    }
+
+    .settingsSubBtn {
+      margin-top: 8px;
+      font-size: 12px;
+      padding: 10px;
+    }
+
+    /* 初回プレイの3手だけを案内する、進行を遮らないコンパクトガイド */
+    .coachCard {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      bottom: 58px;
+      z-index: 130;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px 8px;
+      align-items: center;
+      padding: 9px 10px;
+      border: 1px solid rgba(255, 231, 160, 0.72);
+      border-radius: 13px;
+      background: linear-gradient(135deg, rgba(30, 17, 8, 0.97), rgba(74, 39, 13, 0.96));
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.48), 0 0 20px rgba(255, 183, 74, 0.16);
+      color: #fff5dc;
+      text-align: left;
+      transform-origin: bottom center;
+      animation: coachEnter 0.28s ease-out;
+    }
+
+    .coachCard[hidden] { display: none !important; }
+
+    .coachEyebrow {
+      color: #ffc867;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+    }
+
+    .coachText {
+      margin-top: 1px;
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .coachProgress {
+      grid-column: 1 / -1;
+      height: 5px;
+      overflow: hidden;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, 0.13);
+    }
+
+    .coachProgressFill {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #ffaf42, #fff09a);
+      transition: width 0.22s ease;
+    }
+
+    .coachActions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .coachAction,
+    .coachSkip {
+      min-width: 44px;
+      min-height: 44px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 224, 148, 0.42);
+      color: #fff4d2;
+      font-weight: 900;
+      touch-action: manipulation;
+    }
+
+    .coachAction {
+      padding: 7px 10px;
+      background: linear-gradient(180deg, #a85c1d, #63300d);
+      font-size: 11px;
+    }
+
+    .coachSkip {
+      width: 44px;
+      padding: 0;
+      background: rgba(255, 255, 255, 0.06);
+      font-size: 15px;
+    }
+
+    .item.coachTarget {
+      animation: coachTargetPulse 0.75s ease-in-out 3 !important;
+      position: relative;
+      z-index: 3;
+    }
+
+    @keyframes coachEnter {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes coachTargetPulse {
+      50% { filter: brightness(1.55); box-shadow: 0 0 0 3px #ffe08c, 0 0 24px rgba(255, 186, 78, 0.8); }
+    }
+
     /* ===== 図鑑 ===== */
     #codexBtn,
     #equipBtn {
@@ -5704,15 +5859,62 @@
     @keyframes adGateSpin {
       to { transform: rotate(360deg); }
     }
+
+    .game {
+      position: relative;
+    }
+
+    .audioGate {
+      width: 100%;
+      border: 0;
+      color: inherit;
+      font: inherit;
+    }
+
+    .titleSaveSummary {
+      min-height: 18px;
+      margin: 8px 0 0;
+      color: rgba(255, 242, 210, 0.88);
+      font-size: 11px;
+      font-weight: 800;
+      text-shadow: 0 2px 6px #000;
+    }
+
+    /* 画面全体を固定比率で縮める端末でも、主要操作は基準上44px以上を確保する。 */
+    #settingsBtn,
+    #playFullscreenBtn {
+      width: 44px !important;
+      height: 44px !important;
+      min-width: 44px !important;
+      min-height: 44px !important;
+    }
+
+    body.reduceMotion *,
+    body.reduceMotion *::before,
+    body.reduceMotion *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
   </style>
 </head>
 
 <body class="titleScreenMode audioGateUp">
 
 <!-- 初起動時の音声解禁ゲート。最初にここをタップするとBGMが解禁され、タイトルへ進む -->
-<div id="audioGate" class="audioGate">
+<button id="audioGate" class="audioGate" type="button" aria-label="音声を有効にしてタイトル画面へ進む">
   <div class="audioGateInner">▶ タップして始める</div>
-</div>
+</button>
 
 <section id="titleScreen" class="titleScreen">
   <div class="titleScreenFrame">
@@ -5737,6 +5939,8 @@
       <button id="titleStartBtn" type="button" class="titleStartBtn">ゲームをはじめる</button>
       <button id="titleAboutBtn" type="button" class="titleAboutBtn">このゲームについて</button>
     </div>
+
+    <p id="titleSaveSummary" class="titleSaveSummary">自動保存・会員登録不要</p>
 
     <div class="titleFooter">
       <a href="index.html">トップ</a>
@@ -5823,14 +6027,41 @@
   </div>
 </div>
 
-<div id="settingsOverlay" class="settingsOverlay">
+<div id="settingsOverlay" class="settingsOverlay" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
   <div class="settingsPanel">
     <div class="settingsHead">
-      <h2>設定</h2>
+      <h2 id="settingsTitle">設定</h2>
       <button id="settingsCloseBtn" type="button" class="titleAboutCloseBtn" aria-label="閉じる">✕</button>
     </div>
-    <div class="settingRow">効果音の音量<input type="range" id="setSeVol" min="0" max="100" step="5"><span class="settingVal" id="setSeVolVal">100</span></div>
-    <div class="settingRow">BGMの音量<input type="range" id="setBgmVol" min="0" max="100" step="5"><span class="settingVal" id="setBgmVolVal">35</span></div>
+    <div class="settingRow">効果音の音量<input type="range" id="setSeVol" min="0" max="100" step="5" aria-label="効果音の音量" aria-describedby="setSeVolVal"><span class="settingVal" id="setSeVolVal">100</span></div>
+    <div class="settingRow">BGMの音量<input type="range" id="setBgmVol" min="0" max="100" step="5" aria-label="BGMの音量" aria-describedby="setBgmVolVal"><span class="settingVal" id="setBgmVolVal">35</span></div>
+    <div class="settingSection">
+      <h3>プレイ感</h3>
+      <label class="settingRow settingToggle"><span>振動フィードバック</span><input type="checkbox" id="setHaptics" data-setting-toggle="haptics"></label>
+      <label class="settingRow settingToggle"><span>タップのかけら演出</span><input type="checkbox" id="setTapFx" data-setting-toggle="tapFx"></label>
+      <label class="settingRow settingToggle"><span>豪華な画面演出</span><input type="checkbox" id="setFancyFx" data-setting-toggle="fancyFx"></label>
+      <label class="settingRow settingToggle"><span>動きを少なくする</span><input type="checkbox" id="setReducedMotion" data-setting-toggle="reducedMotion"></label>
+      <label class="settingRow settingToggle"><span>カード画像を表示</span><input type="checkbox" id="setCardArt" data-setting-toggle="cardArt"></label>
+      <label class="settingRow settingToggle"><span>カードをコンパクト表示</span><input type="checkbox" id="setCompactCards" data-setting-toggle="compactCards"></label>
+      <label class="settingRow settingToggle"><span>購入数切替を表示</span><input type="checkbox" id="setShowBuyMode" data-setting-toggle="showBuyMode"></label>
+      <button id="replayCoachBtn" type="button" class="settingsWideBtn settingsSubBtn">最初の3手ガイドをもう一度見る</button>
+    </div>
+    <div class="settingSection">
+      <h3>アプリとして使う</h3>
+      <div id="installAppHint" class="saveCodeHint">ホーム画面に追加すると、全画面ですぐ遊べます。</div>
+      <button id="installAppBtn" type="button" class="settingsWideBtn settingsSubBtn">ホーム画面に追加</button>
+    </div>
+    <div class="settingSection">
+      <h3>端末内バックアップ</h3>
+      <div class="saveCodeHint">クラウドログインなしでも、セーブと設定を1ファイルに保存できます。</div>
+      <div class="settingBtnRow">
+        <button id="exportBackupBtn" type="button" class="settingsWideBtn settingsSubBtn">書き出す</button>
+        <button id="importBackupBtn" type="button" class="settingsWideBtn settingsSubBtn">読み込む</button>
+      </div>
+      <button id="restoreBackupBtn" type="button" class="settingsWideBtn settingsSubBtn" style="display:none">直前の読み込みを取り消す</button>
+      <input id="importBackupInput" type="file" accept="application/json,.json" hidden>
+      <div id="backupStatus" class="settingStatus" role="status" aria-live="polite"></div>
+    </div>
     <div class="settingRow settingRowStack">
       <span>クラウド保存(自動・任意)</span>
       <div class="saveCodeHint" id="cloudSyncStatus">Googleでログインすると、セーブデータが自動でクラウドに保存されます。</div>
@@ -5851,7 +6082,7 @@
   </div>
 </div>
 
-<div id="codexOverlay" class="settingsOverlay codexOverlay">
+<div id="codexOverlay" class="settingsOverlay codexOverlay" role="dialog" aria-modal="true" aria-label="図鑑">
   <div class="settingsPanel codexPanel">
     <div class="settingsHead">
       <h2>図鑑</h2>
@@ -5863,7 +6094,7 @@
   </div>
 </div>
 
-<div id="equipOverlay" class="settingsOverlay codexOverlay">
+<div id="equipOverlay" class="settingsOverlay codexOverlay" role="dialog" aria-modal="true" aria-label="装備">
   <div class="settingsPanel codexPanel">
     <div class="settingsHead">
       <h2>装備</h2>
@@ -5884,7 +6115,7 @@
       <span id="cookieCps" class="cookieCps">合計毎秒 0</span>
     </div>
 
-    <div id="quotaBox" class="quotaBox"></div>
+    <div id="quotaBox" class="quotaBox" aria-live="off"></div>
 
     <div class="cookieWrap">
       <button id="stageArrowL" class="stageArrow" type="button" aria-label="前のステージへ" style="display:none">◀</button>
@@ -5906,10 +6137,22 @@
       <div id="monsterHpText">HP</div>
     </div>
 
-    <div id="message"></div>
+    <div id="message" role="status" aria-live="polite" aria-atomic="true"></div>
   </section>
 
-  <nav class="tabs">
+  <aside id="coachCard" class="coachCard" role="status" aria-live="polite" aria-atomic="true" hidden>
+    <div>
+      <div id="coachEyebrow" class="coachEyebrow">はじめの3手</div>
+      <div id="coachText" class="coachText"></div>
+    </div>
+    <div class="coachActions">
+      <button id="coachActionBtn" type="button" class="coachAction">見る</button>
+      <button id="coachSkipBtn" type="button" class="coachSkip" aria-label="ガイドを閉じる">✕</button>
+    </div>
+    <div class="coachProgress" aria-hidden="true"><span id="coachProgressFill" class="coachProgressFill"></span></div>
+  </aside>
+
+  <nav class="tabs" aria-label="ゲームメニュー">
     <button class="tab active" data-tab="shopTab">強化</button>
     <button class="tab" data-tab="researchTab">研究</button>
     <button class="tab" data-tab="prestigeTab">?</button>
@@ -6921,6 +7164,7 @@ const PRESENCE_FIRST_UNIT_COEF = 0.25;
 const PRESENCE_UPGRADE_IDS = ["oven", "factory", "bank", "spiceRack", "portal", "moonBakery", "timeOven", "galaxyFactory", "blackHoleMixer", "universeOven", "godFinger", "cookieSingularity", "quantumBakery", "antimatterOven"]; // 全設備に拡張(2026-07-16 ㉑・sim同期: momentum B下でantimatterOven/timeOvenの初台Δが不足)
 
 let state = freshState();
+let saveSuspendedForImport = false;
 let buyMode = "1";
 let audioCtx = null;
 let boostUntil = 0;
@@ -7325,6 +7569,22 @@ function $(id) {
   return document.getElementById(id);
 }
 
+// 20Hzのゲーム更新で同じ文字列をDOMへ書き直さない。低性能端末のレイアウト再計算を減らす。
+function setTextIfChanged(el, value) {
+  if (!el) return;
+  const next = String(value);
+  if (el.textContent !== next) el.textContent = next;
+}
+
+function setHtmlIfChanged(el, value) {
+  if (!el) return;
+  const next = String(value);
+  if (el.__lastHtml !== next) {
+    el.innerHTML = next;
+    el.__lastHtml = next;
+  }
+}
+
 function assetUrl(src) {
   return String(src || "").replace(/"/g, "%22");
 }
@@ -7570,6 +7830,7 @@ function preloadRewardChoiceImages(choices) {
 }
 
 function addTap(el, handler) {
+  if (!el) return;
   let startX = 0;
   let startY = 0;
   let pointerId = null;
@@ -7609,11 +7870,20 @@ function addTap(el, handler) {
     moved = true;
     el.classList.remove("pressed");
   });
+
+  // ネイティブbuttonのEnter/Spaceはclick(detail=0)になる。ポインター由来のclickは
+  // pointerup側で既に処理済みなので無視し、キーボード・スイッチ操作だけを補完する。
+  el.addEventListener("click", e => {
+    if (e.detail !== 0) return;
+    e.preventDefault();
+    handler(e);
+  });
 }
 
 // タップした瞬間(触れた瞬間=pointerdown)に発火する版(2026-07-22 ユーザー指示: クッキーは離した時でなく触れた瞬間)。
 // 連打の反応を最速化。移動しても発火済みなので、スクロール開始と競合しない位置(クッキーボタン)専用。
 function addTapImmediate(el, handler) {
+  if (!el) return;
   el.addEventListener("pointerdown", e => {
     el.classList.add("pressed");
     e.preventDefault();
@@ -7623,6 +7893,11 @@ function addTapImmediate(el, handler) {
   el.addEventListener("pointerup", clear);
   el.addEventListener("pointercancel", clear);
   el.addEventListener("pointerleave", clear);
+  el.addEventListener("click", e => {
+    if (e.detail !== 0) return;
+    e.preventDefault();
+    handler(e);
+  });
 }
 
 function fmtShort(n) {
@@ -11973,7 +12248,7 @@ function renderQuota() {
     const runF = state.runCookies;
     const ratioF = currentQuotaProgressRatio();
     const stageF = quotaStageDisplay(ratioF);
-    box.innerHTML = `
+    setHtmlIfChanged(box, `
       <div class="quotaFutureLine">
         <span>モンスター生成ノルマ ${fmt(runF)} / ${fmt(quotaF)}（未達）</span>
       </div>
@@ -11981,7 +12256,7 @@ function renderQuota() {
         ${quotaLayerHtml(ratioF)}
         <div class="quotaStageBadge" title="到達したノルマ層">第<span class="quotaStageNumber">${stageF.stage}</span>層・未達</div>
       </div>
-    `;
+    `);
     return;
   }
 
@@ -12004,21 +12279,21 @@ function renderQuota() {
   box.classList.toggle("quotaBad", !ok);
 
   if (pausedForSkillChoice()) {
-    box.innerHTML = `
+    setHtmlIfChanged(box, `
       <div class="quotaFutureLine">
         <span>モンスター生成ノルマ：準備中</span>
       </div>
       <div class="quotaGauge quotaUnderTarget" aria-label="転生後の準備中">
         <div class="quotaLayer" style="${quotaLayerStyle(0, 0, 1)}"></div>
       </div>
-    `;
+    `);
     return;
   }
 
 
   // 表記は最小限に。1行の要約＋ゲージのみ(クッキー画像を大きく見せるため)。層はゲージ上のバッジで示す。
   // ゲージ下の補足テキスト(先行秒数・連鎖・説明文)は出さない(2026-07-11 ユーザー指示)。
-  box.innerHTML = `
+  setHtmlIfChanged(box, `
     <div class="quotaFutureLine">
       <span>モンスター生成ノルマ ${fmt(run)} / ${fmt(quota)}</span>
     </div>
@@ -12026,7 +12301,7 @@ function renderQuota() {
       ${layerHtml}
       <div class="quotaStageBadge" title="現在のノルマ層">第<span class="quotaStageNumber">${stageDisplay.stage}</span>層</div>
     </div>
-  `;
+  `);
 }
 
 // ===== 設定(音量・演出・画像・省略表示) =====
@@ -12034,17 +12309,25 @@ const SETTINGS_KEY = "cookie_game_settings_v1_exist";
 const settings = {
   seVolume: 100,
   bgmVolume: 60,
+  haptics: true,
   tapFx: true,
   fancyFx: true,
+  reducedMotion: Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches),
   cardArt: true,
   compactCards: false,
-  showBuyMode: true
+  showBuyMode: true,
+  guideDone: false,
+  guideHidden: false
 };
 
 function loadSettings() {
   try {
     const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null");
-    if (raw && typeof raw === "object") Object.assign(settings, raw);
+    if (raw && typeof raw === "object") {
+      Object.keys(settings).forEach(key => {
+        if (Object.prototype.hasOwnProperty.call(raw, key)) settings[key] = raw[key];
+      });
+    }
   } catch (e) {}
 }
 
@@ -12054,6 +12337,7 @@ function saveSettings() {
 
 function applySettings() {
   document.body.classList.toggle("fxOff", !settings.fancyFx);
+  document.body.classList.toggle("reduceMotion", Boolean(settings.reducedMotion));
   document.body.classList.toggle("artOff", !settings.cardArt);
   document.body.classList.toggle("compactCards", settings.compactCards);
   // 購入数変更バーの表示/非表示。非表示のときは購入数を必ず×1に戻す。
@@ -12689,7 +12973,24 @@ window.addEventListener("pagehide", () => {
 window.addEventListener("focus", resumeAudioIfNeeded);
 window.addEventListener("pageshow", resumeAudioIfNeeded);
 
+let lastHapticAt = 0;
+function playHaptic(kind) {
+  try {
+    if (!settings.haptics || typeof navigator.vibrate !== "function") return;
+    const now = performance.now();
+    const rapid = kind === "cookie" || kind === "monster";
+    if (now - lastHapticAt < (rapid ? 38 : 80)) return;
+    lastHapticAt = now;
+    const pattern = kind === "crit" ? [10, 18, 16]
+      : (kind === "golden" || kind === "reward" || kind === "skill") ? [12, 24, 12]
+      : (kind === "upgrade" || kind === "buy") ? 10
+      : rapid ? 5 : 7;
+    navigator.vibrate(pattern);
+  } catch (e) {}
+}
+
 function playSound(kind) {
+  playHaptic(kind);
   try {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     // closed(OSに破棄済み)のContextはresume不能。配線ごと作り直してから鳴らす
@@ -12928,9 +13229,130 @@ function playSound(kind) {
 }
 
 function showMessage(text) {
-  $("message").textContent = text;
+  setTextIfChanged($("message"), text);
   clearTimeout(showMessage.timer);
-  showMessage.timer = setTimeout(() => $("message").textContent = "", 1500);
+  showMessage.timer = setTimeout(() => setTextIfChanged($("message"), ""), 1500);
+}
+
+// ===== 初回プレイの「はじめの3手」 =====
+// 経済へボーナスは加えず、今できる操作だけを短く案内する。進行を遮るモーダルにはしない。
+let coachCelebratingUntil = 0;
+let coachReplayStep = -1;
+let coachActionTarget = "cookie";
+
+function totalUpgradeUnits() {
+  return UPGRADES.reduce((sum, u) => sum + Math.max(0, Math.floor(Number(state.upgrades[u.id]) || 0)), 0);
+}
+
+function coachSnapshot() {
+  const replayTips = [
+    { text: "大きなクッキーは、触れた瞬間に焼けます。連打も有効です。", target: "cookie" },
+    { text: "「強化」で設備を買うと、タップや毎秒生産が伸びます。", target: "finger" },
+    { text: "ノルマを超えるとモンスターが出現。倒した後は報酬を選べます。", target: "quota" }
+  ];
+  if (coachReplayStep >= 0) {
+    const i = Math.min(replayTips.length - 1, coachReplayStep);
+    return { ...replayTips[i], eyebrow: `操作ガイド · ${i + 1}/${replayTips.length}`, ratio: (i + 1) / replayTips.length, replay: true };
+  }
+
+  const clicks = Math.max(0, Math.floor(Number(state.totalClicks) || 0));
+  if (clicks < 10) {
+    return { text: `大きなクッキーを10回タップ（${clicks}/10）`, eyebrow: "はじめの3手 · 1/3", ratio: clicks / 30, target: "cookie" };
+  }
+
+  const finger = Math.max(0, Math.floor(Number(state.upgrades.finger) || 0));
+  if (finger < 1) {
+    const def = UPGRADES.find(u => u.id === "finger");
+    const cost = D(def ? costOf(def) : 100);
+    const haveRatio = cost.gt(0) ? Math.max(0, Math.min(1, state.cookies.div(cost).toNumberClamped(1))) : 1;
+    const suffix = state.cookies.gte(cost) ? "購入できます" : `あと ${fmt(Decimal.max(D(0), cost.sub(state.cookies)))} 枚`;
+    return { text: `「強い指」を1つ購入（${suffix}）`, eyebrow: "はじめの3手 · 2/3", ratio: (1 + haveRatio) / 3, target: "finger" };
+  }
+
+  const units = totalUpgradeUnits();
+  if (units < 3) {
+    return { text: `設備を合計3つにする（${units}/3）`, eyebrow: "はじめの3手 · 3/3", ratio: (2 + units / 3) / 3, target: "shop" };
+  }
+
+  return null;
+}
+
+function focusCoachTarget(target) {
+  if (target === "cookie") {
+    const cookie = $("cookie");
+    if (cookie) {
+      cookie.focus({ preventScroll: true });
+      playTapAnimation(false);
+    }
+    return;
+  }
+  if (target === "quota") {
+    const quota = $("quotaBox");
+    if (quota) {
+      quota.classList.remove("layerUp");
+      void quota.offsetWidth;
+      quota.classList.add("layerUp");
+    }
+    return;
+  }
+
+  switchTab("shopTab");
+  requestAnimationFrame(() => {
+    const card = target === "finger" ? document.querySelector('#shop [data-id="finger"]') : document.querySelector("#shop .item");
+    if (!card) return;
+    card.scrollIntoView({ block: "center", behavior: settings.reducedMotion ? "auto" : "smooth" });
+    card.classList.remove("coachTarget");
+    void card.offsetWidth;
+    card.classList.add("coachTarget");
+    card.focus({ preventScroll: true });
+    setTimeout(() => card.classList.remove("coachTarget"), 2400);
+  });
+}
+
+function renderCoach() {
+  const card = $("coachCard");
+  if (!card) return;
+  if (titleScreenActive() || pausedForSkillChoice() || (settings.guideHidden && coachReplayStep < 0)) {
+    card.hidden = true;
+    return;
+  }
+
+  let view = coachSnapshot();
+  if (!view) {
+    if (!settings.guideDone) {
+      settings.guideDone = true;
+      settings.guideHidden = false;
+      saveSettings();
+      coachCelebratingUntil = Date.now() + 4000;
+      playSound("reward");
+    }
+    if (Date.now() < coachCelebratingUntil) {
+      view = { text: "準備完了。あとは自分の戦略で焼き尽くそう！", eyebrow: "はじめの3手 · 完了", ratio: 1, target: "shop", complete: true };
+    } else {
+      card.hidden = true;
+      return;
+    }
+  }
+
+  coachActionTarget = view.target;
+  card.hidden = false;
+  setTextIfChanged($("coachEyebrow"), view.eyebrow);
+  setTextIfChanged($("coachText"), view.text);
+  $("coachProgressFill").style.width = `${Math.max(0, Math.min(1, view.ratio)) * 100}%`;
+  const action = $("coachActionBtn");
+  action.hidden = Boolean(view.complete);
+  setTextIfChanged(action, view.replay ? (coachReplayStep >= 2 ? "完了" : "次へ") : "場所を見る");
+}
+
+function updateTitleStartUi() {
+  const start = $("titleStartBtn");
+  const summary = $("titleSaveSummary");
+  if (!start || !summary) return;
+  const hasProgress = (Number(state.totalClicks) || 0) > 0 || D(state.totalCookies).gt(0) || totalUpgradeUnits() > 0;
+  setTextIfChanged(start, hasProgress ? "つづきから" : "ゲームをはじめる");
+  setTextIfChanged(summary, hasProgress
+    ? `累計 ${fmt(state.totalCookies)} 枚 · 自動保存済み`
+    : "自動保存・会員登録不要");
 }
 
 // 討伐連鎖の一時表示: 討伐直後に「連鎖 ×N(全生産+X%)」をクッキーの上あたりへ数秒出す
@@ -13051,17 +13473,17 @@ function statDeltaText(tracker, value, holdMs) {
 
 function updateTopOnly() {
   if (typeof updateStageArrows === "function") updateStageArrows();
-  $("cookies").textContent = fmtCookieCount(state.cookies);
+  setTextIfChanged($("cookies"), fmtCookieCount(state.cookies));
   const cpsEl = $("cookieCps");
   if (cpsEl) {
     if (pausedForSkillChoice()) {
-      cpsEl.innerHTML = `<span class="statHalf">合計毎秒 準備中</span><span class="statHalf"></span>`;
+      setHtmlIfChanged(cpsEl, `<span class="statHalf">合計毎秒 準備中</span><span class="statHalf"></span>`);
     } else {
       // ノルマゲージ上の行に、毎秒とモンスターダメージを左右の固定枠で並べて表示する
       const cps = currentCps().add(directIncomeTotalCps());
       const dmg = monsterBaseDamage() * monsterDamageMultiplier();
-      cpsEl.innerHTML = `<span class="statHalf">毎秒 ${fmt(cps)}${statDeltaText(statDeltaCps, cps, 2000)}</span>`
-        + `<span class="statHalf">ダメージ ${fmt(dmg)}${statDeltaText(statDeltaDmg, dmg, 2000)}</span>`;
+      setHtmlIfChanged(cpsEl, `<span class="statHalf">毎秒 ${fmt(cps)}${statDeltaText(statDeltaCps, cps, 2000)}</span>`
+        + `<span class="statHalf">ダメージ ${fmt(dmg)}${statDeltaText(statDeltaDmg, dmg, 2000)}</span>`);
     }
   }
 
@@ -13075,6 +13497,7 @@ function updateTopOnly() {
   checkQuotaStageTransition();
   renderStageBar();
   updateWorkshopTabVisibility();
+  renderCoach();
 
   if (monsterVisible) renderMonsterHp();
 }
@@ -13831,18 +14254,181 @@ function renderSkillChoiceScreen() {
   });
 }
 
+// ===== インストール導線 / 端末内バックアップ =====
+const IMPORT_ROLLBACK_KEY = "cookie_game_import_rollback_v1";
+let deferredInstallPrompt = null;
+
+function runningStandalone() {
+  return Boolean((window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true);
+}
+
+function updateInstallUi() {
+  const btn = $("installAppBtn");
+  const hint = $("installAppHint");
+  if (!btn || !hint) return;
+  if (runningStandalone()) {
+    btn.style.display = "none";
+    setTextIfChanged(hint, "ホーム画面版で起動中です。オフラインでも続けて遊べます。");
+    return;
+  }
+  btn.style.display = "";
+  const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  setTextIfChanged(btn, deferredInstallPrompt ? "ホーム画面に追加" : "追加方法を見る");
+  setTextIfChanged(hint, isIos
+    ? "Safariの共有ボタンから「ホーム画面に追加」を選ぶと、全画面ですぐ遊べます。"
+    : "ホーム画面に追加すると、全画面ですぐ遊べます。");
+}
+
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  updateInstallUi();
+});
+
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  updateInstallUi();
+  showMessage("ホーム画面に追加しました");
+});
+
+async function promptInstallApp() {
+  if (deferredInstallPrompt) {
+    const prompt = deferredInstallPrompt;
+    deferredInstallPrompt = null;
+    await prompt.prompt();
+    const choice = await prompt.userChoice;
+    setTextIfChanged($("installAppHint"), choice && choice.outcome === "accepted"
+      ? "追加を受け付けました。ホーム画面から起動できます。"
+      : "追加はキャンセルされました。いつでもここからやり直せます。");
+    updateInstallUi();
+    return;
+  }
+  const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  setTextIfChanged($("installAppHint"), isIos
+    ? "画面下の共有ボタン（□に↑）→「ホーム画面に追加」→「追加」の順です。"
+    : "ブラウザのメニューから「アプリをインストール」または「ホーム画面に追加」を選んでください。");
+}
+
+function showBackupStatus(text, isError) {
+  const el = $("backupStatus");
+  if (!el) return;
+  setTextIfChanged(el, text || "");
+  el.classList.toggle("error", Boolean(isError));
+}
+
+function backupFileName() {
+  return `cookie-strategist-backup-${new Date().toISOString().slice(0, 10)}.json`;
+}
+
+async function exportLocalBackup() {
+  try {
+    saveGame();
+    const raw = localStorage.getItem(saveKey);
+    if (!raw) throw new Error("セーブデータがまだありません");
+    const envelope = {
+      format: "cookie-strategist-backup",
+      version: 1,
+      createdAt: new Date().toISOString(),
+      save: JSON.parse(raw),
+      settings: JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}")
+    };
+    const json = JSON.stringify(envelope, null, 2);
+    const file = new File([json], backupFileName(), { type: "application/json" });
+
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ title: "クッキーストラテジャー バックアップ", files: [file] });
+        showBackupStatus("バックアップを共有しました。", false);
+      } catch (e) {
+        if (e && e.name === "AbortError") showBackupStatus("共有をキャンセルしました。", false);
+        else throw e;
+      }
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showBackupStatus("バックアップを書き出しました。", false);
+  } catch (e) {
+    showBackupStatus(`書き出せませんでした：${e && e.message ? e.message : "不明なエラー"}`, true);
+  }
+}
+
+async function importLocalBackup(file) {
+  try {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) throw new Error("ファイルが大きすぎます");
+    const parsed = JSON.parse(await file.text());
+    if (!parsed || parsed.format !== "cookie-strategist-backup" || parsed.version !== 1
+        || !parsed.save || typeof parsed.save !== "object" || !parsed.save.upgrades || parsed.save.cookies == null) {
+      throw new Error("このゲームのバックアップ形式ではありません");
+    }
+    if (!window.confirm("現在のセーブをこのバックアップで置き換えます。よろしいですか？")) {
+      showBackupStatus("読み込みをキャンセルしました。", false);
+      return;
+    }
+
+    saveSuspendedForImport = true;
+    localStorage.setItem(IMPORT_ROLLBACK_KEY, JSON.stringify({
+      saveRaw: localStorage.getItem(saveKey),
+      settingsRaw: localStorage.getItem(SETTINGS_KEY),
+      savedAt: new Date().toISOString()
+    }));
+    localStorage.setItem(saveKey, JSON.stringify(parsed.save));
+    if (parsed.settings && typeof parsed.settings === "object") {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(parsed.settings));
+    }
+    showBackupStatus("読み込みました。ゲームを再起動します。", false);
+    setTimeout(() => location.reload(), 350);
+  } catch (e) {
+    showBackupStatus(`読み込めませんでした：${e && e.message ? e.message : "不明なエラー"}`, true);
+  } finally {
+    if ($("importBackupInput")) $("importBackupInput").value = "";
+  }
+}
+
+function restorePreImportBackup() {
+  try {
+    const rollback = JSON.parse(localStorage.getItem(IMPORT_ROLLBACK_KEY) || "null");
+    if (!rollback || typeof rollback !== "object" || !rollback.saveRaw) throw new Error("戻せるデータがありません");
+    if (!window.confirm("直前の読み込み前のセーブへ戻します。よろしいですか？")) return;
+    saveSuspendedForImport = true;
+    localStorage.setItem(saveKey, rollback.saveRaw);
+    if (rollback.settingsRaw) localStorage.setItem(SETTINGS_KEY, rollback.settingsRaw);
+    localStorage.removeItem(IMPORT_ROLLBACK_KEY);
+    showBackupStatus("元のセーブへ戻しました。ゲームを再起動します。", false);
+    setTimeout(() => location.reload(), 350);
+  } catch (e) {
+    showBackupStatus(`元に戻せませんでした：${e && e.message ? e.message : "不明なエラー"}`, true);
+  }
+}
+
 function syncSettingsUi() {
   $("setSeVol").value = settings.seVolume;
   $("setSeVolVal").textContent = settings.seVolume;
   $("setBgmVol").value = settings.bgmVolume;
   $("setBgmVolVal").textContent = settings.bgmVolume;
+  document.querySelectorAll("[data-setting-toggle]").forEach(input => {
+    input.checked = Boolean(settings[input.dataset.settingToggle]);
+  });
+  $("restoreBackupBtn").style.display = localStorage.getItem(IMPORT_ROLLBACK_KEY) ? "" : "none";
+  updateInstallUi();
 }
 
+let settingsReturnFocus = null;
 addTap($("settingsBtn"), () => {
+  settingsReturnFocus = document.activeElement;
   syncSettingsUi();
   syncCloudSettingsUi();
   $("settingsOverlay").classList.add("active");
   playSound("tab");
+  setTimeout(() => $("settingsCloseBtn").focus(), 0);
   // 設定を開いた時点でFirebaseを先読みしておく。
   // これをしないと初回ログインで signInWithPopup を呼ぶ前に3つのスクリプトを
   // ネットワークから読み込むことになり、ユーザー操作(タップ)の有効時間が切れて
@@ -14287,6 +14873,7 @@ if ($("equipCloseBtn")) addTap($("equipCloseBtn"), () => {
 addTap($("settingsCloseBtn"), () => {
   $("settingsOverlay").classList.remove("active");
   playSound("tab");
+  if (settingsReturnFocus && typeof settingsReturnFocus.focus === "function") settingsReturnFocus.focus();
 });
 
 addTap($("settingsToTitleBtn"), () => {
@@ -14347,6 +14934,75 @@ $("setBgmVol").addEventListener("input", () => {
   $("setBgmVolVal").textContent = settings.bgmVolume;
   saveSettings();
   applySettings();
+});
+
+document.querySelectorAll("[data-setting-toggle]").forEach(input => {
+  input.addEventListener("change", () => {
+    const key = input.dataset.settingToggle;
+    if (!Object.prototype.hasOwnProperty.call(settings, key)) return;
+    settings[key] = Boolean(input.checked);
+    saveSettings();
+    applySettings();
+    if (key === "haptics" && settings.haptics) playHaptic("upgrade");
+  });
+});
+
+addTap($("installAppBtn"), () => {
+  promptInstallApp().catch(() => setTextIfChanged($("installAppHint"), "追加方法を表示できませんでした。ブラウザメニューから追加してください。"));
+});
+
+addTap($("exportBackupBtn"), exportLocalBackup);
+addTap($("importBackupBtn"), () => $("importBackupInput").click());
+$("importBackupInput").addEventListener("change", () => importLocalBackup($("importBackupInput").files && $("importBackupInput").files[0]));
+addTap($("restoreBackupBtn"), restorePreImportBackup);
+
+addTap($("coachActionBtn"), () => {
+  focusCoachTarget(coachActionTarget);
+  if (coachReplayStep >= 0) {
+    if (coachReplayStep >= 2) {
+      coachReplayStep = -1;
+      $("coachCard").hidden = true;
+    } else {
+      coachReplayStep += 1;
+      renderCoach();
+    }
+  }
+});
+
+addTap($("coachSkipBtn"), () => {
+  if (coachReplayStep >= 0) {
+    coachReplayStep = -1;
+  } else {
+    settings.guideHidden = true;
+    saveSettings();
+  }
+  $("coachCard").hidden = true;
+});
+
+addTap($("replayCoachBtn"), () => {
+  coachReplayStep = 0;
+  settings.guideHidden = false;
+  saveSettings();
+  $("settingsOverlay").classList.remove("active");
+  renderCoach();
+});
+
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if ($("settingsOverlay").classList.contains("active")) {
+    $("settingsOverlay").classList.remove("active");
+    if (settingsReturnFocus && typeof settingsReturnFocus.focus === "function") settingsReturnFocus.focus();
+    e.preventDefault();
+  } else if ($("codexOverlay").classList.contains("active")) {
+    $("codexOverlay").classList.remove("active");
+    e.preventDefault();
+  } else if ($("equipOverlay").classList.contains("active")) {
+    $("equipOverlay").classList.remove("active");
+    e.preventDefault();
+  } else if ($("titleAboutOverlay").classList.contains("active")) {
+    $("titleAboutOverlay").classList.remove("active");
+    e.preventDefault();
+  }
 });
 
 document.querySelectorAll(".buyModeBtn").forEach(btn => {
@@ -15922,28 +16578,9 @@ function rankName() {
 
 
 function installBrowserZoomBlockers() {
-  ["gesturestart", "gesturechange", "gestureend"].forEach(type => {
-    document.addEventListener(type, e => {
-      e.preventDefault();
-    }, { passive: false });
-  });
-
-  document.addEventListener("touchmove", e => {
-    const target = e.target;
-    const inSkillMap = target && target.closest && target.closest(".skillMapFrame");
-    if (e.touches && e.touches.length > 1 && !inSkillMap) {
-      e.preventDefault();
-    }
-  }, { passive: false });
-
-  let lastTouchEnd = 0;
-  document.addEventListener("touchend", e => {
-    const now = Date.now();
-    if (now - lastTouchEnd <= 320) {
-      e.preventDefault();
-    }
-    lastTouchEnd = now;
-  }, { passive: false });
+  // CSS の touch-action: manipulation でダブルタップ拡大だけを抑え、
+  // OS標準のピンチ拡大は残す。preventDefaultで複数タッチを奪うと、
+  // ロービジョン利用者の拡大操作まで使えなくなるためイベントは遮断しない。
 }
 
 function distanceBetweenTouches(a, b) {
@@ -16558,6 +17195,7 @@ function completeReset() {
 }
 
 function saveGame() {
+  if (saveSuspendedForImport) return;
   const now = Date.now();
   if (state.quotaPauseStartedAt) {
     state.quotaPausedMs = Math.max(0, Number(state.quotaPausedMs) || 0) + Math.max(0, now - state.quotaPauseStartedAt);
@@ -18558,6 +19196,8 @@ loadGame();
 ensureState();
 applyVisualAssets();
 applySettings();
+updateTitleStartUi();
+updateInstallUi();
 restoreCloudSessionIfNeeded();
 
 // PWA: Service Worker登録(オフライン対応・Google Play(TWA)配信の前提)。
@@ -18615,6 +19255,7 @@ function returnToTitleScreen() {
   if (goldenVisible) hideGoldenCookie(false);
   hideMonster(false);
   saveGame();
+  updateTitleStartUi();
 }
 
 // 初起動の音声解禁ゲート: 最初にここをタップするとBGMを解禁してタイトルBGMを鳴らし、
@@ -18623,12 +19264,14 @@ function returnToTitleScreen() {
   const gate = $("audioGate");
   if (!gate) return;
   const dismiss = () => {
+    if (gate.classList.contains("hidden")) return;
     try { startBgm(); } catch (e) {}
     gate.classList.add("hidden");
     // タイトル(名前ロゴ・背景)をここで初めて表示する
     document.body.classList.remove("audioGateUp");
   };
   gate.addEventListener("pointerdown", dismiss, { once: true });
+  gate.addEventListener("click", e => { if (e.detail === 0) dismiss(); }, { once: true });
 })();
 
 addTap($("titleStartBtn"), () => {
