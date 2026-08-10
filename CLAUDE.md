@@ -656,5 +656,12 @@ mp4 無しに落ちる。→ `autopost.mjs` の `ensureTools()` が render の�
   誤報する（3回踏んだ）。
 - **ローカルの git 履歴は巻き戻ることがある。** push 後は
   `git log origin/<branch> -1` まで見て確認する。
+- **HEAD が detached になっていることがある**（8/10 の回はそうだった。
+  枝の ref は origin より9件遅れたまま、commit は detached HEAD の上に載る）。
+  この状態で `git push -u origin <branch>` を打つと、**自分の commit ではなく
+  遅れた枝 ref を押そうとして non-fast-forward で弾かれる。** pull しても
+  `HEAD is up to date` と出るので原因が見えない。`git branch -vv` で
+  `(HEAD detached ...)` が出ていたら、`git push origin HEAD:refs/heads/<branch>`
+  で押す（remote の先端が自分の親なら fast-forward で通る）。
 - **フレームを実際に開いて目で見ること。** `verify()` は「壊れていない」しか見ない。
 - 仕組みの説明は `promo/README.md` と `promo/youtube/README.md`。
