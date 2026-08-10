@@ -71,6 +71,24 @@ import('./youtube/yt.mjs').then(async m => {
   const last = new Date(q[q.length-1]);
   const days = ((last - Date.now()) / 86400000).toFixed(1);
   console.log(\`予約        : \${q.length}本、最後は \${last.toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'})}（あと\${days}日）\`);
+  // 末尾の日付だけでは穴が見えない。2026-08-10、外部レビューで2本落として
+  // 予約を外したあと、8/11 の公開が0本になっていたのに、この行は「あと4.1日」と
+  // 言っていた。**尻尾は伸びていて、前に穴が空いていた。**
+  // 打席は日ごとに配られるので、空白の日はそのぶん成長率から引かれる。
+  const day = t => new Date(t).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' });
+  const byDay = new Map();
+  for (const t of q) byDay.set(day(t), (byDay.get(day(t)) || 0) + 1);
+  // 最後の1日まで必ず含める（日数の割り算で止めると、JSTで日付が変わる分の
+  // 末尾1日が落ちて、その日が「穴」に見えないまま消える）。
+  const rows = [];
+  for (let i = 0; i < 30; i++) {
+    const d = day(Date.now() + i * 86400000);
+    rows.push(\`\${d.slice(5)}:\${byDay.get(d) || 0}\`);
+    if (d === day(last)) break;
+  }
+  const holes = rows.filter(r => r.endsWith(':0'));
+  console.log(\`              日ごと \${rows.join(' ')}\`);
+  if (holes.length) console.log(\`              ← 公開が0本の日が \${holes.length}日ある（\${holes.map(h=>h.split(':')[0]).join(', ')}）。RUNBOOK §2(1) に当たる\`);
   console.log('              ※ 直後にアップした分は検索索引の遅れで数分間ここに出ない。');
   console.log('                 足りないように見えても、作り直す前に videos?id=<id> で直接見ること。');
 }).catch(e => console.log('予約        : 取得できず —', String(e.message||e).slice(0,60)));
