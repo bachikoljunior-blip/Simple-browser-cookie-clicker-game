@@ -541,7 +541,32 @@ const hookScreen = {
     await mustSee('ステージ 第5', /星屑の銀河/, '#stageChoiceScreen');
   },
 };
-await (hookScreen[VARIANT.hook.screen] || hookScreen.play)();
+// 掴みの最初の1秒を、証拠の画面ではなくクッキーそのものに使う。
+//
+// 2026-08-10。外部レビュー3本（`restart` / `stages` / `formula`）が、切り口も
+// 画面も題材も違うのに、**上位の理由をそろえて同じにした**:
+// 「冒頭が茶色い極小テキストの一覧で、何のゲームか分からない」
+// 「いちばん強い絵（巨大クッキー）が4.5秒まで出てこない」。
+// 3人とも互いの講評も作り手の事情も知らない。**切り口ではなく型の問題。**
+//
+// 型がそうなっていた理由は構造にある: hookScreen の設定は録画が始まる**前**に
+// 走っていたので、**フレーム0がいきなりパネルの中身**だった。クッキーは一度も
+// 映らないまま、掴みの2.8秒が終わっていた。
+//
+// なので、クッキー画面（hookScreen.play は何もしない = 素の状態）のまま録り始め、
+// タップを撃ってから、**カメラの前で**証拠の画面を開く。副産物として、
+// レビュー3本が2番目に挙げた「買う瞬間・開く瞬間が映っていない/変化が見えない」も
+// 埋まる —— 開く動きそのものが画になる。
+//
+// **見直す条件**: これ以降に作った本と、それ以前の本の再生数を比べる。差が出ない
+// なら「冒頭が何の絵か」は配信量に効いていないので、この1秒は掴みの尺として
+// 返してよい（capAt の実験と同じで、変えたのは1点だけにしてある）。
+// 個別の切り口は `hook.preroll: false` で降りられる —— 状態を書き換える設定
+// （setMidGame 等）を持つ画面は、数字がカメラの前で飛ぶので降ろすこと。
+const COOKIE_SCREENS = new Set(['play', 'quota', 'hunt', 'board']);
+const setupHookScreen = hookScreen[VARIANT.hook.screen] || hookScreen.play;
+const PREROLL = VARIANT.hook.preroll ?? !COOKIE_SCREENS.has(VARIANT.hook.screen);
+if (!PREROLL) await setupHookScreen();
 
 await page.waitForTimeout(400);
 // Lift the music bed well above the game's own ceiling. Without it the take is
@@ -589,9 +614,26 @@ await begin();
 const recStart = Date.now();
 console.log(`  cut: ${VARIANT.id}`);
 console.log('  audio:', await ev(() => window.__startRec()));
-await shot('hook');
 mark('hook');
 if (SHORT) cues.push({ mark: 'hook', at: 0.30, text: VARIANT.hook.narration });
+// クッキーを先に見せてから、証拠の画面をカメラの前で開く（上の PREROLL の理由）。
+//
+// **タップは録画開始の直後に始める。** 最初の版は `shot('hook')` を先に置いて
+// いて、そのスクリーンショットにかかる時間ぶん **最初の1秒がまるごと静止画**に
+// なっていた（実測: 0〜1.0s のフレーム間差分は 0.02〜0.17 で、最初の打点は
+// 1.1秒）。レビュアーは 0.3 / 0.8 / 1.5 秒のフレームを「区別がつかない、
+// 1枚の画像が貼られている」と書いて 1.5秒でスワイプした。
+// **掴みの動きを測る窓が「最初のフラッシュまでの最大」だったので、
+// 3秒地点でパネルが開く動き（70.95）が最初の1秒の静止（0.17）を隠していた。**
+// 窓のほうは autopost の hookMoves() で直した。
+//
+// 6発200ms でおよそ1.2秒。証拠が出そろうのは 1.8〜2.8秒あたりで、
+// capAt の既定はそのぶん後ろへずらしてある。
+if (PREROLL) {
+  await tapBurst('#cookie', 6, 200);
+  await setupHookScreen();
+}
+await shot('hook');
 // Pre-setting the text means the opening frames would otherwise be motionless.
 // Tapping the cookie gives the hook real movement — floating numbers and the
 // game's own click — instead of a still frame with a caption on it.
@@ -692,7 +734,9 @@ await moved();
 // Default 1500ms: `restart`'s reviewer swiped at 1.5s and `stages`'s at 1.2s, so
 // the answer now arrives after the frame where both of them had already left —
 // it has to buy the stop, not reward it.
-const capAt = VARIANT.hook.capAt ?? 1500;
+// PREROLL の回は、証拠の画面が出そろうのが 1.5〜2.5秒。1500 のままだと答えが
+// クッキー画面や切り替えの途中に乗って、答えでも証拠でもないフレームになる。
+const capAt = VARIANT.hook.capAt ?? (PREROLL ? 2800 : 1500);
 const late = Math.max(0, capAt - (Date.now() - recStart));
 if (late) await wait(late);
 // Captions can be moved off the evidence, same as the banner. #pfxCap defaults

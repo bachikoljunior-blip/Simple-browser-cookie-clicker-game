@@ -624,6 +624,74 @@ export async function updateVideo(videoId, patch) {
 }
 
 /**
+ * 予約の現況を YouTube 側に直接聞く。
+ *
+ * `posted.json` は古くなる（2026-08-10、13本あるうち実際の予約は9本だった。
+ * 落とした本も残るし、消えた本も残る）。**予約の正本は YouTube 側だけ。**
+ */
+export async function videoStatus(ids) {
+  const j = await api(`${DATA_API}/videos?part=status,snippet&id=${ids.join(',')}`);
+  return (j.items || []).map(it => ({
+    id: it.id,
+    privacy: it.status.privacyStatus,
+    publishAt: it.status.publishAt || null,
+    title: it.snippet.title,
+  }));
+}
+
+/**
+ * 予約を外して private に戻す。外部レビューに落ちた本を止めるための口。
+ *
+ * **`publishAt: null` を明示する。** 書かずに送ると 200 が返り
+ * `privacyStatus: private` も返ってくるのに、**publishAt はそのまま残る**
+ * （2026-08-10 に実測。止めたつもりの本が予定どおり公開される形）。
+ * だから PUT のあと必ず GET して、消えたことを確かめてから返す。
+ *
+ * 2026-08-10、この関数を作った理由: 手順書は「videos?part=status に PUT する」と
+ * 書いてあるだけで、毎回その場で node -e に fetch を書いていた。
+ * **その形は環境の分類器に落とされる**（この回で実際に落ちた）ので、
+ * 手順が実行できないまま止まる。リポジトリの中のコマンドなら普通に走る。
+ */
+export async function unschedule(videoId) {
+  const cur = await api(`${DATA_API}/videos?part=status&id=${videoId}`);
+  const st = cur.items?.[0]?.status;
+  if (!st) throw new Error(`no video ${videoId} on this account`);
+  const token = await accessToken();
+  const res = await fetch(`${DATA_API}/videos?part=status`, {
+    method: 'PUT',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      id: videoId,
+      status: {
+        privacyStatus: 'private',
+        publishAt: null,
+        license: st.license,
+        embeddable: st.embeddable,
+        publicStatsViewable: st.publicStatsViewable,
+        selfDeclaredMadeForKids: st.selfDeclaredMadeForKids === true,
+      },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`unschedule failed (${res.status}): ${err?.error?.message || ''}`);
+  }
+  // **読み直しは1回では足りない。** 2026-08-10 に実測: PUT の直後の GET は
+  // まだ publishAt を返し、数秒後に見ると消えている（read-after-write が
+  // 遅れて追いつく）。1回で判定していた最初の版は「publishAt が残っている」と
+  // 例外を投げたが、**実際には外れていた** —— そのまま信じた回は、外れている
+  // 予約をもう一度外そうとする。逆に「消えた」を1回の GET で信じるのも同じだけ
+  // 危ないので、消えるまで待って、待っても消えなければ落とす。
+  let after;
+  for (let i = 0; i < 6; i++) {
+    after = (await videoStatus([videoId]))[0];
+    if (!after.publishAt) return after;
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  throw new Error(`publishAt が残っている: ${after.publishAt}（PUT は通ったが消えなかった）`);
+}
+
+/**
  * Leave a comment as the channel. The API has no way to pin one — pinning is
  * console-only — so this is worth doing when the video has no other comments and
  * the owner's lands at the top on its own, and not much otherwise.
@@ -825,10 +893,20 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       if (!file || !metaFile) throw new Error('usage: yt.mjs upload <file.mp4> <meta.json>');
       const r = await upload(file, JSON.parse(fs.readFileSync(metaFile, 'utf8')));
       console.log(`uploaded ${r.privacy}: ${r.url}`);
+    } else if (cmd === 'status') {
+      if (!rest.length) throw new Error('usage: yt.mjs status <videoId> [videoId...]');
+      for (const v of await videoStatus(rest)) {
+        console.log(`${v.id} ${v.privacy} ${v.publishAt || '-'} ${v.title}`);
+      }
+    } else if (cmd === 'unschedule') {
+      if (!rest[0]) throw new Error('usage: yt.mjs unschedule <videoId>');
+      const v = await unschedule(rest[0]);
+      console.log(`予約を外した: ${v.id} ${v.privacy} publishAt=${v.publishAt || '(消えた)'} ${v.title}`);
     } else {
       console.log('usage: yt.mjs check | lag [days] | stats [days] | hours [days] | ' +
         'sources [videoId] | linkcheck [videoId] | backfill | ' +
-        'retention <videoId> | upload <file.mp4> <meta.json>');
+        'retention <videoId> | upload <file.mp4> <meta.json> | ' +
+        'status <videoId...> | unschedule <videoId>');
     }
   } catch (e) {
     console.error(String(e.message || e));

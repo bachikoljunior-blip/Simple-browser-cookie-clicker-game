@@ -323,6 +323,31 @@ function hookMoves(file) {
   const diffs = frameMotion('ffmpeg', file, FPS, firstFlash, path.join(PROMO, 'video', '_motion'));
   if (!diffs.length) return;
   const peak = Math.max(...diffs);
+  // 最初の1秒だけを別に見る。
+  //
+  // 2026-08-10。この関数は「最初のフラッシュまでの最大」を見ていた。窓が広すぎた。
+  // `formula` の take は 0〜1.0秒が 0.02〜0.17（実質1枚の絵）で、3秒地点でパネルが
+  // 開く動き 70.95 がそれを隠し、**掴みの動き: 最大 87.77** と印字して通った。
+  // 外部レビュアーは 0.3 / 0.8 / 1.5秒 のフレームを「区別がつかない」と書いて
+  // 1.5秒でスワイプしている。**測っていた窓が、視聴者が去る窓を含んでいなかった。**
+  //
+  // 3人のレビュアーがスワイプした時刻は 1.2 / 1.5 / 1.5秒。**指が離れるのは最初の
+  // 1.5秒**なので、そこに動きが無いなら、そのあと何が動いても届かない。
+  // 窓は 1.0秒にした —— 1.5 にすると「1.4秒で動き始めた take」が通ってしまい、
+  // それはレビュアーが去ったあとの動きになる。
+  //
+  // 下限は同じ 0.5。この窓での実測は 静止した最初の1秒 = 0.17、
+  // 打点が入っている窓 = 2.4〜3.7。**下限をいじる前に take のほうを見ること。**
+  const OPEN_SEC = 1.0;
+  const open = diffs.slice(0, Math.round(OPEN_SEC * FPS));
+  const openPeak = open.length ? Math.max(...open) : peak;
+  if (openPeak < FLOOR) {
+    throw new Error(
+      `掴みの最初の${OPEN_SEC}秒が静止画のまま撮れている（動きの最大 ${openPeak.toFixed(2)} < ${FLOOR}）。\n`
+      + `掴み全体では ${peak.toFixed(2)} 動いているが、それは視聴者が去ったあとの動き。\n`
+      + `外部レビュー3本のスワイプ時刻は 1.2 / 1.5 / 1.5秒。**最初の1秒に動きを置くこと。**\n`
+      + `投稿しない。`);
+  }
   if (peak < FLOOR) {
     throw new Error(
       `掴みが静止画のまま撮れている（動きの最大 ${peak.toFixed(2)} < ${FLOOR}）。\n`
@@ -331,7 +356,8 @@ function hookMoves(file) {
       + `hookMotion が空振りしている（スクロール先が無い等）。`
       + `投稿しない —— Shorts は最初の1秒で決まる。`);
   }
-  console.log(`掴みの動き: 最大 ${peak.toFixed(2)}（0〜${firstFlash.toFixed(1)}s、下限 ${FLOOR}）`);
+  console.log(`掴みの動き: 最初の${OPEN_SEC}s ${openPeak.toFixed(2)} / 掴み全体 ${peak.toFixed(2)}`
+    + `（0〜${firstFlash.toFixed(1)}s、下限 ${FLOOR}）`);
 }
 
 /**

@@ -441,6 +441,17 @@ export const VARIANTS = [
   },
   {
     id: 'formula',
+    // **捨てた切り口（2026-08-10）。新しく作らないこと。**
+    //
+    // 外部レビューに2回出して2回とも fail（どちらもスワイプ 1.5秒）。2人が独立に
+    // 同じことを言った: **「生産の式」と約束しているのに、映るのは倍率の項目表で、
+    // 掛け合わせの式は一行も出ていない。** 言葉のほうが盛れている —— 指示11
+    // （画面に映っていないものを語らない）に触れる。予約も外した（hkM7fdWg8vc）。
+    //
+    // **同じ画面を別の言葉で扱うのは可**（`numbers` は「効いてる倍率が全部見られる」と
+    // 言い切って維持 84.3% を出している）。落ちたのは画面ではなく「式」という語。
+    // 残してあるのは、次の回が同じ言葉をもう一度発明しないため。
+    //
     // The untried combination the retention data pointed at. `numbers` opens on
     // this same screen with a statement hook — 「効いてる倍率が全部見られる」 —
     // and holds 84.3% of a 14s watch, the highest on the channel, for 184 views.
