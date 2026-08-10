@@ -983,11 +983,21 @@ if (REVEAL) {
   // 行が入れ替わるのが 2.7秒だった —— レビュアーが指を動かすのは 1.2〜2.5秒なので、
   // **出来事がその窓の後ろ端に落ちていた。** 前の行は1フレーム読めれば足りる。
   await wait(280);
-  // **返り値を捨てない**（指示7の5つ目の形）。`tapEl` は箱が取れないと
-  // `no box:` と印字して false を返すだけで、呼ぶ側が見なければ
-  // 「何も押していない take」がそのまま進む。
-  const tapped = await tapEl(`#research [data-id="${REVEAL.id}"]`);
-  if (!tapped) throw new Error(`前の行をタップできなかった（${REVEAL.id}）。`);
+  if (REVEAL.act === 'counter') {
+    // 単位が書き換わるのは、所持数がその桁に届いたとき。押す物は無いので
+    // 出来事は grant のほうで起こす（`bodyBeyond` が前からやっている操作で、
+    // ゲームが 10^72 に対して実際に組み立てる名前を出させるだけ）。
+    // **画面で読めることは `__revealAfter` が文字列で見る** ——
+    // 状態の変化は見える出来事ではない、を1回踏んでいるので。
+    if (!REVEAL.next) throw new Error('counter の reveal に next（後の所持数）が無い。');
+    await grant(REVEAL.next);
+  } else {
+    // **返り値を捨てない**（指示7の5つ目の形）。`tapEl` は箱が取れないと
+    // `no box:` と印字して false を返すだけで、呼ぶ側が見なければ
+    // 「何も押していない take」がそのまま進む。
+    const tapped = await tapEl(`#research [data-id="${REVEAL.id}"]`);
+    if (!tapped) throw new Error(`前の行をタップできなかった（${REVEAL.id}）。`);
+  }
   await wait(650);   // 列が組み替わり、後の行が読める間
   const after = await ev(a => window.__revealAfter(a), REVEAL);
   console.log(`  前→後（後）: ${after}`);
@@ -1073,6 +1083,10 @@ if (SHORT) {
     // 音声も正常と言うので、ここで確実に閉じる。
     try { closePolicyChoiceScreen(); } catch (e) {}
     try { closeStageChoiceScreen(); } catch (e) {}
+    // 掴みが巨大化したカウンターも戻す。戻さないと本体のあいだじゅう
+    // 画面中央に 128px の所持数が居座り、本体のキャプションと重なる
+    // ——— risk のモーダルを閉じ忘れたのと同じ形の事故。
+    try { if (window.__counterUndo) window.__counterUndo(); } catch (e) {}
     const rm = document.getElementById('rewardModal');
     if (!rm) return;
     ['zoom', 'align-items', 'padding-top'].forEach(k => rm.style.removeProperty(k));

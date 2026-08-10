@@ -323,7 +323,86 @@ window.__promoInstall = function () {
    * 「段階2」という語が他の研究のカードにも出るから ——
    * 語で見ると、別の行が最初から在るだけの take が通る。
    */
+  /* act:'counter' —— カウンターそのものを主役にして、**単位名がその場で
+   * 書き換わる**のを撮る（2026-08-11 に新設）。
+   *
+   * この台帳でいちばん重なりの強い未実装でした。**5人が独立に同じことを
+   * 書いています**（`unit` と `beyond` を別々のレビュアーに見せた2本＋
+   * 研究カードについて言っていた3本）:
+   *   「上端の所持クッキー表示を画面幅いっぱいに寄せ、無量大数→火炉が
+   *     その場で書き換わる瞬間を冒頭0〜1.5秒に。クッキーの絵は捨ててよい」
+   *   「豆粒カウンターを画面中央の巨大表示に変え、正→無量大数→火炉と
+   *     単位名がその場で書き換わるのを0秒から撮る」
+   * 両方が同じ**理由**も挙げていました —— 主張の証拠（火炉・10の72乗）が
+   * 自分のキャプションの中にしかなく、ゲーム画面側の該当文字は上端2%の豆粒。
+   * 視聴者から見ると「ゲームが言っている」ではなく「動画の字幕が言っている」。
+   *
+   * **研究カードの reveal と同じ枠に入れた理由**: 出来事の形が同じだから。
+   * 前に在って後に無い／前に無くて後に在る、が二値で言える。
+   * `state.cookies` を動かすのは `bodyBeyond` が前からやっていることで、
+   * 偽装ではありません（ゲームが 10^72 で実際に組み立てる名前を出させる）。
+   *
+   * **「呼んだ回数 ≠ 出来事」「状態の変化 ≠ 見える出来事」の次**: ここで
+   * 変わるのは**画面いちばん大きい文字そのもの**なので、状態ではなく
+   * 描画された文字列で前後を判定します（`#cookies` の textContent）。
+   * 数字の部分は 1.00000 のまま動かない（10^68 も 10^72 も level 境界ちょうど）
+   * ので、**書き換わるのは単位名だけ**になります。
+   */
+  const counterParts = () => {
+    const el = document.getElementById('cookies');
+    if (!el) return null;
+    return { el, box: el.closest('.cookieCount') || el.parentElement };
+  };
+
+  // 巨大表示が「読める大きさ」かを、文字の大きさそのもので測る。
+  // `__zoom` の minShare は行の高さを見るが、ここで効くのは1文字の大きさなので
+  // **font-size を画面幅に対する比で見る**。既定 0.08 は 1080幅で 86px ＝
+  // 1行に約12文字。**印字ではなく停止**（浅い巨大化は事故として扱う）。
+  const counterMeasure = (spec, el) => {
+    const fs = parseFloat(getComputedStyle(el).fontSize) || 0;
+    const vw = window.innerWidth || 1;
+    const share = fs / vw;
+    const floor = spec.minCharShare == null ? 0.08 : spec.minCharShare;
+    const r = el.getBoundingClientRect();
+    const size = `${Math.round(fs)}px 幅の${Math.round(share * 100)}% `
+      + `箱 ${Math.round(r.width)}x${Math.round(r.height)} @${Math.round(r.top)}`;
+    if (share < floor) return { why: `文字が小さい: ${size} < 下限${Math.round(floor * 100)}%` };
+    // 矩形は「レイアウト上どこか」であって「画面のどこか」ではない
+    // （ボスを枠外へ出したとき 232x242 @401 を返してきた）。**画面内まで見る。**
+    if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth
+        || !r.width || !r.height) {
+      return { why: `カウンターが画面の外: ${size}/${innerHeight}` };
+    }
+    return { size };
+  };
+
   window.__revealPrep = spec => {
+    if (spec && spec.act === 'counter') {
+      const p = counterParts();
+      if (!p) return 'カウンターが無い(#cookies)';
+      // 主役は1つ。隣の「合計毎秒」は同じ箱に居るので、巨大化すると
+      // 単位名と同じ大きさで並んで**どちらが答えか読めなくなる。**
+      const cps = document.getElementById('cookieCps');
+      if (cps) cps.style.setProperty('display', 'none', 'important');
+      const css = {
+        position: 'fixed', left: '0', right: '0',
+        top: spec.top || '24%', 'z-index': '9998',
+        'font-size': (spec.px || 128) + 'px', 'line-height': '1.06',
+        'text-align': 'center', 'word-break': 'break-all', margin: '0',
+      };
+      Object.keys(css).forEach(k => p.box.style.setProperty(k, css[k], 'important'));
+      window.__counterUndo = () => {
+        Object.keys(css).forEach(k => p.box.style.removeProperty(k));
+        if (cps) cps.style.removeProperty('display');
+      };
+      if (spec.at) {
+        state.cookies = D(spec.at);
+        state.runCookies = D(spec.at);
+        state.totalCookies = D(spec.at);
+      }
+      try { updateTopOnly(); } catch (e) {}
+      return `ok カウンター「${(p.el.textContent || '').trim()}」`;
+    }
     if (!spec || spec.act !== 'research') return `知らない act: ${spec && spec.act}`;
     const r = (typeof RESEARCH !== 'undefined' ? RESEARCH : []).find(x => x.id === spec.id);
     if (!r) return `研究が無い: ${spec.id}`;
@@ -360,6 +439,18 @@ window.__promoInstall = function () {
   // 見る** —— 前の行が無ければ買う瞬間は映らないし、後の行が最初から在れば
   // 「現れた」は嘘になる。
   window.__revealBefore = spec => {
+    if (spec && spec.act === 'counter') {
+      const p = counterParts();
+      if (!p) return 'カウンターが無い(#cookies)';
+      const txt = (p.el.textContent || '').trim();
+      // 前に在って、後がまだ無いこと。**後だけ見ると、最初から在ったものを
+      // 「現れた」と報告する take が通る**（monsters.length で1回外している）。
+      if (!txt.includes(spec.from)) return `前の単位が出ていない: 「${txt}」に ${spec.from} が無い`;
+      if (txt.includes(spec.to)) return `後の単位が最初から在る: 「${txt}」`;
+      const m = counterMeasure(spec, p.el);
+      if (m.why) return m.why;
+      return `ok 「${txt}」 ${m.size}`;
+    }
     const box = document.getElementById('research');
     if (!box) return '研究欄が無い';
     const from = box.querySelector(`[data-id="${spec.id}"]`);
@@ -399,6 +490,17 @@ window.__promoInstall = function () {
   // もっともらしい値を返し、フレームには1体も映っていなかった。
   // 矩形は「レイアウト上どこか」であって「見えている」ではない。
   window.__revealAfter = spec => {
+    if (spec && spec.act === 'counter') {
+      const p = counterParts();
+      if (!p) return 'カウンターが無い(#cookies)';
+      try { updateTopOnly(); } catch (e) {}
+      const txt = (p.el.textContent || '').trim();
+      if (txt.includes(spec.from)) return `前の単位が消えていない: 「${txt}」`;
+      if (!txt.includes(spec.to)) return `後の単位が出ていない: 「${txt}」に ${spec.to} が無い`;
+      const m = counterMeasure(spec, p.el);
+      if (m.why) return m.why;
+      return `ok 「${txt}」 ${m.size}`;
+    }
     const box = document.getElementById('research');
     if (!box) return '研究欄が無い';
     if (box.querySelector(`[data-id="${spec.id}"]`)) return `前の行が消えていない: ${spec.id}`;

@@ -354,5 +354,23 @@
       "--at",
       "2026-08-15T12:30:00+09:00"
     ]
+  },
+  {
+    "at": "2026-08-10T23:11:12.205Z",
+    "cut": "unitmake",
+    "videoId": "TEdMNqX10gs",
+    "privacy": "private",
+    "publishAt": "2026-08-16T03:30:00.000Z",
+    "title": "日本語の単位が尽きた先、どうなると思いますか【放置ゲー】",
+    "commit": "2f371af697844215aeae2d1b32647252b1d329aa+dirty",
+    "argv": [
+      "--cut",
+      "unitmake",
+      "--length",
+      "short",
+      "--public",
+      "--at",
+      "2026-08-16T03:30:00Z"
+    ]
   }
 ]
