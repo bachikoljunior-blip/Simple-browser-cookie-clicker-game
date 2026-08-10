@@ -3,7 +3,7 @@
 // ・images/ など同一オリジンの静的ファイルはキャッシュ優先(初回取得時に保存)
 // ・広告(AdSense)・課金(Play Billing)・Firebase などクロスオリジンの通信には一切関与しない
 // ゲーム本体を更新したら CACHE のバージョン番号を上げること(古いキャッシュは activate で消える)
-const CACHE = "cookie-strategist-v10";
+const CACHE = "cookie-strategist-v11";
 const PRECACHE = [
   "./",
   "./index.html",
@@ -13,7 +13,27 @@ const PRECACHE = [
   "./icons/icon-512.png",
   "./images/bg_title.webp",
   "./images/logo_title.webp",
-  "./images/object_cookie.webp"
+  "./images/bg_stage1_meadow.webp",
+  "./images/screen_play.webp",
+  "./images/screen_shop.webp",
+  "./images/screen_research.webp",
+  "./images/object_cookie.webp",
+  "./images/object_goldenCookie.webp",
+  "./images/object_cookieMonster.webp",
+  "./images/upgrade_finger.webp",
+  "./images/upgrade_grandma.webp",
+  "./images/upgrade_oven.webp",
+  "./images/tab_shop.webp",
+  "./images/tab_research.webp",
+  "./images/tab_prestige.webp",
+  "./images/tab_order.webp",
+  "./images/tab_workshop.webp",
+  "./images/tab_info.webp",
+  "./images/icon_settings.webp",
+  "./images/buyMode_x1.webp",
+  "./images/buyMode_x10.webp",
+  "./images/buyMode_x100.webp",
+  "./images/buyMode_max.webp"
 ];
 
 self.addEventListener("install", e => {
