@@ -1320,6 +1320,27 @@ async function bodyBeyond() {
 async function bodyPrestige() {
   await flash();
   await top(null);
+  // **画面を先に開く。キャプションはそのあと**（指示11。2026-08-11 に踏んだ）。
+  //
+  // ここは長らく `cap('1回目は500万クッキー')` から始まっていた。転生が**唯一の本体**
+  // だったころは、直前に居るのが `screen: 'prestige'` の掴みだったので、たまたま
+  // 転生タブが開いたままで、根拠が画面に在った。**`--body a+b+c` で本体を繋げるように
+  // した瞬間、その仮定が黙って崩れた** ——— `--body hunt+prestige` で撮った take は、
+  // 金のクッキーとモンスターとボスが映っている戦闘画面の上に
+  // 「1回目は500万クッキー」だけが乗っていた（外部レビュアーが見つけた）。
+  // hunt / scale / beyond は3つとも画面を先に開いていて、**転生だけが違った。**
+  //
+  // 一般化: **前の場面が残した画面に寄りかかっている本体は、繋いだ瞬間に嘘になる。**
+  // 本体は「自分が主張することの画面を、自分で開く」こと。
+  //
+  // 周回数も自分で戻す。前の本体が `setLateGame()` を通っていると転生済みの状態で、
+  // そのとき画面が出す数は「1回目」のものではない。
+  await ev(() => {
+    state.prestigeRuns = 0;
+    try { renderActiveTab(); } catch (e) {}
+  });
+  await showTab('prestigeTab', true);
+  await scrollToHeading('prestigeTab', '転生');
   await cap(['1回目は<em>500万</em>クッキー']);
   mark('first');
   cues.push({ mark: 'first', at: 0.20, text: '1回目は、500万クッキー。' });

@@ -18,6 +18,7 @@ import path from 'node:path';
 import { VARIANTS, MARK, describe } from '../variants.mjs';
 import { frameMotion } from '../framestats.mjs';
 import { videoStats, channelVideos, channel, about, upload, credentials, retention } from './yt.mjs';
+import { recordVideo } from './review.mjs';
 
 const PROMO = path.resolve(import.meta.dirname, '..');
 const MP4 = path.join(PROMO, 'cookie_strateger_short.mp4');
@@ -511,6 +512,11 @@ const c = await channel();
 const res = await upload(file, meta);
 console.log(`\nuploaded to ${c.title}: ${res.url} ` +
   (res.publishAt ? `(${res.publishAt} に公開予定)` : `(${res.privacy})`));
+
+// この本のレビュー判定を、いま採れた videoId で台帳に写す。
+// これをやらないと、**さっきレビューしたばかりの本が `queue` で「未レビュー」**に
+// 見え、次の回が §2(4) でもう一度レビューする（この回に3本ぶん踏んだ）。
+recordVideo(res.id);
 
 // **アップ時の commit と引数を残す**（2026-08-11 に足した）。
 //

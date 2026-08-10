@@ -713,6 +713,57 @@ export async function unschedule(videoId) {
 }
 
 /**
+ * Move an existing scheduled video to a different publish time.
+ *
+ * なぜ足りなかったか（2026-08-11 に踏んだ）: この回、日ごとの本数が薄い日を埋めようと
+ * `--at` で投稿したら、**その日に既に居た本と同じ 12:30 に重なった。** 打席を1つ増やした
+ * つもりが、同じ分に2本出す形になっていた（フィードは1日に何本配るかで見ているので、
+ * 同時刻の2本は2日ぶんの打席にならない）。**直す口が `unschedule` しか無く、外すと
+ * publishAt が消えるだけで入れ直せない** ——— 唯一の道は撮り直して再投稿で、
+ * 同じ動画をもう1本アップする形になる。
+ *
+ * `unschedule` と同じ落とし穴を2つとも踏まないようにしてある:
+ * `status` の他の欄を書き戻さないと消えること、PUT 直後の GET が古い値を返すこと。
+ */
+export async function reschedule(videoId, at) {
+  const when = new Date(at);
+  if (Number.isNaN(when.getTime())) throw new Error(`日時が読めない: ${at}`);
+  if (when.getTime() < Date.now()) throw new Error(`過去の時刻です: ${when.toISOString()}`);
+  const cur = await api(`${DATA_API}/videos?part=status&id=${videoId}`);
+  const st = cur.items?.[0]?.status;
+  if (!st) throw new Error(`no video ${videoId} on this account`);
+  const token = await accessToken();
+  const res = await fetch(`${DATA_API}/videos?part=status`, {
+    method: 'PUT',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      id: videoId,
+      status: {
+        privacyStatus: 'private',
+        publishAt: when.toISOString(),
+        license: st.license,
+        embeddable: st.embeddable,
+        publicStatsViewable: st.publicStatsViewable,
+        selfDeclaredMadeForKids: st.selfDeclaredMadeForKids === true,
+      },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`reschedule failed (${res.status}): ${err?.error?.message || ''}`);
+  }
+  // read-after-write が遅れる（`unschedule` の注を見ること）。**新しい時刻が返るまで
+  // 待つ。** 1回の GET で古い値を見て「失敗した」と判断すると、通った PUT をもう一度撃つ。
+  let after;
+  for (let i = 0; i < 6; i++) {
+    after = (await videoStatus([videoId]))[0];
+    if (after.publishAt && Math.abs(new Date(after.publishAt) - when) < 60000) return after;
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  throw new Error(`publishAt が変わらない: ${after?.publishAt}（PUT は通ったが反映されなかった）`);
+}
+
+/**
  * Leave a comment as the channel. The API has no way to pin one — pinning is
  * console-only — so this is worth doing when the video has no other comments and
  * the owner's lands at the top on its own, and not much otherwise.
@@ -799,6 +850,36 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       }
     } else if (cmd === 'stats') {
       console.log(JSON.stringify(await videoStats(Number(rest[0]) || 28), null, 2));
+    } else if (cmd === 'perday') {
+      // **1日に何本出すと、1本あたりが痩せるのか。**
+      //
+      // RUNBOOK §2(1) は長らく「0本の日があるなら埋める」で、**1本の日は穴として
+      // 数えていなかった。** その注に「1日あたり何本が適正かは測っていない（いまは2本）」
+      // と自分で書いてあったので、2026-08-11 に測った。**痩せなかった。**
+      // 痩せないなら、1本の日は 1本ぶん（およそ200再生）をそのまま捨てているだけなので、
+      // 条件は「0本でない」ではなく「2本ある」でなければならない。
+      //
+      // 日は **JST で束ねる** ——— 見ているのは日本語のフィードで、`publishedAt` は UTC。
+      // 横型の長尺は Shorts フィードに入らず1〜7再生で終わるので、平均を壊さないように
+      // `avgViewSeconds > 30` を外す（20本の Shorts は全部 7〜17秒）。
+      const days = Number(rest[0]) || 90;
+      const vids = (await videoStats(days)).filter(v => v.avgViewSeconds <= 30);
+      const jst = t => new Date(new Date(t).getTime() + 9 * 3600e3).toISOString().slice(0, 10);
+      const byDay = {};
+      for (const v of vids) (byDay[jst(v.publishedAt)] ||= []).push(v);
+      const rows = Object.entries(byDay).sort();
+      for (const [d, vs] of rows) {
+        console.log(`${d} ${vs.length}本  平均${Math.round(vs.reduce((s, v) => s + v.views, 0) / vs.length)}  ${vs.map(v => v.views).join('/')}`);
+      }
+      const grouped = {};
+      for (const [, vs] of rows) (grouped[vs.length] ||= []).push(...vs.map(v => v.views));
+      console.log('\n1日あたりの本数ごと（1本あたりの再生）');
+      for (const k of Object.keys(grouped).sort()) {
+        const g = grouped[k];
+        console.log(`  ${k}本の日: 動画${g.length}本  平均${Math.round(g.reduce((s, x) => s + x, 0) / g.length)}`);
+      }
+      console.log('※ 平均が本数とともに下がっていないなら、1本足すぶんはそのまま合計に乗る。');
+      console.log('※ 下がり始めたら RUNBOOK §2(1) の「2本」を測った数に直すこと。');
     } else if (cmd === 'hours') {
       const rows = await byHour(Number(rest[0]) || 90);
       if (!rows.length) console.log('公開時刻ごとのデータがまだありません');
@@ -944,11 +1025,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       if (!rest[0]) throw new Error('usage: yt.mjs unschedule <videoId>');
       const v = await unschedule(rest[0]);
       console.log(`予約を外した: ${v.id} ${v.privacy} publishAt=${v.publishAt || '(消えた)'} ${v.title}`);
+    } else if (cmd === 'reschedule') {
+      if (!rest[0] || !rest[1]) throw new Error('usage: yt.mjs reschedule <videoId> <RFC3339>');
+      const v = await reschedule(rest[0], rest[1]);
+      console.log(`予約を移した: ${v.id} → ${new Date(v.publishAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} (JST) ${v.title}`);
     } else {
       console.log('usage: yt.mjs check | lag [days] | stats [days] | hours [days] | ' +
         'sources [videoId] | linkcheck [videoId] | backfill | ' +
         'retention <videoId> | upload <file.mp4> <meta.json> | ' +
-        'status <videoId...> | queue | unschedule <videoId>');
+        'status <videoId...> | queue | unschedule <videoId> | reschedule <videoId> <RFC3339>');
     }
   } catch (e) {
     console.error(String(e.message || e));

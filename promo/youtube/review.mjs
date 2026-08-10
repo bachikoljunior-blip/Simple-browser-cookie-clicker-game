@@ -141,6 +141,31 @@ function record() {
 }
 
 /**
+ * 投稿した直後に、いま焼いてある判定をその videoId で台帳へ写す。
+ *
+ * なぜ要るか（2026-08-11 に踏んだ）: `record` は `--video` を渡した回しか台帳を
+ * 更新せず、その注には「新規に作る本には videoId がまだ無いので渡さない」と
+ * 書いてある。**正しいが、そこで終わっていた** ——— アップロードが済めば videoId は
+ * 在るのに、書き戻す経路がどこにも無い。結果、**この回に作ってレビューまでした3本が、
+ * 投稿した直後から `queue` で「未レビュー」と表示された。**
+ * 次の回はそれを見て §2(4) に入り、**自分がさっき見た本をもう一度レビューする。**
+ * 外部レビュー1回ぶんが毎回そのまま消える形になっていた。
+ *
+ * 手順書に「投稿したら台帳にも書くこと」と足すのでは足りない（指示7の6つ目の形
+ * ——「毎回必要と書く」のは覚えていられる人がいる前提）。`autopost.mjs` が
+ * アップロードの直後に自分で呼ぶ。**覚えなくていい手順は、忘れられない。**
+ */
+export function recordVideo(videoId) {
+  if (!videoId || !fs.existsSync(VERDICT)) return;
+  const v = JSON.parse(fs.readFileSync(VERDICT, 'utf8'));
+  const led = JSON.parse(fs.readFileSync(LEDGER, 'utf8'));
+  if (led.videos[videoId]) return;   // 既に在るなら触らない（回数を潰さない）
+  led.videos[videoId] = { cut: v.cut || null, at: new Date().toISOString(), ...v };
+  fs.writeFileSync(LEDGER, JSON.stringify(led, null, 2) + '\n');
+  console.log(`台帳に記録: ${videoId}（${v.verdict}）`);
+}
+
+/**
  * The gate. Throws — does not print — so `autopost.mjs` dies before uploading.
  */
 function check() {
@@ -216,11 +241,18 @@ function check() {
   console.log(`外部レビュー: 合格（${(v.reasons || [])[0] || ''}）`);
 }
 
-const cmd = process.argv[2];
-if (cmd === 'prepare') prepare();
-else if (cmd === 'record') record();
-else if (cmd === 'check') check();
-else {
-  console.log('usage: review.mjs prepare | record [--video <videoId>] < verdict.json | check');
-  process.exit(2);
+// **CLI として起動されたときだけ引数を読む。**
+// これが無いと、`import { recordVideo } from './review.mjs'` した側の argv を
+// このファイルが自分の引数として読んでしまい、`--cut` は知らない語なので
+// **usage を出して process.exit(2)** —— autopost がレンダリングの前に死ぬ。
+// （`recordVideo` を autopost から呼ぶようにした 2026-08-11 に、実際に踏む手前で気づいた。）
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)) {
+  const cmd = process.argv[2];
+  if (cmd === 'prepare') prepare();
+  else if (cmd === 'record') record();
+  else if (cmd === 'check') check();
+  else {
+    console.log('usage: review.mjs prepare | record [--video <videoId>] < verdict.json | check');
+    process.exit(2);
+  }
 }

@@ -274,5 +274,65 @@
     "title": "“無量大数”の上、知ってますか【10の68乗】",
     "commitInferred": "1021794",
     "inferredFrom": "アップ時刻の直前の commit。実測ではない（2026-08-11 に遡って付けた）"
+  },
+  {
+    "at": "2026-08-10T21:07:47.817Z",
+    "cut": "unit",
+    "videoId": "fzsGXeZ0LJc",
+    "privacy": "private",
+    "publishAt": "2026-08-12T03:30:00.000Z",
+    "title": "“正”って単位、知ってますか【10の42乗】",
+    "commit": "326c70801f29e09ac33f75a937d51896c7ce522d",
+    "argv": [
+      "--cut",
+      "unit",
+      "--length",
+      "short",
+      "--body",
+      "beyond+scale",
+      "--public",
+      "--at",
+      "2026-08-12T12:30:00+09:00"
+    ]
+  },
+  {
+    "at": "2026-08-10T21:17:35.758Z",
+    "cut": "cook",
+    "videoId": "W5PLcWLdm2U",
+    "privacy": "private",
+    "publishAt": "2026-08-14T03:30:00.000Z",
+    "title": "クッキーをタップするゲームで料理が作れる",
+    "commit": "326c70801f29e09ac33f75a937d51896c7ce522d+dirty",
+    "argv": [
+      "--cut",
+      "cook",
+      "--length",
+      "short",
+      "--body",
+      "hunt+prestige",
+      "--public",
+      "--at",
+      "2026-08-14T12:30:00+09:00"
+    ]
+  },
+  {
+    "at": "2026-08-10T21:24:09.985Z",
+    "cut": "beyond",
+    "videoId": "_o32j_CW9qs",
+    "privacy": "private",
+    "publishAt": "2026-08-11T00:30:00.000Z",
+    "title": "“無量大数”の上、知ってますか【10の68乗】",
+    "commit": "326c70801f29e09ac33f75a937d51896c7ce522d+dirty",
+    "argv": [
+      "--cut",
+      "beyond",
+      "--length",
+      "short",
+      "--body",
+      "beyond+prestige+hunt",
+      "--public",
+      "--at",
+      "2026-08-11T09:30:00+09:00"
+    ]
   }
 ]
