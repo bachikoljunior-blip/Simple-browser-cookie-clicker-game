@@ -651,6 +651,23 @@ if (VARIANT.hook.spot) {
 const moved = VARIANT.hook.motion === 'still'
   ? (() => wait(300))
   : (hookMotion[VARIANT.hook.screen] || hookMotion.play);
+// Implicit stillness is a defect; declared stillness is a choice.
+//
+// 2026-08-10. `restart` opens on `skill`, whose entry above is `wait(400)` — no
+// motion at all. The recorded hook scored 0.01–0.09 per frame for its whole 2.8s
+// (the beats that genuinely move score 3–28), and an outside reviewer swiped at
+// 1.5s naming the still opening as the reason. Nothing in the pipeline objected:
+// `verify` asks whether a render is broken, and a held frame is not broken.
+//
+// Nine of the entries above are `wait(...)`. None of those cuts decided to hold
+// still — they inherited it from a table, which is how a comment fifteen lines
+// up can say a static opening is known-bad while most screens are static.
+//
+// So the gate keys on the declaration, not the screen: `hook.motion: 'still'` is
+// an author saying "hold, I know" — `craftcap` says it because the shared scroll
+// pushed its evidence out of frame — and that is respected. Everything else is
+// expected to move, and autopost throws on a take that did not.
+const hookAsksToMove = VARIANT.hook.motion !== 'still';
 await moved();
 // The hold has to leave room for the hook line to finish, not just for the
 // motion to play. Cutting it to 900ms made the tree hook overrun by 0.73s: the
@@ -1116,4 +1133,10 @@ await shot('cta');
 await wait(SHORT ? 4700 : 3900);
 mark('scene9 / total');
 
-await finish({ variant: VARIANT.id, ...(SHORT ? { narration: cues } : {}) });
+await finish({
+  variant: VARIANT.id,
+  // Recorded so the motion gate in autopost can ask "did this take do what it
+  // asked for", instead of guessing from the cut id.
+  hookAsksToMove,
+  ...(SHORT ? { narration: cues } : {}),
+});

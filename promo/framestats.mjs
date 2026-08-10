@@ -10,7 +10,7 @@ import zlib from 'node:zlib';
 import fs from 'node:fs';
 
 // 8-bit greyscale, non-interlaced — the only shape ffmpeg is asked to produce.
-function pngGrayMean(buf) {
+function pngGray(buf) {
   let pos = 8, w = 0, h = 0;
   const idat = [];
   while (pos + 8 <= buf.length) {
@@ -48,20 +48,57 @@ function pngGrayMean(buf) {
       cur[x] = v & 0xff;
     }
   }
+  return out;
+}
+
+const meanOf = px => {
   let sum = 0;
-  for (let i = 0; i < out.length; i++) sum += out[i];
-  return sum / out.length;
+  for (let i = 0; i < px.length; i++) sum += px[i];
+  return sum / px.length;
+};
+
+// Decode a stretch of the video to 32x32 greyscale, once, for whoever wants it.
+function scan(ff, file, fps, tmp, extra = []) {
+  fs.rmSync(tmp, { recursive: true, force: true });
+  fs.mkdirSync(tmp, { recursive: true });
+  execFileSync(ff, ['-y', '-hide_banner', '-loglevel', 'error', ...extra, '-i', file,
+    '-r', String(fps), '-vf', 'scale=32:32', '-pix_fmt', 'gray', `${tmp}/f%06d.png`]);
+  const frames = fs.readdirSync(tmp).sort()
+    .map(n => pngGray(fs.readFileSync(`${tmp}/${n}`)));
+  fs.rmSync(tmp, { recursive: true, force: true });
+  return frames;
 }
 
 export function frameMeans(ff, file, fps, tmp = 'framescan') {
-  fs.rmSync(tmp, { recursive: true, force: true });
-  fs.mkdirSync(tmp);
-  execFileSync(ff, ['-y', '-hide_banner', '-loglevel', 'error', '-i', file,
-    '-r', String(fps), '-vf', 'scale=32:32', '-pix_fmt', 'gray', `${tmp}/f%06d.png`]);
-  const means = fs.readdirSync(tmp).sort()
-    .map(n => pngGrayMean(fs.readFileSync(`${tmp}/${n}`)));
-  fs.rmSync(tmp, { recursive: true, force: true });
-  return means;
+  return scan(ff, file, fps, tmp).map(meanOf);
+}
+
+/**
+ * How much the picture actually changes, frame to frame: mean absolute pixel
+ * difference against the previous frame, one number per frame.
+ *
+ * Why this exists (2026-08-10): an outside reviewer watching `restart` said the
+ * first four sampled frames were identical and swiped at 1.5s. Measuring it
+ * agreed — the opening 2.8s scored 0.01–0.09 while the beats that genuinely move
+ * scored 3–28, two orders of magnitude apart. The cut had asked for motion
+ * (`hookMotion.tree` scrolls the skill map) and the scroll silently did nothing,
+ * because the call's result was thrown away. That is the failure mode CLAUDE.md
+ * names: a function that reports by returning, to a caller that never looks.
+ *
+ * Deliberately measured on the encoded video rather than in the browser: what
+ * matters is whether the recorded picture moves, not whether a scroll was
+ * requested. Requesting it is what already passed.
+ */
+export function frameMotion(ff, file, fps, upToSec = null, tmp = 'motionscan') {
+  const extra = upToSec ? ['-t', String(upToSec)] : [];
+  const frames = scan(ff, file, fps, tmp, extra);
+  const out = [];
+  for (let i = 1; i < frames.length; i++) {
+    let sum = 0;
+    for (let j = 0; j < frames[i].length; j++) sum += Math.abs(frames[i][j] - frames[i - 1][j]);
+    out.push(sum / frames[i].length);
+  }
+  return out;
 }
 
 // Onset frame of each white flash. The flash animation fades from 90% white over

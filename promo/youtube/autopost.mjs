@@ -16,6 +16,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { VARIANTS, MARK, describe } from '../variants.mjs';
+import { frameMotion } from '../framestats.mjs';
 import { videoStats, channelVideos, channel, about, upload, credentials, retention } from './yt.mjs';
 
 const PROMO = path.resolve(import.meta.dirname, '..');
@@ -271,6 +272,66 @@ function verify(file) {
 
   if (problems.length) throw new Error('render failed checks: ' + problems.join('; '));
   console.log(`checks passed: ${dur.toFixed(1)}s, ${v.width}x${v.height}, ${a.codec_name} audio`);
+  hookMoves(file);
+}
+
+/**
+ * A hook that asked the screen to move, and got a still picture, is a broken
+ * take — not a taste call.
+ *
+ * 2026-08-10. `restart` opens on the `skill` screen, whose motion in director's
+ * table is `wait(400)` — nothing. 2.8 seconds of hook were one frame held still.
+ * `verify` passed it: right length, right size, audio present, opening frame not
+ * blank. An outside reviewer swiped at 1.5s and named the still opening.
+ *
+ * The threshold is measured, not felt. Two renders, same day, same scan:
+ *
+ *     restart  掴み静止        peak 0.09   ← 落ちてほしい側
+ *     stages   研究一覧をスクロール peak 2.50   ← 通ってほしい側
+ *
+ * 0.5 is ~5x above one and ~5x below the other. Not a wide gap — the mid-video
+ * beats reach 3–28, but a list scrolling is gentler than a golden cookie — so
+ * this line is worth re-measuring as cuts are added rather than treated as
+ * settled. If a cut lands between 0.3 and 1.0, that is the signal to look at the
+ * take itself, not to nudge the number.
+ *
+ * Exempt: cuts that declare `hook.motion: 'still'`. That is an author choosing to
+ * hold — `craftcap` does, because the shared scroll pushed its evidence out of
+ * frame — and a declared choice is reviewable. Stillness inherited from a table
+ * entry nobody chose is not, which is the case this catches.
+ *
+ * A first version keyed on whether the cut's *screen* was a scrolling one. It
+ * would have passed `restart` — the take that prompted it. A gate that misses its
+ * own motivating case is the printed warning instruction 7 forbids, wearing a
+ * throw's clothes; the rule had to move to the declaration.
+ *
+ * Reviewing this line: if a cut ever fails here while its opening does visibly
+ * move, the 32x32 greyscale scan is too coarse for that kind of motion and the
+ * scale — not the threshold — is what needs raising.
+ */
+function hookMoves(file) {
+  const trimFile = path.join(PROMO, 'trim.json');
+  if (!fs.existsSync(trimFile)) return;
+  const trim = JSON.parse(fs.readFileSync(trimFile, 'utf8'));
+  if (!trim.hookAsksToMove) return;
+  // The hook runs from the first frame to the first hard cut. Without a logged
+  // flash there is no hook window to measure, so there is nothing to assert.
+  const firstFlash = (trim.flashLog || [])[0];
+  if (!firstFlash) return;
+
+  const FPS = 10, FLOOR = 0.5;
+  const diffs = frameMotion('ffmpeg', file, FPS, firstFlash, path.join(PROMO, 'video', '_motion'));
+  if (!diffs.length) return;
+  const peak = Math.max(...diffs);
+  if (peak < FLOOR) {
+    throw new Error(
+      `掴みが静止画のまま撮れている（動きの最大 ${peak.toFixed(2)} < ${FLOOR}）。\n`
+      + `この切り口は画面を動かすと宣言しているのに、録れた ${firstFlash.toFixed(1)}秒 は`
+      + `1枚の絵と区別がつかない。\n`
+      + `hookMotion が空振りしている（スクロール先が無い等）。`
+      + `投稿しない —— Shorts は最初の1秒で決まる。`);
+  }
+  console.log(`掴みの動き: 最大 ${peak.toFixed(2)}（0〜${firstFlash.toFixed(1)}s、下限 ${FLOOR}）`);
 }
 
 /**
@@ -361,6 +422,19 @@ console.log(`\ntitle: ${meta.title}\nprivacy: ${meta.privacy}` +
   `${(fs.statSync(file).size / 1e6).toFixed(1)}MB`);
 console.log(`\n--- description ---\n${meta.description}\n---`);
 
+// Before the dry-run exit, not after.
+//
+// 2026-08-10: `verify` sat below this block, so the render step the runbook
+// actually tells you to use (`--dry-run`) ran no checks at all. A take could be
+// the wrong length, silent, or — since today — a still picture, and the render
+// would finish quietly; the first complaint arrived at `--public`, after an
+// outside reviewer had already spent a pass on it. These checks only read the
+// file, so there is no reason to hold them until upload.
+//
+// `review.mjs check` stays below: at dry-run time the verdict does not exist yet,
+// which is the whole point of rendering first.
+verify(file);
+
 if (dryRun) {
   console.log('\n--dry-run: not uploading');
   process.exit(0);
@@ -376,7 +450,6 @@ try {
   process.exit(0);
 }
 
-verify(file);
 // verify() only asks whether the render is broken. Whether it is worth watching
 // has never been asked by anyone but the process that made it — 19 videos, 1
 // subscriber, 0 comments, growth flat. So an outside reviewer has to have passed
