@@ -942,6 +942,45 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         await updateVideo(v.id, { description: body, tags: TAGS });
         console.log(`  ${v.id}  説明欄を追加  ${v.title}`);
       }
+    } else if (cmd === 'subcta') {
+      // 既に上がっている本の説明欄に「チャンネル登録」の一行を足す。
+      //
+      // なぜ要るか（2026-08-11）: 終了カードと `cta()` に登録の一行を入れたが、
+      // **それが効くのは、これから撮る本だけ。** 予約に並んでいる10本は
+      // mp4 も説明欄も既に上がっていて、公開は 8/11〜8/15。
+      // つまり何もしなければ、**この探索の結果が出始めるのは 8/16 以降**になる。
+      // 説明欄は上げたあとでも直せるので、そこだけ先に届かせる。
+      //
+      // `--dry-run` で対象だけ出す。`part=snippet` しか送らないので
+      // `publishAt` は動かない（`unschedule` が踏んだ罠はここには無い）。
+      const dry = rest.includes('--dry-run');
+      // 文面の正本は variants.mjs。**ここに書き写さない** ——
+      // 同じ文が2か所にあると片方が古くなる（EXPLORE.md の間隔が 6h のまま
+      // 残っていたのが実例）。`backfill` が `describe` を動的 import しているのと同じ形。
+      const { SUB_CTA_LINE, SUB_CTA_MARK } = await import('../variants.mjs');
+      const vs = await channelVideos();
+      // **既定は「まだ公開されていない本」だけ。** `--all` で公開済みも含める。
+      //
+      // なぜ絞るか: 公開済みの説明欄を書き換える利得はほぼ無い（古い本は
+      // もう配信されていない ——「古い本に置いた問いは、ほとんど誰にも見えない」）。
+      // 一方で、**いま配信されている数本の metadata を触る**のは、順位への影響が
+      // 私たちに測れない賭けになる。**利得がほぼ0で、損失が測れないなら、賭けない。**
+      // 予約の10本（8/11〜8/15 公開）は配信履歴がまだ無いので、触っても失うものが無く、
+      // **この探索が結果を出し始める窓そのもの**なので、そこだけ足す。
+      const all = rest.includes('--all');
+      const sched = new Set((await queue()).map(v => v.id));
+      const scope = all ? vs : vs.filter(v => sched.has(v.id));
+      // 既に入っている本は飛ばす。**二重に足さないことを文字列で保証する**
+      // ——— 撃つたびに1行ずつ増える形にすると、説明欄が静かに壊れる。
+      const targets = scope.filter(v => !(v.description || '').includes(SUB_CTA_MARK));
+      console.log(`対象 ${targets.length}本 / ${all ? `全${vs.length}本` : `予約${scope.length}本`}`
+        + `${dry ? '（--dry-run。書き込みません）' : ''}`);
+      for (const v of targets) {
+        if (dry) { console.log(`  ${v.id}  ${v.title}`); continue; }
+        const body = `${(v.description || '').trimEnd()}\n\n${SUB_CTA_LINE}`;
+        await updateVideo(v.id, { description: body });
+        console.log(`  ${v.id}  登録の一行を追加  ${v.title}`);
+      }
     } else if (cmd === 'sources') {
       // `sources <videoId>` narrows to one video — see videoSources().
       const vid = rest.find(a => a && !/^\d+$/.test(a));

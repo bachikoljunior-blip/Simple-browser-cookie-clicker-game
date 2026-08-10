@@ -29,6 +29,22 @@ export async function openStage({ width, height, fps = 20, quality = 95,
   const overlaySrc = fs.readFileSync(overlay, 'utf8');
   const audioTapSrc = fs.readFileSync('audiotap.js', 'utf8');
 
+  // 注入するスクリプトの構文を、注入する前に見る。
+  //
+  // なぜ（2026-08-11 に踏んだ）: overlay.js の CSS はテンプレートリテラルの中に
+  // あり、コメントにバッククォートを1つ書いたら**そこで文字列が終わって**
+  // ファイル全体が壊れた。`addScriptTag` は壊れたスクリプトを黙って飲み、
+  // 苦情は次の行の **`window.__promoInstall is not a function`** として出る。
+  // 原因（構文）と症状（関数が無い）が離れているので、`__promoInstall` の定義や
+  // 注入の順番を疑うことになる。**実際そこで1往復した。**
+  //
+  // `new Function` は本文をパースするだけで実行しない。壊れていれば
+  // SyntaxError が行番号つきで出て、**撮影の前に止まる**（印字ではなく停止）。
+  for (const [name, src] of [[overlay, overlaySrc], ['audiotap.js', audioTapSrc]]) {
+    try { new Function(src); }
+    catch (e) { throw new Error(`${name} の構文が壊れています: ${e.message}`); }
+  }
+
   const browser = await chromium.launch({
     ...(fs.existsSync(CHROME) ? { executablePath: CHROME } : {}),
     args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'],

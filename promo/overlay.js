@@ -102,6 +102,18 @@ window.__promoInstall = function () {
   @keyframes pfxPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
   #pfxEnd .arrow{color:#fff;font-size:6.019vw;animation:pfxBob .8s ease-in-out infinite}
   @keyframes pfxBob{0%,100%{transform:translateY(0)}50%{transform:translateY(1.62vw)}}
+  /* 「また出す」の一行。**赤枠の下に、赤枠より小さく置く。**
+     指示12 のテスター募集は動画に残る制約なので、こちらが主役を奪ってはいけない。
+     逆に、ここが空欄のままだった20本で登録者は生涯1。**場所は取るが順位は下**、
+     が両方を満たす唯一の置き方。空文字を渡すと display:none で消える
+     （旧い呼び方 __end(t,s,cta) がそのまま動くように）。
+     この CSS はテンプレートリテラルの中なので、コメントにバッククォートを
+     書かないこと ——— 2026-08-11 に書いて文字列がそこで終わり、
+     overlay 全体が構文エラーになった（__promoInstall is not a function で出る）。 */
+  #pfxEnd .sub{color:#ffe9b8;font-size:3.472vw;font-weight:700;text-align:center;
+    line-height:1.5;text-shadow:0 0.463vw 0 rgba(0,0,0,.7)}
+  #pfxEnd .sub:empty{display:none}
+  #pfxEnd .sub em{font-style:normal;color:#ffd75e}
   `;
 
   const st = document.createElement('style');
@@ -119,6 +131,7 @@ window.__promoInstall = function () {
       <div class="s"></div>
       <div class="cta"></div>
       <div class="arrow">▼</div>
+      <div class="sub"></div>
     </div>
     <div id="pfxCover"></div>`;
   document.body.appendChild(root);
@@ -414,11 +427,12 @@ window.__promoInstall = function () {
     return `ok ${Math.round(r.width)}x${Math.round(r.height)} @${Math.round(r.top)}`;
   };
 
-  window.__end = (t, s, cta) => {
+  window.__end = (t, s, cta, sub = '') => {
     const e = $$('pfxEnd');
     e.querySelector('.t').innerHTML = t;
     e.querySelector('.s').innerHTML = s;
     e.querySelector('.cta').innerHTML = cta;
+    e.querySelector('.sub').innerHTML = sub;
     e.classList.add('on');
   };
 

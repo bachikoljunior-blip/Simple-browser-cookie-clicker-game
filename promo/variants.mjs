@@ -33,6 +33,25 @@ const TAGS = ['Shorts', '放置ゲーム', 'クリッカー', 'インクリメ�
 const PLAY_URL = 'https://cookiestrateger.com/play.html';
 
 /**
+ * 「また来て」の一行。**説明欄と、既存の本への追記と、両方がこれを使う。**
+ *
+ * 2026-08-11 に足した。それまで**20本のあいだ、どこにも登録の依頼が無かった**
+ * （`grep -rn 'チャンネル登録' promo/` が0件）。そのあいだの登録者は**生涯1**。
+ * 台帳「戻ってくる理由」には「続きもの」と「固定コメント」が並んでいて、
+ * **いちばん安い形＝ただ頼む、が項目になっていなかった。**
+ *
+ * `SUB_CTA_MARK` は追記済みかを見分けるための部分文字列。**文面を変えるときは
+ * マークが前の文面にも一致するかを考えること** ——— 一致しなくなると、
+ * `yt.mjs subcta` が同じ本にもう一行足す。
+ *
+ * 頻度は約束しない。「毎日出します」は自動実行が止まった日に嘘になり、
+ * 動画の説明欄はそのとき誰も直しに来ない（指示11）。
+ */
+export const SUB_CTA_MARK = 'チャンネル登録';
+export const SUB_CTA_LINE =
+  '■ このゲームの中身を1本ずつ出しています。チャンネル登録で次の回が届きます。';
+
+/**
  * The call to action every description carries.
  *
  * The browser link goes first, and that ordering is the point. Measured
@@ -88,7 +107,9 @@ ${groupUrl}
 ${optInUrl}
 ③ 表示されたリンクからインストール
 
-${contact ? `うまくいかないときは ${contact} まで。` : 'うまくいかないときはコメントで教えてください。'}`;
+${contact ? `うまくいかないときは ${contact} まで。` : 'うまくいかないときはコメントで教えてください。'}
+
+${SUB_CTA_LINE}`;
 
 export const VARIANTS = [
   {
