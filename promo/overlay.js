@@ -245,6 +245,137 @@ window.__promoInstall = function () {
     }, 30);
   };
 
+  /* 前→後 —— 行が「現れる瞬間」をカメラの前で撮る（2026-08-10 夕に新設）。
+   *
+   * この台帳でいちばん重なりの強い指摘の、残っていた半分。7本目と8本目の
+   * レビュアーが、互いの講評も作り手の事情も知らないまま**行の選び方まで
+   * 一致させて**同じ fix を書いた:
+   *   7本目「オーブンの熟練Iの行と、オーブン大量生成 段階2 の行だけを画面
+   *          いっぱいに拡大して、**上の段が買われた瞬間に下の段が現れる**
+   *          ところを撮れ」
+   *   8本目「段階2の1件だけを大写しにして、その行が一覧に**挿入される前→後**の
+   *          変化を0秒目に置け」
+   * `__zoom` で「大写し」は作った。**足りなかったのは「前→後」のほう** ——
+   * 寄れるのは既に在る行で、行が現れる瞬間は一度も撮っていなかった。
+   *
+   * **状態を書き換えて再描画する形にはしない。** それは今日いちばん高くついた
+   * 間違い（`opening: 'battle'` が `monsters.length` の減少で合格して、画面には
+   * 倒れる瞬間が1フレームも無かった）と同じ形になる。ここでやるのは
+   * **プレイヤーがやる操作そのもの** —— 研究カードをタップして買う。
+   * 買えば `buyResearch()` が購入カードを列から外し、対応スキルを持っていれば
+   * `visibleResearchStageCards()` が段階2のカードを列に入れる（play.html:15206）。
+   * **同じ1タップで、上の行が消えて下の行が現れる。**
+   *
+   * 判定は data-id で見る。カードは `data-id="<研究id>"` と
+   * `data-id="<研究id>__s2"`（play.html:15455 の stageMatch）を持つので、
+   * **前に無くて後に在る**が二値で言える。文字列一致にしないのは、
+   * 「段階2」という語が他の研究のカードにも出るから ——
+   * 語で見ると、別の行が最初から在るだけの take が通る。
+   */
+  window.__revealPrep = spec => {
+    if (!spec || spec.act !== 'research') return `知らない act: ${spec && spec.act}`;
+    const r = (typeof RESEARCH !== 'undefined' ? RESEARCH : []).find(x => x.id === spec.id);
+    if (!r) return `研究が無い: ${spec.id}`;
+    const skill = (typeof RES_STAGE2 !== 'undefined' ? RES_STAGE2 : {})[r.id];
+    if (!skill) return `段階2を持たない研究: ${spec.id}`;
+    // 段階2のカードは「段1購入済み + 対応スキル所持」で出る。スキルが無ければ
+    // 買っても出てこない ——「出てこなかった」を後で例外にするのではなく、
+    // **出ない条件のまま撮り始めない。**
+    if (!hasSkill(skill)) return `段階2のスキル(${skill})を持っていない`;
+    if (!researchUnlocked(r)) return `対応設備が未購入で研究欄に出ない: ${spec.id}`;
+    // 買っていない状態に戻す。setLateGame は全研究を購入済みにするので、
+    // そのままだと購入カードが列に無く、買う瞬間が撮れない。
+    state.research[r.id] = false;
+    state.researchStages = state.researchStages || {};
+    delete state.researchStages[r.id];
+    // **他の研究の段階カードは、列から出しておく。**
+    // setLateGame は全研究を購入済みにし全スキルを与えるので、素のままだと
+    // 列には13件ぶんの「〜 段階2」カードが並ぶ。その中に14件目が増えても、
+    // 視聴者には**何も起きていないのと同じ**（6/7 が挙げた「読めない一覧表」
+    // そのもの）。段階3まで買った状態にすると `visibleResearchStageCards()` の
+    // どちらの枝にも入らない（play.html:15206 の cur<2 / cur===2）ので、
+    // **画面に出る「段階2」はこれから現れる1件だけ**になる。
+    // late game のセーブとして矛盾しない状態であって、絵のための偽装ではない。
+    RESEARCH.forEach(x => {
+      if (x.id === r.id || !state.research[x.id]) return;
+      if (RES_STAGE2[x.id]) state.researchStages[x.id] = RES_STAGE3[x.id] ? 3 : 2;
+    });
+    if (!state.cookies.gte(researchCost(r))) return `クッキーが足りない: ${spec.id}`;
+    try { renderActiveTab(); } catch (e) {}
+    return `ok ${r.name}`;
+  };
+
+  // 前の状態を確かめてから返す。**「前に在る」「後に無い」の両方を撮影直前に
+  // 見る** —— 前の行が無ければ買う瞬間は映らないし、後の行が最初から在れば
+  // 「現れた」は嘘になる。
+  window.__revealBefore = spec => {
+    const box = document.getElementById('research');
+    if (!box) return '研究欄が無い';
+    const from = box.querySelector(`[data-id="${spec.id}"]`);
+    const to = box.querySelector(`[data-id="${spec.id}__s2"]`);
+    if (!from) return `前の行が列に無い: ${spec.id}`;
+    if (to) return `後の行が最初から在る: ${spec.id}__s2`;
+    // **語のほうも見る。** data-id が無いだけで「段階2」と書かれた別のカードが
+    // 並んでいたら、視聴者にとっては現れる前から段階2が在る。
+    // キャプションが「段階2が出てきます」と言うので、**出てくる前に画面のどこにも
+    // 無いこと**まで確かめる（`stages` は expect が語の有無しか見ず、
+    // 画面に無い「段階3」をテロップが主張したまま通した）。
+    // 見るのは購入カードの列だけ（`.item.artCard`）。#research の末尾には
+    // 「研究解析」パネルが付いていて、そこは効果の式を書き出すので
+    // 「狩り窓(段階2)」のような語が常に在る（play.html の異世界炉の式）。
+    // **箱ごと見ると、その1文で毎回落ちる** —— 検査は主張と同じ粒度で書く。
+    const said = [...box.querySelectorAll('.item.artCard')]
+      .find(n => (n.textContent || '').includes('段階2'));
+    if (said) return `前の時点で購入カードに「段階2」が在る: ${(said.textContent || '').slice(0, 20)}`;
+    // **スクロールしない。測るだけ。** 前の行がどこに在るかを覚えて、
+    // 後の行を**同じ高さ**へ持ってくる（`__revealAfter`）。
+    //
+    // 最初の版は前も後も `scrollIntoView({block:'center'})` にしていた。
+    // 「どちらも中央」なら同じ場所に来るはずだったが、**前の行は列の先頭**で、
+    // 先頭は scrollTop=0 より上へは行けないので中央に来ない。撮れた take は
+    // 「上端の行が消える」→「列が10行ぶん飛ぶ」→「別の行が中央に出る」で、
+    // **視聴者には前と後が別々の出来事**にしか見えなかった（t2.5 と t3.5）。
+    // 位置を合わせれば、同じ場所で名前が「オーブン大量焼成」→
+    // 「オーブン大量焼成 段階2」に変わる1つの出来事になる。
+    const r = from.getBoundingClientRect();
+    if (!r.width || !r.height) return `前の行に大きさが無い: ${spec.id}`;
+    window.__revealAnchor = r.top;
+    return `ok ${Math.round(r.width)}x${Math.round(r.height)} @${Math.round(r.top)}`;
+  };
+
+  // 後。**矩形が「画面のどこか」であることまで見る** —— 今日、ボスの位置を
+  // 動かしたとき `getBoundingClientRect()` は 232x242 @401 という
+  // もっともらしい値を返し、フレームには1体も映っていなかった。
+  // 矩形は「レイアウト上どこか」であって「見えている」ではない。
+  window.__revealAfter = spec => {
+    const box = document.getElementById('research');
+    if (!box) return '研究欄が無い';
+    if (box.querySelector(`[data-id="${spec.id}"]`)) return `前の行が消えていない: ${spec.id}`;
+    const to = box.querySelector(`[data-id="${spec.id}__s2"]`);
+    if (!to) return `後の行が出ていない: ${spec.id}__s2`;
+    // 後の行を、前の行が在った高さへ。段階2は段階1より高いので列の下のほうに
+    // 入る（コスト順・play.html:15261）—— 放っておくと枠外なので、
+    // **カメラのほうを合わせる。**
+    const anchor = typeof window.__revealAnchor === 'number' ? window.__revealAnchor : null;
+    if (anchor == null) return '前の行の高さを測っていない（__revealBefore を先に呼ぶこと）';
+    // zoom を掛けた箱では scrollTop は拡大前の座標、getBoundingClientRect は
+    // 拡大後の座標。**単位が違うので割る。** 1回で合わないので詰める。
+    const z = parseFloat(getComputedStyle(box).zoom) || 1;
+    for (let i = 0; i < 10; i++) {
+      const d = to.getBoundingClientRect().top - anchor;
+      if (Math.abs(d) < 2) break;
+      const was = box.scrollTop;
+      box.scrollTop += d / z;
+      if (box.scrollTop === was) break;   // 端に張り付いた
+    }
+    const r = to.getBoundingClientRect();
+    if (r.width < 60 || r.height < 24) return `後の行が小さすぎる ${Math.round(r.width)}x${Math.round(r.height)}`;
+    if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) {
+      return `後の行が画面の外 @${Math.round(r.top)}/${innerHeight}`;
+    }
+    return `ok ${Math.round(r.width)}x${Math.round(r.height)} @${Math.round(r.top)}`;
+  };
+
   window.__end = (t, s, cta) => {
     const e = $$('pfxEnd');
     e.querySelector('.t').innerHTML = t;

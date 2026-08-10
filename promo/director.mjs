@@ -566,6 +566,18 @@ const hookScreen = {
 const COOKIE_SCREENS = new Set(['play', 'quota', 'hunt', 'board']);
 const setupHookScreen = hookScreen[VARIANT.hook.screen] || hookScreen.play;
 const PREROLL = VARIANT.hook.preroll ?? !COOKIE_SCREENS.has(VARIANT.hook.screen);
+// 前→後の下ごしらえは**録画の前**にやる（`hook.reveal`。中身は overlay.js）。
+// カメラの前でやりたいのは「買う瞬間」だけで、そのために状態を戻す操作まで
+// 映すと、行が2回ちらついて、どちらが出来事なのか読めなくなる。
+const REVEAL = VARIANT.hook.reveal || null;
+if (REVEAL) {
+  const got = await ev(a => window.__revealPrep(a), REVEAL);
+  console.log(`  前→後の下ごしらえ: ${got}`);
+  if (typeof got !== 'string' || !got.startsWith('ok')) {
+    throw new Error(`前→後の下ごしらえが成立していない（${got}）。`
+      + '行が現れる瞬間を撮れない状態で撮り始めるので止める。');
+  }
+}
 if (!PREROLL) await setupHookScreen();
 
 await page.waitForTimeout(400);
@@ -887,7 +899,15 @@ if (VARIANT.hook.spot) {
 // right when the claim is "there is a lot of this" and wrong when the claim is
 // one line near the top — `craftcap` had its evidence scrolled out of frame by
 // the shared craft motion.
-const moved = VARIANT.hook.motion === 'still'
+//
+// `'reveal'` は3つ目の宣言（2026-08-10 夕）。共通のスクロールは流さないが、
+// **動きの検査は降りない。** 前→後を撮る切り口は、行が現れることそのものが
+// 動きなので、共通スクロールに証拠を動かされては困る一方で、
+// 「動かなかった take」は事故のまま止めたい。`'still'` にしてしまうと
+// 検査ごと降りてしまい、reveal が空振りした take が黙って通る。
+const moved = VARIANT.hook.motion === 'reveal'
+  ? (() => wait(120))       // 出来事はこの後に来る。ここで待つぶんだけ後ろへ寄る
+  : VARIANT.hook.motion === 'still'
   ? (() => wait(300))
   : (hookMotion[VARIANT.hook.screen] || hookMotion.play);
 // Implicit stillness is a defect; declared stillness is a choice.
@@ -931,6 +951,47 @@ if (VARIANT.hook.zoom) {
       + '根拠が読めない大きさのまま撮れるので止める。');
   }
   await wait(250);   // 寄ったことが1フレーム以上残るように
+}
+// **行が現れる瞬間を、カメラの前で起こす**（`hook.reveal`）。
+//
+// 2026-08-10 夕。この台帳でいちばん重なりの強い指摘で、**半分だけ実装して
+// 残していた半分。** 7本目と8本目のレビュアーが、互いの講評も作り手の事情も
+// 知らないまま**行の選び方まで一致させて**「上の段が買われた瞬間に下の段が
+// 現れるところを撮れ」「その行が挿入される前→後を0秒目に置け」と書いた。
+// 寄る（`__zoom`）は在ったが、寄れるのは**既に在る行**で、
+// 現れる瞬間は一度も撮っていなかった。
+//
+// **順番が要点**: 寄る → 前を確かめる → タップ → 後を確かめる。
+// 寄ってからタップするので、視聴者は**読める大きさの行が入れ替わるのを見る**。
+// 逆にすると、入れ替わった後の一覧に寄ることになり、それは今までと同じ
+// 「読めない小文字の一覧表」に戻る（6/7 が挙げた理由）。
+//
+// **検査は前と後の両方を見る。** 後だけ見ると、最初から在った行を「現れた」と
+// 報告する take が通る —— 今日それと同じ形で1回外している
+// （`monsters.length` の減少で合格して、倒れる瞬間が1フレームも無かった）。
+if (REVEAL) {
+  const before = await ev(a => window.__revealBefore(a), REVEAL);
+  console.log(`  前→後（前）: ${before}`);
+  if (typeof before !== 'string' || !before.startsWith('ok')) {
+    throw new Error(`前→後の「前」が成立していない（${before}）。`);
+  }
+  // **前は短く。** 1本目の take は前を 500ms 取っていて、タップが 1.5〜2.0秒、
+  // 行が入れ替わるのが 2.7秒だった —— レビュアーが指を動かすのは 1.2〜2.5秒なので、
+  // **出来事がその窓の後ろ端に落ちていた。** 前の行は1フレーム読めれば足りる。
+  await wait(280);
+  // **返り値を捨てない**（指示7の5つ目の形）。`tapEl` は箱が取れないと
+  // `no box:` と印字して false を返すだけで、呼ぶ側が見なければ
+  // 「何も押していない take」がそのまま進む。
+  const tapped = await tapEl(`#research [data-id="${REVEAL.id}"]`);
+  if (!tapped) throw new Error(`前の行をタップできなかった（${REVEAL.id}）。`);
+  await wait(650);   // 列が組み替わり、後の行が読める間
+  const after = await ev(a => window.__revealAfter(a), REVEAL);
+  console.log(`  前→後（後）: ${after}`);
+  if (typeof after !== 'string' || !after.startsWith('ok')) {
+    throw new Error(`前→後の「後」が成立していない（${after}）。`
+      + '行が現れる瞬間が撮れていないので止める。');
+  }
+  await wait(250);
 }
 // The answer lands here, measured from the moment recording started rather than
 // from this line — `moved()` runs 400ms on the still screens and 1500ms on the
