@@ -1151,13 +1151,30 @@ mark('scene3');
 // video, so a second body is what makes a second daily post something other than
 // a near-duplicate. Full mode always plays every beat, so this only selects.
 const BODY = process.env.PROMO_BODY || 'hunt';
+// `--body a+b+c` で本体を並べられる（2026-08-10 夕に足した）。
+//
+// なぜ: 私たちの20本は**全部 11〜15秒**で、外の上位75本の尺の中央値は 28s。
+// 11〜15秒の帯は母集団で 8/75 しかいない（`rivals.mjs` の実測）。**尺は n=0 の軸**で、
+// 掴みの絵のほうは4通り試して swipeAt 2.5 で頭打ちになっている。
+// 尺を伸ばす最も安い形は「本体をもう1つ足す」——— 新しい絵を作らずに済むので、
+// **変わるのが尺だけ**になり、切り口と掴みは既存のまま比較できる。
+//
+// **順番は宣言した順。コードに書いてある順ではない。** 以前は本体が
+// `if (SHORT && BODY === 'x')` の羅列で、実行順はファイルの並び（hunt→scale→
+// beyond→prestige）に固定されていた。それだと「単位の話」の掴みのあとに
+// いきなり討伐が来る組み合わせしか作れない —— コードの並びが構成を決めていた。
+const BODIES = SHORT ? BODY.split('+').map(s => s.trim()).filter(Boolean) : [];
 
-if (!SHORT || BODY === 'hunt') {
+async function bodyHunt() {
 // =============================================================== SCENE 4 — 討伐
 // Golden cookie first (the field cookie visibly swells), then a swarm and a boss
 // on screen together — the busiest, most alive frame in the game.
 await flash();
 await top(null);
+// 本体を並べられるようにしたので、討伐は「盤面の上から始まる」を仮定できない。
+// 前の本体が転生タブや研究タブを開いたままなら、金のクッキーは湧いても映らない
+// （`getBoundingClientRect()` は「見えている」ではない、と同じ穴）。
+if (SHORT) { await toPlayScreen(); await setPlayFullscreen(true); }
 await cap(['<em>金のクッキー</em>で生産が跳ねて'], 'high');
 mark('golden');
 await ev(() => {
@@ -1202,11 +1219,12 @@ if (SHORT) {
 
 await ev(() => { state.huntFocusLv = 0; });
 }   // end body: hunt
+if (!SHORT) await bodyHunt();
 
 // ---- SHORT body: scale — the same screen, thirty orders of magnitude apart.
 // The one cut that has ever been distributed was built on this contrast, so it
 // is worth a body of its own rather than only a hook.
-if (SHORT && BODY === 'scale') {
+async function bodyScale() {
   await flash();
   // Clear the hook's banner. The hunt body does this; leaving it up put
   // 「転生で消えないもの」 above 「スタートはクッキー25枚」 — two unrelated claims
@@ -1252,7 +1270,7 @@ if (SHORT && BODY === 'scale') {
 //   level 18 = 10^72 -> 火炉
 // The captions say only those three things. What the game does past 10^72 is a
 // larger claim and is left to the description.
-if (SHORT && BODY === 'beyond') {
+async function bodyBeyond() {
   await flash();
   await top(null);
   await toPlayScreen();
@@ -1295,7 +1313,7 @@ if (SHORT && BODY === 'beyond') {
 // runs" — there is no cap, and saying there was one would be false. The claim is
 // that the price of the first is 500万 and the price of the 116th is 10^131, and
 // both of those are printed on the screen the shot is pointing at.
-if (SHORT && BODY === 'prestige') {
+async function bodyPrestige() {
   await flash();
   await top(null);
   await cap(['1回目は<em>500万</em>クッキー']);
@@ -1321,6 +1339,19 @@ if (SHORT && BODY === 'prestige') {
   cues.push({ mark: 'last', at: 0.25, text: '116回目は、10の131乗。単位の名前も変わります。' });
   await wait(2800);
   await shot('last');
+}
+
+// 宣言した順に本体を流す。**知らない名前は例外で止める** ——— `--body beyond+hunt` の
+// 打ち間違いが「本体1つの短い動画」として黙って通ると、尺を試したつもりで
+// 何も試していない回になる（印字するだけの検査は仕組みではない・指示7）。
+if (SHORT) {
+  const TABLE = { hunt: bodyHunt, scale: bodyScale, beyond: bodyBeyond, prestige: bodyPrestige };
+  for (const name of BODIES) {
+    const fn = TABLE[name];
+    if (!fn) throw new Error(`本体 "${name}" は無い（使えるのは ${Object.keys(TABLE).join('/')}）`);
+    console.log(`  body: ${name}`);
+    await fn();
+  }
 }
 
 if (!SHORT) {
