@@ -943,8 +943,12 @@ await moved();
 // ok 以外は例外にする。値を返すだけの検査は検査ではない（指示7）。
 if (VARIANT.hook.zoom) {
   const z = VARIANT.hook.zoom;
-  const got = await ev(a => window.__zoom(a[0], a[1], a[2], a[3]),
-    [z.root, z.target, z.factor ?? 2, z.contains || null]);
+  // `minShare` は「寄れたか」の本体。**2026-08-11 に足した** ——
+  // それまで `ok WxH` の数字は印字するだけで、`stagebuy` は factor 2.1 で
+  // カード9枚が並んだフレームに対して ok を返していた（外部レビュアーは
+  // 「読めない極小文字の一覧表」と書いて1.5秒でスワイプ）。理由は overlay.js。
+  const got = await ev(a => window.__zoom(a[0], a[1], a[2], a[3], a[4]),
+    [z.root, z.target, z.factor ?? 2, z.contains || null, z.minShare ?? null]);
   console.log(`  掴みのズーム: ${got}`);
   if (typeof got !== 'string' || !got.startsWith('ok')) {
     throw new Error(`掴みのズームが効いていない（${got}）。`

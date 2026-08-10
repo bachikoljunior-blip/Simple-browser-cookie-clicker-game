@@ -23,6 +23,10 @@ window.__promoInstall = function () {
   #pfxTop{position:absolute;left:3%;right:var(--uiRight);top:37.5%;display:flex;justify-content:center;opacity:0}
   #pfxTop.on{opacity:1;animation:pfxDrop .26s cubic-bezier(.2,1.6,.4,1)}
   #pfxTop.hi{top:11%}
+  /* 2026-08-11: 寄せたカードが画面の三分の二を占めると、テロップの逃げ場は
+     カードの下（66%〜）と上の10%しか残らない。上は --uiTop(9%) が YouTube の
+     chrome 帯なので使えない。lo はカードの直下・キャプションの直上。 */
+  #pfxTop.lo{top:67%}
   #pfxTop .b{
     display:inline-block;padding:1.157vw 3.241vw;border-radius:1.852vw;
     background:linear-gradient(180deg,#ffd85e,#f2a01c);
@@ -198,7 +202,32 @@ window.__promoInstall = function () {
    * 返り値は真偽ではなく理由つき。**呼んだ結果を捨てると検査が無いのと同じ**
    * （指示7の5つ目の形。`scrollToHeading` が false を返して誰も見ていなかった）。
    */
-  window.__zoom = (rootSel, targetSel, factor, contains) => {
+  /*
+   * **「ok」は寄れたことを意味していなかった**（2026-08-11、実測で判明）。
+   *
+   * ここは 8/10 に「ok WxH @top」を返すようにして、director は
+   * `startsWith('ok')` だけを見ていた。**大きさは印字していただけ。**
+   * `stagebuy` を factor 2.1 で撮ったら ok が返り、撮れたフレームには
+   * **研究カードが9枚並んでいた**（外部レビュアーは同じフレームを見て
+   * 「読めない極小文字の一覧表」と書き、1.5秒でスワイプした）。
+   * 縦 1920 に対してカードは約140px ＝ **画面の7%**。`record` の 824x114 も
+   * 同じく6%で、そちらも同じ理由で落ちている。
+   * **2つとも「ok」で通っていた。**
+   *
+   * 経路は指示7の5つ目の形の変種: 返り値は捨てていない（`startsWith('ok')` は
+   * 見ている）が、**返り値のうち判断に効く部分だけを捨てていた。**
+   * 数字を文字列に混ぜて返すと、混ぜた側は「報告した」つもりになり、
+   * 読む側は前置きしか見ない。→ **測った値そのものに下限を当てる。**
+   *
+   * `minShare` はビューポート高に対する target の高さの比。既定 0.25 は
+   * 実測から置いた線ではなく、**「9枚並ぶのは寄っていない」を排除する最小値**
+   * （0.25 なら画面に並べて4枚が上限）。浅い寄りを意図する切り口は
+   * `zoom.minShare` で自分で宣言する —— `hook.motion: 'still'` と同じ形で、
+   * **宣言していない浅さは事故として扱う。**
+   * **見直す条件**: 0.25 以上で撮った本の swipeAt を、2.1倍時代の 1.5 と比べる。
+   * 動かなければ、読めなさは主因ではなかったことになる（掴みで6回目の空振り）。
+   */
+  window.__zoom = (rootSel, targetSel, factor, contains, minShare) => {
     const root = document.querySelector(rootSel);
     if (!root) return `root なし: ${rootSel}`;
     // 行を nth-child で選ばない。ゲームは並びを状態で組み替えるので、
@@ -212,7 +241,16 @@ window.__promoInstall = function () {
     el.scrollIntoView({ block: 'center', inline: 'center' });
     const r = el.getBoundingClientRect();
     if (!r.width || !r.height) return `target に大きさが無い: ${targetSel}`;
-    return `ok ${Math.round(r.width)}x${Math.round(r.height)} @${Math.round(r.top)}`;
+    const vh = window.innerHeight || 1;
+    const share = r.height / vh;
+    const pct = n => `${Math.round(n * 100)}%`;
+    const size = `${Math.round(r.width)}x${Math.round(r.height)} @${Math.round(r.top)} 縦の${pct(share)}`;
+    const floor = minShare == null ? 0.25 : minShare;
+    if (share < floor) {
+      return `寄りが浅い: ${size} < 下限${pct(floor)}（factor ${factor}）。`
+        + '一覧のまま撮れるので、factor を上げるか zoom.minShare で宣言すること';
+    }
+    return `ok ${size}`;
   };
 
   window.__mount = sel => {
