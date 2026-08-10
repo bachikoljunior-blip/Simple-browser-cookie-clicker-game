@@ -334,5 +334,25 @@
       "--at",
       "2026-08-11T09:30:00+09:00"
     ]
+  },
+  {
+    "at": "2026-08-10T21:35:23.810Z",
+    "cut": "quest",
+    "videoId": "PSeHx9H4uO0",
+    "privacy": "private",
+    "publishAt": "2026-08-15T03:30:00.000Z",
+    "title": "次のステージ、何体倒すと開くと思いますか【放置ゲー】",
+    "commit": "545e8302efa82349effa864012583f70dc39a03b+dirty",
+    "argv": [
+      "--cut",
+      "quest",
+      "--length",
+      "short",
+      "--body",
+      "scale+hunt",
+      "--public",
+      "--at",
+      "2026-08-15T12:30:00+09:00"
+    ]
   }
 ]
