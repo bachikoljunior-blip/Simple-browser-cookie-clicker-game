@@ -13,6 +13,18 @@
       "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__fire_trigger",
       "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__list_triggers",
       "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__send_later",
+      "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__create_session",
+      "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__archive_session",
+      "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__list_sessions",
+      "mcp__bf7c680d-5fdc-5ef4-b4a0-abadb619bf0a__get_session",
+      "mcp__claude-code-remote__create_session",
+      "mcp__claude-code-remote__archive_session",
+      "mcp__claude-code-remote__list_sessions",
+      "mcp__claude-code-remote__get_session",
+      "Write",
+      "Glob",
+      "Grep",
+      "Task",
       "Bash(git *)",
       "Bash(node *)",
       "Bash(bash promo/youtube/setup.sh*)",
@@ -33,10 +45,26 @@
   },
   "hooks": {
     "UserPromptSubmit": [
-      { "hooks": [ { "type": "command", "command": "bash promo/youtube/mandate-hook.sh UserPromptSubmit", "timeout": 10 } ] }
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash promo/youtube/mandate-hook.sh UserPromptSubmit",
+            "timeout": 10
+          }
+        ]
+      }
     ],
     "PostCompact": [
-      { "hooks": [ { "type": "command", "command": "bash promo/youtube/mandate-hook.sh PostCompact", "timeout": 10 } ] }
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash promo/youtube/mandate-hook.sh PostCompact",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }
