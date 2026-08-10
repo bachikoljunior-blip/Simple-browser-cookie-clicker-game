@@ -80,6 +80,18 @@ import('./youtube/yt.mjs').then(async m => {
 # in this file. Anything decided to be checked every run belongs here.
 node youtube/diag.mjs 2>/dev/null
 
+# 参加型の問いを、公開済みでまだ置いていない本に置く（2026-08-10 の探索）。
+#
+# なぜ手順書ではなくここか: 予約済み(private)には commentThreads.insert が 403 を返す
+# ので、問いは「公開されたあと」に置くしかない。それを回の判断に任せると、
+# `yt.mjs` の comment() が書かれてから一度も呼ばれなかったのと同じことになる
+# （書いてあるだけの関数は、印字するだけの検査と同じで仕組みではない —— 指示7）。
+# ここに置けば、公開された本は次の1時間以内に必ず問いを持つ。
+#
+# --limit=6 は連投で迷惑コメント扱いされないため。溜まっている分は数時間で片づき、
+# そのあとは1日2本ぶんしか出ない。二重投稿は asked.json が止める。
+node youtube/ask.mjs --pending --limit=6 2>/dev/null | sed 's/^/  参加型      : /' | grep -v 'skip' || true
+
 # Tokens only. The %-conversion this used to print was retired 2026-08-08: the
 # cap counts every session on the account and the others live in other
 # containers, so no honest remaining-balance can be computed here.

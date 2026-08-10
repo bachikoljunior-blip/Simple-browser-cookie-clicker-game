@@ -177,16 +177,31 @@ try {
 // viewer has ever said, and nothing else would surface it.
 try {
   const tok = await accessToken();
-  let n = 0, sample = [];
+  // 2026-08-10 から、自分で参加型の問いをコメントとして置いている（ask.mjs）。
+  // **自分の問いと視聴者の返答を分けないと、置いた瞬間に「コメントが増えた」に
+  // 見えて、いちばん見たい信号（初めて視聴者が何か言った）が消える。**
+  // 自分のコメントは channelId で判定する —— 本文の一致では、問いの文面を
+  // 変えた瞬間に自分のものが視聴者側へ流れ込む。
+  const mine = (await channel()).id;
+  let own = 0, theirs = 0, sample = [];
   for (const v of stats.slice(0, 8)) {
-    const r = await fetch(`https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&maxResults=10&videoId=${v.id}`,
+    const r = await fetch(`https://www.googleapis.com/youtube/v3/commentThreads?part=snippet&maxResults=20&videoId=${v.id}`,
       { headers: { Authorization: 'Bearer ' + tok } });
     if (!r.ok) continue;
     for (const it of ((await r.json()).items || [])) {
-      n++; if (sample.length < 2) sample.push(it.snippet.topLevelComment.snippet.textOriginal.slice(0, 40));
+      const s = it.snippet.topLevelComment.snippet;
+      const byMe = s.authorChannelId?.value === mine;
+      if (byMe) { own++; continue; }
+      theirs++;
+      if (sample.length < 3) sample.push(`${s.authorDisplayName}「${s.textOriginal.slice(0, 30)}」`);
     }
   }
-  row('コメント', n ? `${n}件 ★読むこと: ${sample.join(' / ')}` : '0件（直近8本）');
+  row('コメント', theirs
+    ? `視聴者 ${theirs}件 ★★ 読んで返信すること: ${sample.join(' / ')}`
+    : `視聴者 0件（直近8本）／自分の問い ${own}件`);
+  // 問いには約束が入っている（「いちばん多かったものを次に作ります」「答え合わせします」）。
+  // 票が入ったのに集計しないのは、視聴者に嘘をついたことになる（指示11）。
+  if (theirs) row('', '↑ 参加型の問いに返答がある。番号を数えて次の切り口を決め、返信すること');
 } catch (e) { gap('コメント', String(e.message || e).slice(0, 40)); }
 
 // Kept in the list although it cannot be fetched. Removing it would remove the
