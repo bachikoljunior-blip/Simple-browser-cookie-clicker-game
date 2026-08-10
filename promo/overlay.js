@@ -183,6 +183,38 @@ window.__promoInstall = function () {
     return true;
   };
 
+  /**
+   * Blow one row of a list up until it is readable on a phone, and centre it.
+   *
+   * 2026-08-10。**6人の外部レビュアーが独立に同じ理由を挙げた**: 掴みの答えが
+   * 「読めない小文字の一覧表」で、20行のどこを見ればいいのか示されていない。
+   * 6本目（stages 2回目）は「段階2の行は確かにそこにあるけど、スマホの画面で
+   * その文字は爪の先ほどの大きさ。**視聴者は答えを受け取っていない。**
+   * 受け取っていないので、問いに意味がなくなる」と書いた。
+   *
+   * **これまでの手は spot（枠で囲う）だった。囲っても文字は小さいまま。**
+   * 小さい文字を指し示すのと、読める大きさにするのは別の操作。
+   *
+   * 返り値は真偽ではなく理由つき。**呼んだ結果を捨てると検査が無いのと同じ**
+   * （指示7の5つ目の形。`scrollToHeading` が false を返して誰も見ていなかった）。
+   */
+  window.__zoom = (rootSel, targetSel, factor, contains) => {
+    const root = document.querySelector(rootSel);
+    if (!root) return `root なし: ${rootSel}`;
+    // 行を nth-child で選ばない。ゲームは並びを状態で組み替えるので、
+    // 番号で選ぶと**別の行に静かにずれる**（それは mustSee が見ている文と
+    // 違う行かもしれない）。文字で選べば、寄った先は必ず主張の載る行になる。
+    const all = [...document.querySelectorAll(targetSel)];
+    const el = contains ? all.find(n => (n.textContent || '').includes(contains)) : all[0];
+    if (!el) return `target なし: ${targetSel}${contains ? ` 含[${contains}]` : ''}`;
+    root.style.zoom = String(factor || 2);
+    // zoom はレイアウトを変えるので、寄せるのは必ずそのあと。
+    el.scrollIntoView({ block: 'center', inline: 'center' });
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return `target に大きさが無い: ${targetSel}`;
+    return `ok ${Math.round(r.width)}x${Math.round(r.height)} @${Math.round(r.top)}`;
+  };
+
   window.__mount = sel => {
     const host = (sel && document.querySelector(sel)) || document.body;
     host.appendChild(document.getElementById('pfxRoot'));

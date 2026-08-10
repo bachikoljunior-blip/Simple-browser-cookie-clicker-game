@@ -661,9 +661,121 @@ if (SHORT) cues.push({ mark: 'hook', at: 0.30, text: VARIANT.hook.narration });
 //     （下の before/after。差分でも呼び出し回数でもない）
 // (2) 画が大きい —— 群れは枠の端の小さな2体だったが、金は中央付近に置ける
 // (3) 取ると中央のクッキーが目に見えて膨らむ。scene 4 が既にこの順で撮っている
+//
+// **2026-08-10 夕、`battle` を足した。** `golden` は swipeAt を 1.5 → 2.5 に
+// 動かしたが pass ではない。**5本の外部レビューのうち3人が、頼まれてもいないのに
+// 独立に同じ絵を名指しした**: `stages`「モンスターの群れがクッキーに群がる絵(t9)で
+// 始めろ」/ `restart`「冒頭を金のクッキーの画面と入れ替えろ」/ `record`
+// 「9秒の戦闘画面（群れ＋ボス＋HPバー）を0秒に持ってこい」。
+// **重なった理由を信じる**（RUNBOOK 3-2）——— 単独の fix は n=1 だが、
+// 互いの講評も作り手の事情も知らない3人が同じ絵を指したのは、絵の側の情報。
+//
+// **RUNBOOK は「この一手は打てない」と書いていた。それは誤りだった。**
+// 曰く「障害は `hook.expect` ——『証拠は掴みの中に無ければならない』を強制して
+// いるので、掴みを戦闘にすると全部の切り口が例外で落ちる。証拠を掴みの後ろに
+// 置けるようにする設計変更が要る」。**その設計変更は PREROLL として既に在る。**
+// PREROLL の回は「開幕は別の絵 → そのあと証拠の画面を開く → expect を見る」の
+// 順で、`expect` が見るのは開幕ではなく**開いたあと**の画面。
+// つまり必要だったのは設計変更ではなく、`openingEvent()` に戦闘を足すことだけ。
+// **手順書に「打てない」と書いてあったせいで、1日ぶん打たれなかった。**
+// → 手順書に障害を書くときは、その障害を**実際にコードで確かめてから**書くこと。
+//
+// **群れは 2026-08-10 午前に一度外している。今回それを外した理由と直した点**:
+// 前回の take は t0.8 と t1.5 がほぼ同一で、モンスターは枠の右端に小さく2体、
+// HP は 41.977万 のまま動かなかった。**原因は「殴っていたが倒せていなかった」**
+// —— `hitMonster()` を6回呼んで hits=6 で通っていたが、素のダメージでは
+// HP が目に見えて減らない。scene 4 は同じ絵を撮るのに `state.huntFocusLv = 20`
+// を先に入れていて、**そちらは倒せている。** 開幕にも同じ下ごしらえを入れる。
+// 判定も「呼んだ回数」ではなく**討伐数の増加**（状態の差）にした ——
+// 倒れたかどうかは画面の出来事そのもので、差分でも呼び出し回数でもない。
+//
+// **見直す条件**: これで swipeAt が 2.5 から動かなければ、**掴みの絵は主因では
+// ない。** 5回外したことになるので、次は掴みより後ろ（尺・本編・題材）を疑うこと。
 const OPENING = VARIANT.hook.opening ?? 'golden';
 async function openingEvent() {
   if (OPENING === 'taps') { await tapBurst('#cookie', 6, 200); return 'taps'; }
+  if (OPENING === 'battle') {
+    // **1体だけにする。HPが8発かけて減って、最後に落ちる。**
+    //
+    // 2026-08-10 夕、最初の版は `showMonster('swarm')` + `showMonster('boss')` を
+    // 湧かせて9発殴り、**`monsters.length` が減ったことを確かめて合格していた。**
+    // 外部レビュアーは同じ take を見て「タップも、**何かが倒れる瞬間**も無い、
+    // 0.3/0.8/1.5秒はほぼ同じ絵」と書いて 2.5秒でスワイプした。
+    // **状態は変わっていたのに、画面では誰も倒れて見えなかった。**
+    //
+    // 理由は2つ、どちらもコードで裏が取れる:
+    // (1) `hitMonster()` は先頭に `if (rewardPending || rewardModalOpen()) return;`
+    //     を持つ（play.html:17898）。**1体倒した時点で報酬待ちになり、残り8発は
+    //     何もしていない。** 数は 4→3 に減るので、私の検査は通る。
+    // (2) 群れは `目安1撃` で消えるので、HPバーは満タンのまま**忽然と消える**。
+    //     減っていく過程が1フレームも無い ——「倒れる瞬間」は無い。
+    //
+    // **一般化（指示7に足す形）**: 「呼んだ回数 ≠ 出来事」は午前に学んだ。
+    // **「状態の変化 ≠ 見える出来事」はその次の段**で、今回そこで踏んだ。
+    // 状態で判定する検査は、事象が**起きたこと**は証明できるが、
+    // **画面で読めること**は証明しない。読めるかは人が見るしかない（それが外部レビュー）。
+    //
+    // なので 8発で落ちる強さに**実測から合わせる**。定数で書くと、周回の状態や
+    // ステージでHPが変わったときに黙って1撃に戻る（そして検査は通る）。
+    // **位置は動かさない。** 一度動かして失敗した（同じ回で）:
+    // `mon.el.style.left/top` を `.top` の寸法で書いたら、モンスターの
+    // offsetParent は `.top` ではないので**枠の外に出た。** そのとき
+    // `getBoundingClientRect()` は 232x242 @401 という**もっともらしい値**を
+    // 返して私の可視判定を通し、**フレームには1体も映っていなかった。**
+    // 矩形は「レイアウト上どこか」であって「見えている」ではない。
+    // 素の位置で湧かせた take は実際に映っている（同じ回の1本目で確認済み）。
+    const setup = await ev(() => {
+      try { showMonster('swarm'); showMonster('boss'); } catch (e) { return String(e); }
+      const list = (typeof monsters !== 'undefined' && monsters) || [];
+      if (!list.length) return 'モンスターが出ない';
+      // **いちばん弱い個体に合わせる。** 最初は `list[0]`（ボス）で合わせて
+      // いて、ボスが3発で落ちる強さは群れを**1撃**で消した ——— t0.8 に4体、
+      // t1.5 に0体、間の「減っていく」フレームが1枚も無い絵になった。
+      // 弱いほうに合わせると、群れが3発ずつ・ボスはさらに何発もかかるので、
+      // **開幕の2秒がずっと戦闘のまま**になり、HP バーが減り続ける。
+      const weakest = list.reduce((a, b) => (b.maxHp < a.maxHp ? b : a), list[0]);
+      const base = Math.max(1, Math.ceil(monsterBaseDamage() * monsterDamageMultiplier(weakest)));
+      // **3発で落ちる強さ。** 1撃だと HP バーは満タンのまま忽然と消えるので、
+      // 「減っていく過程」が1フレームも残らない ——— レビュアーが
+      // 「何かが倒れる瞬間が無い」と書いたのはこれ。
+      state.huntFocusLv = Math.max(1, Math.ceil(weakest.maxHp / (base * 3)) - 1);
+      return { n: list.length, hp: weakest.maxHp, lv: state.huntFocusLv };
+    });
+    if (typeof setup === 'string') throw new Error(`開幕の戦闘を出せない（${setup}）`);
+    await wait(400);            // 群れとボスと HP バーが画面に載る間
+    // **報酬待ちを毎回どける。** `hitMonster()` の1行目は
+    // `if (rewardPending || rewardModalOpen()) return;`（play.html:17898）で、
+    // **1体倒した瞬間に残りの打撃が全部無効になる。** 最初の take はそれで
+    // 9発中1発しか効いておらず、`monsters.length` が 4→3 に減ったのを見て
+    // 私の検査は合格を出していた。**殴るたびに報酬をどけて、次を殴れる状態に戻す。**
+    for (let i = 0; i < 10; i++) {
+      await ev(() => {
+        const mon = (typeof monsters !== 'undefined' && monsters[0]) || null;
+        if (!mon || !mon.el) return false;
+        const r = mon.el.getBoundingClientRect();
+        window.__ring(r.x + r.width / 2, r.y + r.height / 2);
+        hitMonster(mon.id);
+        return true;
+      });
+      // 260ms。**打撃の間隔が開幕の尺を決めている。** 120ms だと10発が1.2秒で
+      // 終わり、t1.5 のフレームは**もう誰もいない野原**になっていた（実測）。
+      // 1体あたり何発かかるかは倍率次第で読み切れないので、**倒れる速さではなく
+      // 打つ速さのほうで尺を作る。** 10発×260ms ≒ 2.6秒 —— レビュアーが指を
+      // 動かす 1.2〜2.5秒のあいだ、画面はずっと戦闘のまま。
+      await wait(260);
+      await hideRewardModal();
+    }
+    await wait(350);            // 落ちた反応と素材
+    const left = await ev(() => (typeof monsters !== 'undefined' && monsters.length) || 0);
+    await hideRewardModal();    // 次の画面を覆わせない
+    // **半分以上倒れていること。** 「1体減った」で合格にすると、
+    // 報酬待ちで止まった take が今日と同じように通る。
+    if (!(left <= setup.n / 2)) {
+      throw new Error(`開幕の戦闘で倒れた数が足りない（湧き${setup.n}→残り${left}・HP${setup.hp}・Lv${setup.lv}）。`
+        + '報酬待ちで殴れていないか、3発の見積りが外れている。');
+    }
+    return `討伐=湧き${setup.n}→残り${left}（1体あたり3発の想定）`;
+  }
   // 置き場所は scene 4 と同じ理由 —— ゲームは金を画面のどこにでも落とすので、
   // 「どこにでも」には下端（小さく、YouTube のUIの下、誰も見ないうち消える）が入る。
   const born = await ev(() => {
@@ -698,7 +810,8 @@ if (PREROLL) {
   // 現れなかった（なし→なし）なら開幕は素のクッキー画面のままで、それは直前に
   // 5本続けて落ちた型そのもの。消えなかった（あり→あり）ならタップが外れていて、
   // 画には金が置いてあるだけ ——「置いた」は出来事ではない。
-  if (OPENING !== 'taps' && what !== '金=あり→なし') {
+  // `battle` は自分の中で状態差を見て throw するので、ここは golden の判定だけ。
+  if (OPENING === 'golden' && what !== '金=あり→なし') {
     throw new Error(`掴みの開幕に出来事が起きていない（${what}）。`
       + '期待は「金=あり→なし」（現れて、取られて、消える）。');
   }
@@ -795,6 +908,30 @@ const moved = VARIANT.hook.motion === 'still'
 // expected to move, and autopost throws on a take that did not.
 const hookAsksToMove = VARIANT.hook.motion !== 'still';
 await moved();
+// 答えを読める大きさにする（`hook.zoom`）。**囲うのではなく、寄る。**
+//
+// 2026-08-10 夕。外部レビュー6本のうち6本が「掴みの答え／冒頭が読めない小文字の
+// 一覧表」を理由に挙げた。**これは掴みの絵の話でも、答えの時刻の話でもない。**
+// 今日ここで打った手は3つとも「何を映すか」「いつ映すか」を動かすもので
+// （PREROLL / capAt / battle）、swipeAt は 1.5 → 2.5 → 2.5 と止まった。
+// **6本が名指ししていたのは「映しているものが読めない」ほう**で、そこは
+// 一度も触っていない。**重なった理由を信じる**（RUNBOOK 3-2）。
+//
+// 寄せるのは `moved()` のあと。スクロールの共通モーションが先に走るので、
+// 先に寄せると craftcap と同じ事故（根拠が枠外へ押し出される）になる。
+// **返り値を捨てないこと** —— `__zoom` は理由つきの文字列を返し、
+// ok 以外は例外にする。値を返すだけの検査は検査ではない（指示7）。
+if (VARIANT.hook.zoom) {
+  const z = VARIANT.hook.zoom;
+  const got = await ev(a => window.__zoom(a[0], a[1], a[2], a[3]),
+    [z.root, z.target, z.factor ?? 2, z.contains || null]);
+  console.log(`  掴みのズーム: ${got}`);
+  if (typeof got !== 'string' || !got.startsWith('ok')) {
+    throw new Error(`掴みのズームが効いていない（${got}）。`
+      + '根拠が読めない大きさのまま撮れるので止める。');
+  }
+  await wait(250);   // 寄ったことが1フレーム以上残るように
+}
 // The answer lands here, measured from the moment recording started rather than
 // from this line — `moved()` runs 400ms on the still screens and 1500ms on the
 // scrolling ones, so timing it from here would put the answer at a different
@@ -807,7 +944,14 @@ await moved();
 // it has to buy the stop, not reward it.
 // PREROLL の回は、証拠の画面が出そろうのが 1.5〜2.5秒。1500 のままだと答えが
 // クッキー画面や切り替えの途中に乗って、答えでも証拠でもないフレームになる。
-const capAt = VARIANT.hook.capAt ?? (PREROLL ? 2800 : 1500);
+// `battle` の開幕は golden より長い（湧き→9発→素材で約1.8秒）ので、既定の 2800 の
+// ままだと証拠の画面が開ききる前に答えが乗る。**答えは証拠の上に置くもの**なので、
+// 開幕の実尺に合わせて後ろへずらす。**上げるほど掴みが伸びる**（hold は capAt から
+// 引かれるので下限 500 に張り付き、掴み全体は capAt+500 になる）ことは承知のうえ:
+// 13〜15秒の本で 4.3秒は3割で、**その3割で止まらなければ残りは配られない。**
+// **見直す条件**: battle の take が「戦闘は良いが長い」と言われたら、
+// 殴る回数（9発）のほうを削ること。capAt はそれに追随する数字でしかない。
+const capAt = VARIANT.hook.capAt ?? (OPENING === 'battle' ? 3800 : PREROLL ? 2800 : 1500);
 const late = Math.max(0, capAt - (Date.now() - recStart));
 if (late) await wait(late);
 // Captions can be moved off the evidence, same as the banner. #pfxCap defaults
