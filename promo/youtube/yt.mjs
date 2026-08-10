@@ -640,6 +640,27 @@ export async function videoStatus(ids) {
 }
 
 /**
+ * いま実際に予約されている本を、**ID つきで**全部返す。
+ *
+ * 2026-08-11 に足した。手順書 §2(4) は「予約の正本は YouTube 側なので
+ * `yt.mjs status <videoId>` で確かめろ」と言うが、**その videoId をどこから
+ * 得るかは書いていなかった。** 唯一の一覧が `posted.json` で、同じ手順書が
+ * 「posted.json は古くなる」と言っている ——— つまり (4) を判定する経路が
+ * 一周して閉じていた（実際この回、posted.json は未来分14件、YouTube 側は7件）。
+ * preflight は正しい数を出しているのに**本数しか印字せず ID を捨てていた**ので、
+ * そこからも辿れない。
+ *
+ * **「手順が実行できない形で書いてある回はそこで止まる」（指示8）の一例**で、
+ * 直し方も同じ ——— 必要な操作は `yt.mjs` に口を足す。
+ */
+export async function queue() {
+  const vs = await channelVideos();
+  if (!vs.length) return [];
+  const st = await videoStatus(vs.map(v => v.id));
+  return st.filter(v => v.publishAt).sort((a, b) => Date.parse(a.publishAt) - Date.parse(b.publishAt));
+}
+
+/**
  * 予約を外して private に戻す。外部レビューに落ちた本を止めるための口。
  *
  * **`publishAt: null` を明示する。** 書かずに送ると 200 が返り
@@ -898,6 +919,27 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       for (const v of await videoStatus(rest)) {
         console.log(`${v.id} ${v.privacy} ${v.publishAt || '-'} ${v.title}`);
       }
+    } else if (cmd === 'queue') {
+      // reviewed.json と突き合わせて印字する。§2(4) が聞いているのは
+      // 「予約に、まだ誰も見ていない本が残っているか」の一点なので、
+      // 一覧と台帳を別々に読ませると、そこで人が突き合わせる仕事が残る。
+      let reviewed = {};
+      try {
+        reviewed = JSON.parse(fs.readFileSync(new URL('./reviewed.json', import.meta.url), 'utf8')).videos || {};
+      } catch { /* 台帳がまだ無い＝全部が未レビュー */ }
+      const q = await queue();
+      if (!q.length) {
+        console.log('予約は0本 ← 途切れる');
+      } else {
+        for (const v of q) {
+          const r = reviewed[v.id];
+          const mark = r ? `済(${r.verdict}${r.cut ? ' ' + r.cut : ''})` : '未レビュー';
+          console.log(`${v.id} ${new Date(v.publishAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }).padEnd(20)} ${mark.padEnd(14)} ${v.title}`);
+        }
+        const un = q.filter(v => !reviewed[v.id]);
+        console.log(`\n予約 ${q.length}本 / 未レビュー ${un.length}本` +
+          (un.length ? ' → RUNBOOK §2(4)（ただし「同じコードで撮り直せる本か」を先に確かめること）' : ''));
+      }
     } else if (cmd === 'unschedule') {
       if (!rest[0]) throw new Error('usage: yt.mjs unschedule <videoId>');
       const v = await unschedule(rest[0]);
@@ -906,7 +948,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.log('usage: yt.mjs check | lag [days] | stats [days] | hours [days] | ' +
         'sources [videoId] | linkcheck [videoId] | backfill | ' +
         'retention <videoId> | upload <file.mp4> <meta.json> | ' +
-        'status <videoId...> | unschedule <videoId>');
+        'status <videoId...> | queue | unschedule <videoId>');
     }
   } catch (e) {
     console.error(String(e.message || e));

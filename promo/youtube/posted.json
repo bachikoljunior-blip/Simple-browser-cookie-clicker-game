@@ -203,7 +203,9 @@
     "videoId": "2_Hpb4-hDQI",
     "privacy": "private",
     "publishAt": "2026-08-12T12:30:00.000Z",
-    "title": "装備、いくつでも作れると思いますか【放置ゲー】"
+    "title": "装備、いくつでも作れると思いますか【放置ゲー】",
+    "commitInferred": "不明（clone が shallow で、この時刻まで履歴が無い）",
+    "inferredFrom": "アップ時刻の直前の commit。実測ではない（2026-08-11 に遡って付けた）"
   },
   {
     "at": "2026-08-09T14:00:41.585Z",
@@ -211,7 +213,9 @@
     "videoId": "DOjvMgI9HCY",
     "privacy": "private",
     "publishAt": "2026-08-13T00:30:00.000Z",
-    "title": "素材、倒し方で変わると思いますか【放置ゲー】"
+    "title": "素材、倒し方で変わると思いますか【放置ゲー】",
+    "commitInferred": "不明（clone が shallow で、この時刻まで履歴が無い）",
+    "inferredFrom": "アップ時刻の直前の commit。実測ではない（2026-08-11 に遡って付けた）"
   },
   {
     "at": "2026-08-09T22:39:07.700Z",
@@ -219,7 +223,9 @@
     "videoId": "iLAmC2g9Q74",
     "privacy": "private",
     "publishAt": "2026-08-13T03:30:00.000Z",
-    "title": "報酬、全部いいことだと思いますか【放置ゲー】"
+    "title": "報酬、全部いいことだと思いますか【放置ゲー】",
+    "commitInferred": "dfad049",
+    "inferredFrom": "アップ時刻の直前の commit。実測ではない（2026-08-11 に遡って付けた）"
   },
   {
     "at": "2026-08-10T02:49:52.137Z",
@@ -227,7 +233,9 @@
     "videoId": "RctUoxGCZnA",
     "privacy": "private",
     "publishAt": "2026-08-13T15:30:00.000Z",
-    "title": "転生で選ぶのは強さだと思いますか【放置ゲー】"
+    "title": "転生で選ぶのは強さだと思いますか【放置ゲー】",
+    "commitInferred": "509d7eb",
+    "inferredFrom": "アップ時刻の直前の commit。実測ではない（2026-08-11 に遡って付けた）"
   },
   {
     "at": "2026-08-10T02:51:01.380Z",
@@ -243,7 +251,9 @@
     "videoId": "9yTbo6jKZZE",
     "privacy": "private",
     "publishAt": "2026-08-14T15:30:00.000Z",
-    "title": "ステージ、進んだら戻れないと思いますか【放置ゲー】"
+    "title": "ステージ、進んだら戻れないと思いますか【放置ゲー】",
+    "commitInferred": "509d7eb",
+    "inferredFrom": "アップ時刻の直前の commit。実測ではない（2026-08-11 に遡って付けた）"
   },
   {
     "at": "2026-08-10T17:34:29.831Z",
@@ -251,7 +261,9 @@
     "videoId": "kqaZaDnCaes",
     "privacy": "private",
     "publishAt": "2026-08-11T12:30:00.000Z",
-    "title": "研究を買うと、同じ研究がまた出てくる放置ゲー"
+    "title": "研究を買うと、同じ研究がまた出てくる放置ゲー",
+    "commitInferred": "0a6648a",
+    "inferredFrom": "アップ時刻の直前の commit。実測ではない（2026-08-11 に遡って付けた）"
   },
   {
     "at": "2026-08-10T18:11:07.669Z",
@@ -259,6 +271,8 @@
     "videoId": "A8R4tS1_AnU",
     "privacy": "private",
     "publishAt": "2026-08-11T00:30:00.000Z",
-    "title": "“無量大数”の上、知ってますか【10の68乗】"
+    "title": "“無量大数”の上、知ってますか【10の68乗】",
+    "commitInferred": "1021794",
+    "inferredFrom": "アップ時刻の直前の commit。実測ではない（2026-08-11 に遡って付けた）"
   }
 ]

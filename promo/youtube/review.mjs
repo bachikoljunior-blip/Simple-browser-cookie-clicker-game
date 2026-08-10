@@ -31,6 +31,7 @@ const PROMO = path.resolve(import.meta.dirname, '..');
 const MP4 = path.join(PROMO, 'cookie_strateger_short.mp4');
 const FRAMES = path.join(PROMO, 'review');
 const VERDICT = path.join(PROMO, 'youtube', 'review-verdict.json');
+const LEDGER = path.join(PROMO, 'youtube', 'reviewed.json');
 
 const sha = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 
@@ -45,14 +46,25 @@ const duration = file => Number(JSON.parse(execFileSync('ffprobe',
  * one at every measured cliff. The retention curves this channel has all fall
  * hardest between 4s and 6s, so that stretch gets its own samples rather than
  * being averaged away by an even spread.
+ *
+ * **尻尾は尺に合わせて伸ばす**（2026-08-11 に直した）。この表は 13〜15秒の本を
+ * 前提に書かれていて、9秒のあとは `dur*0.75` と末尾の2枚しか無かった。
+ * 24.8秒の本（`--body a+b+c` で尺を倍にした最初の1本）にそのまま当てたら、
+ * **9.0s → 18.6s の 9.6秒が1枚も無い**まま「これで判定してくれ」と渡すことになった。
+ * 尺を伸ばした本で問われているのは**まさにその後半が保つか**なので、
+ * 窓が判断の起きる区間を外している ——— CLAUDE.md に既に書いてある形の再発です
+ * （「検査に窓があるときは、その窓が判断の起きる時刻を含んでいるかを問う」）。
+ * → 9秒より後ろは約3秒刻みで埋める。13秒の本では従来とほぼ同じ枚数のままです。
  */
 function prepare() {
   if (!fs.existsSync(MP4)) throw new Error(`まだ動画が無い: ${MP4}`);
   const dur = duration(MP4);
-  const stamps = [0.3, 0.8, 1.5, 2.5, 3.5, 4.5, 5.5, 7, 9]
-    .concat([dur * 0.75, dur - 0.6])
+  const tail = [];
+  for (let t = 12; t < dur - 1.2; t += 3) tail.push(t);
+  const stamps = [...new Set([0.3, 0.8, 1.5, 2.5, 3.5, 4.5, 5.5, 7, 9]
+    .concat(tail, [dur - 0.6])
     .filter(t => t > 0 && t < dur)
-    .map(t => Math.round(t * 10) / 10);
+    .map(t => Math.round(t * 10) / 10))].sort((a, b) => a - b);
 
   fs.rmSync(FRAMES, { recursive: true, force: true });
   fs.mkdirSync(FRAMES, { recursive: true });
@@ -104,6 +116,28 @@ function record() {
     sha256: sha(MP4), at: new Date().toISOString(),
   }, null, 2));
   console.log(`判定を記録: ${v.verdict}（${path.relative(PROMO, VERDICT)}）`);
+
+  // **既に予約に並んでいる本をレビューしたときは、台帳のほうにも書く**
+  // （2026-08-11 に足した）。RUNBOOK §2(4) は「`reviewed.json` に videoId を
+  // 記録していき、そこに無いものを1回に1本レビューする」と言うが、
+  // **その記録は手で JSON を編集する手順として書いてあった。**
+  // 手で書く記録は、書き忘れた回に静かに欠ける ——— 次の回は同じ本をもう一度
+  // レビューし、外部レビュー1回ぶんがそのまま消えます。
+  // `--video <id>` を渡した回だけ台帳を更新する（新規に作る本には videoId が
+  // まだ無いので、渡さない回は今までどおり VERDICT だけ）。
+  const vi = process.argv.indexOf('--video');
+  if (vi > 0 && process.argv[vi + 1]) {
+    const id = process.argv[vi + 1];
+    const led = JSON.parse(fs.readFileSync(LEDGER, 'utf8'));
+    const prev = led.videos[id];
+    // 上書きしない。2回目は round2 として積む（RUNBOOK は「2回続けて落ちたら
+    // その切り口を捨てる」と言うので、**回数が消えると判断ができなくなる**）。
+    led.videos[id] = prev
+      ? { ...prev, rounds: (prev.rounds || 1) + 1, [`round${(prev.rounds || 1) + 1}`]: { ...v, at: new Date().toISOString() } }
+      : { cut: process.env.PROMO_VARIANT || null, at: new Date().toISOString(), ...v };
+    fs.writeFileSync(LEDGER, JSON.stringify(led, null, 2) + '\n');
+    console.log(`台帳に記録: ${id}（${path.relative(PROMO, LEDGER)}）`);
+  }
 }
 
 /**
@@ -187,6 +221,6 @@ if (cmd === 'prepare') prepare();
 else if (cmd === 'record') record();
 else if (cmd === 'check') check();
 else {
-  console.log('usage: review.mjs prepare | record < verdict.json | check');
+  console.log('usage: review.mjs prepare | record [--video <videoId>] < verdict.json | check');
   process.exit(2);
 }

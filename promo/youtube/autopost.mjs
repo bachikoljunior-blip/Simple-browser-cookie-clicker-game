@@ -512,8 +512,28 @@ const res = await upload(file, meta);
 console.log(`\nuploaded to ${c.title}: ${res.url} ` +
   (res.publishAt ? `(${res.publishAt} に公開予定)` : `(${res.privacy})`));
 
+// **アップ時の commit と引数を残す**（2026-08-11 に足した）。
+//
+// RUNBOOK §2(4) は「代理レビューが成り立つのは、その本を作ったときと同じコードで
+// 撮り直せるときだけ」と言い、そのうえで **「posted.json にアップ時の commit を
+// 書けば機械で判定できる。まだやっていません」** と書いてあった。
+// やっていない間、判定は**アップ時刻と director を触った時刻を人が突き合わせる**
+// 形になる ——— この回、実際にそれを手でやった。手でやる判定は、次の回には
+// 残らないし、director を触った時刻の記憶が消えた時点でできなくなる。
+//
+// `argv` も要る。commit だけでは足りない切り口が既にある ———
+// `A8R4tS1_AnU` は `--body beyond+prestige+hunt` で 25.6秒に伸ばした本で、
+// **同じ commit の同じ cut を素で撮り直すと 13秒の別物**になる。
+// 「同じコードか」だけでなく「同じ呼び方か」まで合わないと再現しない。
+let commit = null;
+try {
+  commit = execFileSync('git', ['-C', path.dirname(PROMO),'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const dirty = execFileSync('git', ['-C', path.dirname(PROMO),'status', '--porcelain'], { encoding: 'utf8' }).trim();
+  if (dirty) commit += '+dirty';   // 未コミットのまま撮った本は commit だけでは再現しない
+} catch { /* git が無い環境でも投稿は止めない。記録が欠けるだけ */ }
 const posted = readLog();
 posted.push({ at: new Date().toISOString(), cut: cut.id, videoId: res.id,
-  privacy: res.privacy, publishAt: res.publishAt, title: meta.title });
+  privacy: res.privacy, publishAt: res.publishAt, title: meta.title,
+  commit, argv: process.argv.slice(2) });
 fs.writeFileSync(LOG, JSON.stringify(posted, null, 2));
 console.log(`recorded in ${path.relative(PROMO, LOG)}`);
