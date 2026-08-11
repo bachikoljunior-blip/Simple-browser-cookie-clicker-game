@@ -516,7 +516,7 @@ console.log(`\nuploaded to ${c.title}: ${res.url} ` +
 // この本のレビュー判定を、いま採れた videoId で台帳に写す。
 // これをやらないと、**さっきレビューしたばかりの本が `queue` で「未レビュー」**に
 // 見え、次の回が §2(4) でもう一度レビューする（この回に3本ぶん踏んだ）。
-recordVideo(res.id);
+recordVideo(res.id, cut.id);
 
 // **アップ時の commit と引数を残す**（2026-08-11 に足した）。
 //

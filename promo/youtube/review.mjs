@@ -183,9 +183,15 @@ function record() {
  * ——「毎回必要と書く」のは覚えていられる人がいる前提）。`autopost.mjs` が
  * アップロードの直後に自分で呼ぶ。**覚えなくていい手順は、忘れられない。**
  */
-export function recordVideo(videoId) {
+export function recordVideo(videoId, cut) {
   if (!videoId) return;
-  const v = readVerdicts()[process.env.PROMO_VARIANT || ''];
+  // **切り口は引数で受ける。** `process.env.PROMO_VARIANT` を見ていた版は
+  // **この場で壊れた**（2026-08-11）——— `autopost.mjs` は director と check には
+  // 環境変数で cut を渡すが、`recordVideo` は同じプロセス内の関数呼び出しなので
+  // その環境変数を持っていない。判定は在るのに台帳が動かず、投稿した3本が
+  // その場で「未レビュー」に見えた（この関数がまさに直したはずの症状）。
+  // **プロセス境界をまたぐ渡し方と、またがない渡し方を混ぜないこと。**
+  const v = readVerdicts()[cut || process.env.PROMO_VARIANT || ''];
   if (!v) return;
   const led = JSON.parse(fs.readFileSync(LEDGER, 'utf8'));
   if (led.videos[videoId]) return;   // 既に在るなら触らない（回数を潰さない）
