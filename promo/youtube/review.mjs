@@ -35,6 +35,33 @@ const LEDGER = path.join(PROMO, 'youtube', 'reviewed.json');
 
 const sha = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 
+/**
+ * 判定は**切り口ごとに**持つ（2026-08-11 に直した）。
+ *
+ * **何が起きたか**: この回は RUNBOOK §3 のとおり「まとめて3本」作り、3本とも
+ * レビューに出して record した。**投稿しようとしたら1本目で落ちた** ———
+ * 「判定は別の切り口のものです（判定=unitnayu / いま=unitgoga）」。
+ * `review-verdict.json` は**1件しか持てない**ので、3本 record した時点で
+ * 先の2本の判定は上書きされて消えていた。
+ *
+ * **手順書とコードが食い違っていた。** §3 は「1本ずつではなくまとめて3本」と
+ * 言い、その理由（会話の長さがコストを決める）も測ってある。**その手順を、
+ * 判定の置き場所が構造的に禁じていた** ——— 通す道は「record→投稿」を3回
+ * 交互にやることだけで、それはどこにも書いていない。
+ *
+ * → 切り口をキーにした地図にする。古い形（単票）も読めるようにしてあるので、
+ * この変更で既存の判定が消えることはない。
+ * **見直す条件**: 同じ切り口を1回のうちに2回レビューするようになったら、
+ * キーを切り口から take（sha）に変えること。いまは後の判定で上書きしてよい。
+ */
+const readVerdicts = () => {
+  if (!fs.existsSync(VERDICT)) return {};
+  const raw = JSON.parse(fs.readFileSync(VERDICT, 'utf8'));
+  // 古い形: 単票がそのまま入っている（`verdict` が最上位に在る）。
+  if (raw && typeof raw.verdict === 'string') return raw.cut ? { [raw.cut]: raw } : {};
+  return raw || {};
+};
+
 const duration = file => Number(JSON.parse(execFileSync('ffprobe',
   ['-v', 'error', '-print_format', 'json', '-show_format', file],
   { encoding: 'utf8' })).format.duration);
@@ -108,14 +135,15 @@ function record() {
   if (!Array.isArray(v.reasons) || !v.reasons.length) {
     throw new Error('reasons が空。理由の無い合格は、見ていないのと区別がつかない');
   }
-  fs.writeFileSync(VERDICT, JSON.stringify({
-    // 切り口も焼き付ける。**sha だけでは投稿の直前に必ず食い違う** ——
-    // `autopost --public` は投稿の前にもう一度レンダリングするので、
-    // 判定を取った mp4 は、その時点でもう存在しない（下の check を見ること）。
-    ...v, cut: process.env.PROMO_VARIANT || null,
-    sha256: sha(MP4), at: new Date().toISOString(),
-  }, null, 2));
-  console.log(`判定を記録: ${v.verdict}（${path.relative(PROMO, VERDICT)}）`);
+  // 切り口も焼き付ける。**sha だけでは投稿の直前に必ず食い違う** ——
+  // `autopost --public` は投稿の前にもう一度レンダリングするので、
+  // 判定を取った mp4 は、その時点でもう存在しない（下の check を見ること）。
+  const cut = process.env.PROMO_VARIANT || null;
+  if (!cut) throw new Error('PROMO_VARIANT が無い。どの切り口の判定か分からないと、投稿の直前に照合できない。');
+  const all = readVerdicts();
+  all[cut] = { ...v, cut, sha256: sha(MP4), at: new Date().toISOString() };
+  fs.writeFileSync(VERDICT, JSON.stringify(all, null, 2) + '\n');
+  console.log(`判定を記録: ${cut} → ${v.verdict}（${path.relative(PROMO, VERDICT)}、計${Object.keys(all).length}件）`);
 
   // **既に予約に並んでいる本をレビューしたときは、台帳のほうにも書く**
   // （2026-08-11 に足した）。RUNBOOK §2(4) は「`reviewed.json` に videoId を
@@ -156,8 +184,9 @@ function record() {
  * アップロードの直後に自分で呼ぶ。**覚えなくていい手順は、忘れられない。**
  */
 export function recordVideo(videoId) {
-  if (!videoId || !fs.existsSync(VERDICT)) return;
-  const v = JSON.parse(fs.readFileSync(VERDICT, 'utf8'));
+  if (!videoId) return;
+  const v = readVerdicts()[process.env.PROMO_VARIANT || ''];
+  if (!v) return;
   const led = JSON.parse(fs.readFileSync(LEDGER, 'utf8'));
   if (led.videos[videoId]) return;   // 既に在るなら触らない（回数を潰さない）
   led.videos[videoId] = { cut: v.cut || null, at: new Date().toISOString(), ...v };
@@ -174,9 +203,17 @@ function check() {
       + '`node youtube/review.mjs prepare` でフレームを出し、別エージェントに見せて、'
       + '`record` で判定を記録すること。**見せずに投稿しない。**');
   }
-  const v = JSON.parse(fs.readFileSync(VERDICT, 'utf8'));
   const now = sha(MP4);
   const cut = process.env.PROMO_VARIANT || null;
+  const all = readVerdicts();
+  // **判定は切り口ごとに引く**（2026-08-11）。前は1件しか持てず、
+  // 「まとめて3本」作ると最後の1本ぶんしか残らなかった（readVerdicts の注）。
+  const v = all[cut] || null;
+  if (!v) {
+    throw new Error(`この切り口の判定が無い（${cut}。記録済み: ${Object.keys(all).join(', ') || 'なし'}）。`
+      + '`PROMO_VARIANT=' + cut + ' node youtube/review.mjs prepare` でフレームを出し、'
+      + '別エージェントに見せて `record` すること。**見せずに投稿しない。**');
+  }
   // **sha の一致は要求できない。要求すると、このゲートは絶対に通らない。**
   //
   // 2026-08-10 夕に実際にぶつかった。`autopost --public` は投稿の前に

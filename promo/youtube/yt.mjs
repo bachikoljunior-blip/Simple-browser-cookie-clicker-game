@@ -1068,11 +1068,37 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       if (!rest[0] || !rest[1]) throw new Error('usage: yt.mjs reschedule <videoId> <RFC3339>');
       const v = await reschedule(rest[0], rest[1]);
       console.log(`予約を移した: ${v.id} → ${new Date(v.publishAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })} (JST) ${v.title}`);
+    } else if (cmd === 'retitle') {
+      // **題は上げたあとでも直せる。映像と違って、直しがその場で届く。**
+      //
+      // なぜ要るか（2026-08-11）: `unit` の題が
+      // 「“正”って単位、知ってますか【10の42乗】」で、**正 は 10の40乗**。
+      // 10の42乗なのはキャプションが言っている **100正**のほうで、
+      // **短い題に写すときに「100」が落ちていた**（`record` の「25体ごと」と同じ経路）。
+      // 指示11 は好みではないので直す。**が、口が無かった** ——
+      // `subcta` は説明欄しか触らず、題を直す道はどこにも無い。
+      //
+      // `part=snippet` しか送らないので `publishAt` は動きません
+      // （`unschedule` が踏んだ罠はここには無い）。
+      // **公開済みに撃つかどうかはその場で決めること** —— `subcta` の注のとおり、
+      // 配信中の本の metadata を触る損失は測れない。**事実の誤りなら撃つ、
+      // 好みなら撃たない**、が今のところの線引きです。
+      if (!rest[0] || !rest[1]) throw new Error('usage: yt.mjs retitle <videoId> <新しい題>');
+      const title = rest.slice(1).join(' ');
+      // YouTube の上限は100文字。**超えると API が 400 を返すだけで理由を言わない**ので、
+      // ここで落として理由を出す。
+      if ([...title].length > 100) throw new Error(`題が長すぎます（${[...title].length}文字 > 100）`);
+      const before = await api(`${DATA_API}/videos?part=snippet&id=${rest[0]}`);
+      const old = before.items?.[0]?.snippet?.title;
+      if (!old) throw new Error(`no video ${rest[0]} on this account`);
+      const s = await updateVideo(rest[0], { title });
+      console.log(`題を直した: ${rest[0]}\n  前: ${old}\n  後: ${s.title}`);
     } else {
       console.log('usage: yt.mjs check | lag [days] | stats [days] | hours [days] | ' +
         'sources [videoId] | linkcheck [videoId] | backfill | ' +
         'retention <videoId> | upload <file.mp4> <meta.json> | ' +
-        'status <videoId...> | queue | unschedule <videoId> | reschedule <videoId> <RFC3339>');
+        'status <videoId...> | queue | unschedule <videoId> | reschedule <videoId> <RFC3339> | ' +
+        'retitle <videoId> <新しい題>');
     }
   } catch (e) {
     console.error(String(e.message || e));

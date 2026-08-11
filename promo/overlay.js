@@ -376,31 +376,58 @@ window.__promoInstall = function () {
     return { size };
   };
 
+  /**
+   * カウンターを画面中央の巨大表示にする（掛けるだけ。数は動かさない）。
+   *
+   * **`__revealPrep` から切り出した**（2026-08-11）。理由は本体側から掛け直す
+   * ため ——— 3人のレビュアーが**互いを知らないまま同じことを書いた**:
+   * 「見せ場で中央の巨大カウンターが消えて上端の極小文字に降格している」
+   * 「巨大カウンターを一度も画面から降ろすな」「10の72乗が画面のどこにも無い」。
+   * 掴みで「この文字は書き換わる」と教えておいて、**オチでその文字を捨てていた。**
+   * `bodyBeyond` のコメントは 2%の位置で読めないことを**自分で予告していた**のに、
+   * 直し方を「キャプションで言い直す」に取っていた。**言い直しは証拠ではない。**
+   *
+   * 掛け直しが要るのは、本体が `setPlayFullscreen` で描画先を作り直すため
+   * （inline style ごと消える）。**冪等**なので何度呼んでもよい。
+   */
+  window.__counterStar = spec => {
+    spec = spec || {};
+    const p = counterParts();
+    if (!p) return 'カウンターが無い(#cookies)';
+    // 主役は1つ。隣の「合計毎秒」は同じ箱に居るので、巨大化すると
+    // 単位名と同じ大きさで並んで**どちらが答えか読めなくなる。**
+    const cps = document.getElementById('cookieCps');
+    if (cps) cps.style.setProperty('display', 'none', 'important');
+    const css = {
+      position: 'fixed', left: '0', right: '0',
+      top: spec.top || '24%', 'z-index': '9998',
+      'font-size': (spec.px || 128) + 'px', 'line-height': '1.06',
+      'text-align': 'center', 'word-break': 'break-all', margin: '0',
+    };
+    Object.keys(css).forEach(k => p.box.style.setProperty(k, css[k], 'important'));
+    window.__counterUndo = () => {
+      Object.keys(css).forEach(k => p.box.style.removeProperty(k));
+      if (cps) cps.style.removeProperty('display');
+    };
+    try { updateTopOnly(); } catch (e) {}
+    // **大きさは毎回測って返す。** 掛け直しが効かなかった回に
+    // 「掛けたつもり」で進むのが、この台帳で何度も踏んでいる形なので。
+    const m = counterMeasure(spec, p.el);
+    if (m.why) return m.why;
+    return `ok 「${(p.el.textContent || '').trim()}」 ${m.size}`;
+  };
+
   window.__revealPrep = spec => {
     if (spec && spec.act === 'counter') {
-      const p = counterParts();
-      if (!p) return 'カウンターが無い(#cookies)';
-      // 主役は1つ。隣の「合計毎秒」は同じ箱に居るので、巨大化すると
-      // 単位名と同じ大きさで並んで**どちらが答えか読めなくなる。**
-      const cps = document.getElementById('cookieCps');
-      if (cps) cps.style.setProperty('display', 'none', 'important');
-      const css = {
-        position: 'fixed', left: '0', right: '0',
-        top: spec.top || '24%', 'z-index': '9998',
-        'font-size': (spec.px || 128) + 'px', 'line-height': '1.06',
-        'text-align': 'center', 'word-break': 'break-all', margin: '0',
-      };
-      Object.keys(css).forEach(k => p.box.style.setProperty(k, css[k], 'important'));
-      window.__counterUndo = () => {
-        Object.keys(css).forEach(k => p.box.style.removeProperty(k));
-        if (cps) cps.style.removeProperty('display');
-      };
+      const got = window.__counterStar(spec);
+      if (!String(got).startsWith('ok')) return got;
       if (spec.at) {
         state.cookies = D(spec.at);
         state.runCookies = D(spec.at);
         state.totalCookies = D(spec.at);
       }
       try { updateTopOnly(); } catch (e) {}
+      const p = counterParts();
       return `ok カウンター「${(p.el.textContent || '').trim()}」`;
     }
     if (!spec || spec.act !== 'research') return `知らない act: ${spec && spec.act}`;

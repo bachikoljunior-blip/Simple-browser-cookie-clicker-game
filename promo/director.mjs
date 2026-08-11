@@ -1006,6 +1006,46 @@ if (REVEAL) {
       + '行が現れる瞬間が撮れていないので止める。');
   }
   await wait(250);
+  // **答えが出たあとの静止を、同じ出来事でもう一度埋める**（`hook.reveal.then`、
+  // 2026-08-11 に足した）。
+  //
+  // なぜ: `unitmake` は counter の reveal で swipeAt 3.5 を出し、掴みの帯
+  // （1.2〜2.5）を初めて破った。**そのとき残った宿題が2つ**あって、どちらも
+  // 「書き換わった後」の話だった ——（1）レビュアーの掴みへの指摘は
+  // 「0.8秒と1.5秒が完全に同一（答えの後が静止）」だけ、（2）実際に指が動いたのは
+  // **3.5秒＝本体に切り替わった瞬間**。つまり **1つ目の書き換えは効いたが、
+  // その後ろが空いている。** capAt で作った空白を4本ぶん指摘されたのと同じ形です。
+  //
+  // 対処は「待たせ方を変える」ではなく **同じ二値の出来事をもう一段置く**こと。
+  // 単位名は段ごとに変わるので、grant を1回足すだけで「読める大きさの文字が
+  // その場で書き換わる」がもう一度起きる（絵も画面も変えない）。
+  //
+  // **これは同時に、3.5秒の壁が「時刻」なのか「本体への切り替え」なのかを分ける
+  // 実験でもあります。** 掴みが伸びて、なお 3.5 で指が動くなら壁は時刻の側。
+  // 本体の開始まで持つなら、壁は切り替えの側（＝次の予算は本体へ）。
+  //
+  // 検査は1段目とまったく同じものを使い回す —— `from` は前段の `to`。
+  // **「前に在って後に無い」を毎段見る**ので、grant が空振りした段は止まります。
+  let prevTo = REVEAL.to;
+  for (const step of REVEAL.then || []) {
+    if (REVEAL.act !== 'counter') throw new Error('reveal.then は counter だけに対応しています。');
+    if (!step.next || !step.to) throw new Error('reveal.then の段に next / to が無い。');
+    // 1段目の後の 250ms と合わせて、書き換わった文字が読める間を置く。
+    // **短いほうに倒す** —— 前の段の take で「答えの後が静止」と書かれたのは
+    // 止まっている時間が長いからで、ここを伸ばすと同じ穴を自分で掘り直します。
+    await wait(step.hold ?? 420);
+    await grant(step.next);
+    await wait(650);
+    const spec = { act: 'counter', from: prevTo, to: step.to, minCharShare: REVEAL.minCharShare };
+    const got = await ev(a => window.__revealAfter(a), spec);
+    console.log(`  前→後（続き ${prevTo}→${step.to}）: ${got}`);
+    if (typeof got !== 'string' || !got.startsWith('ok')) {
+      throw new Error(`reveal.then の段が成立していない（${got}）。`
+        + '書き換わる瞬間が撮れていないので止める。');
+    }
+    prevTo = step.to;
+    await wait(250);
+  }
 }
 // The answer lands here, measured from the moment recording started rather than
 // from this line — `moved()` runs 400ms on the still screens and 1500ms on the
@@ -1288,12 +1328,37 @@ async function bodyScale() {
 //   level 18 = 10^72 -> 火炉
 // The captions say only those three things. What the game does past 10^72 is a
 // larger claim and is left to the description.
+// **掴みがカウンターを主役にしたなら、本体でも降ろさない**（2026-08-11）。
+// 3人のレビュアーが互いを知らないまま同じ場所を指した ——— 掴みで
+// 「画面中央の巨大な文字がその場で書き換わる」と教えておいて、
+// **見せ場（無量大数→火炉）でその文字を上端2%の極小表示に降格させていた。**
+// 「一番強い主張が、一番小さい文字で裏づけられている」（2本目）。
+// 掛け直しは冪等なので、掴みが counter でない回には何も起きません。
+const starCounter = async () => {
+  if (!REVEAL || REVEAL.act !== 'counter') return;
+  const got = await ev(a => window.__counterStar(a), REVEAL);
+  console.log(`  本体でもカウンターを主役に: ${got}`);
+  // **返り値を捨てない**（指示7の5つ目の形）。掛け直しが効かないまま進むと、
+  // 直したつもりで元の「読めない極小文字」を撮ります。
+  if (typeof got !== 'string' || !got.startsWith('ok')) {
+    throw new Error(`本体でカウンターを主役にできなかった（${got}）。`);
+  }
+};
+
 async function bodyBeyond() {
   await flash();
   await top(null);
   await toPlayScreen();
   await setPlayFullscreen(true);
+  // **ここだけ grant が先。** 逆にすると、画面を作り直した直後の値
+  // （実測 6736.45穣 ＝ 10の31乗）が巨大表示で1拍映り、
+  // **直前に見せた恒河沙(10^52)より小さい数**が画面に出ます。
+  // 2本目のレビュアーが上端の極小文字でそれを見つけて
+  // 「数字が後退したように見えて話が壊れる」と書いた ———
+  // **大きくすると、その傷も大きくなる。** 火炉のほうは逆で、
+  // 書き換わる瞬間そのものが見せ場なので star が先です。
   await grant('1e68');
+  await starCounter();
   await cap(['<em>無量大数</em> ＝ 10の<em>68</em>乗', '日本語の単位はここで終わり']);
   mark('top');
   cues.push({ mark: 'top', at: 0.20, text: 'むりょうたいすう。日本語の単位はここで終わりです。' });
@@ -1302,14 +1367,25 @@ async function bodyBeyond() {
   await shot('top');
 
   await flash('stamp');
-  await grant('1e72');
   await setPlayFullscreen(true);
+  // **grant より先に掛け直す。** 逆にすると、書き換わる瞬間が
+  // 極小文字のほうで起きて、巨大表示は「もう火炉になっている」状態で現れます
+  // ——— 出来事をカメラの前で起こす、の逆。
+  await starCounter();
+  await grant('1e72');
   // The caption quotes 火炉 rather than pointing at it. The counter is the proof
   // and it renders at 2% from the top — inside the band YouTube draws its own
   // chrome over — so a viewer may never see it, and the payoff of the whole cut
   // would be the one thing on screen that got covered. Saying the name in the
   // caption costs a line and makes the claim survive the crop.
-  await cap(['10の<em>72</em>乗の単位は', 'ゲームが<em>作ります</em>', '＝ <em>火炉</em>']);
+  // 3行目「＝ 火炉」は、**カウンターが主役になっている回だけ落とす。**
+  // 上のコメントは「読めないからキャプションで言い直す」と決めていたが、
+  // **言い直しは証拠ではない** ——— レビュアーは「中央にすでに書いてあるのに
+  // 同じ単語を二度言われただけ」と書き、そこで問いが閉じたと言っています。
+  // 巨大表示が出ていない回（掴みが counter でない回）は、今までどおり言い直す。
+  await cap(REVEAL && REVEAL.act === 'counter'
+    ? ['10の<em>72</em>乗の単位は', 'ゲームが<em>作ります</em>']
+    : ['10の<em>72</em>乗の単位は', 'ゲームが<em>作ります</em>', '＝ <em>火炉</em>']);
   mark('made');
   cues.push({ mark: 'made', at: 0.25, text: '10の72乗の単位は、ゲームが作ります。かろ、でした。' });
   // No ring on #cookies. The invented name is small and easy to miss, which is
