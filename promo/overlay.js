@@ -367,6 +367,16 @@ window.__promoInstall = function () {
     const size = `${Math.round(fs)}px 幅の${Math.round(share * 100)}% `
       + `箱 ${Math.round(r.width)}x${Math.round(r.height)} @${Math.round(r.top)}`;
     if (share < floor) return { why: `文字が小さい: ${size} < 下限${Math.round(floor * 100)}%` };
+    // **文字列が箱に収まっているか。**（2026-08-11 夜に足した。実際に落ちる）
+    // 桁送りを入れた最初の take は、`textContent` が「9981.25恒河沙」を返して
+    // 検査を全部通り、**画面には「9981 .25恒…」と出ていた** ——
+    // 答えである単位名が省略記号で切られていた。これは
+    // 「DOM に在ることと画面で見えることは違う」の、この台帳で何度目かの形です。
+    // 単位名だけが変わる（1.00◯◯）形では文字列が短く、**桁が回り始めて初めて
+    // 溢れる**ので、7本ぶん誰も踏まずに来ていました。
+    if (el.scrollWidth > el.clientWidth + 2) {
+      return { why: `文字が箱から溢れて省略されている: ${el.scrollWidth}>${el.clientWidth} ${size}` };
+    }
     // 矩形は「レイアウト上どこか」であって「画面のどこか」ではない
     // （ボスを枠外へ出したとき 232x242 @401 を返してきた）。**画面内まで見る。**
     if (r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth
@@ -405,8 +415,25 @@ window.__promoInstall = function () {
       'text-align': 'center', 'word-break': 'break-all', margin: '0',
     };
     Object.keys(css).forEach(k => p.box.style.setProperty(k, css[k], 'important'));
+    // **内側の span にも掛ける。** 箱を広げても `#cookies` 自身が
+    // `white-space: nowrap` / `text-overflow: ellipsis` を持っていると、
+    // 桁が回って文字列が伸びた瞬間に**答えの単位名が「恒…」に化けます**
+    // （桁送りを入れた最初の take で実際に起きた）。折り返せる形に直して、
+    // なお溢れるなら `counterMeasure` が止める。
+    // **1行のまま、切らずに収める。** 折り返しは選択肢に見えて選択肢ではない
+    // ——— 桁が回り始めた take を `word-break: break-all` で折り返したら
+    // 「9800 .5恒河 / 沙」と**単位名の途中で改行**し、`hook.zoom` の factor 6 で
+    // レビュアーが1位に挙げたのと同じ「レイアウトが崩れた画面」になった。
+    // → `nowrap` で固定し、**入らなければ `counterMeasure` が溢れとして止める**。
+    // 大きさのほうは `__counterFit` が桁送りの最悪形で先に合わせます。
+    const inner = {
+      display: 'block', 'white-space': 'nowrap', 'word-break': 'normal',
+      'text-overflow': 'clip', overflow: 'visible', 'max-width': 'none', width: 'auto',
+    };
+    Object.keys(inner).forEach(k => p.el.style.setProperty(k, inner[k], 'important'));
     window.__counterUndo = () => {
       Object.keys(css).forEach(k => p.box.style.removeProperty(k));
+      Object.keys(inner).forEach(k => p.el.style.removeProperty(k));
       if (cps) cps.style.removeProperty('display');
     };
     try { updateTopOnly(); } catch (e) {}
@@ -417,11 +444,146 @@ window.__promoInstall = function () {
     return `ok 「${(p.el.textContent || '').trim()}」 ${m.size}`;
   };
 
+  /**
+   * **桁を回しながら段の境目を跨ぐ**（`hook.reveal.ramp`、2026-08-11 夜に新設）。
+   *
+   * なぜ: 互いを知らない3人のレビュアーが、別々の take（載/那由他/不可思議）を見て
+   * **4点すべてで一致**した。そのうちの1つが
+   * **「数字が終始『1○○』で、桁が一度も回らない ——— 増える実感がゼロ」**。
+   * CLAUDE.md 第2部では 2/3 → 5/6 に増えた、この台帳で最も重なりの強い未実装でした。
+   *
+   * 原因はコードの側にはっきり在った: `at`/`next` に**段の境目ちょうど**（1e64 等）を
+   * 選んでいたので `fmtCookieCount` の枝が `1.00000` に張り付き、
+   * `setLateGame` の生産（毎秒およそ 6e38）は 1e64 に対して見えない。
+   * **検査を通しやすい形（境目ちょうど＝単位名だけが変わる）が、画を決めていた。**
+   *
+   * 直し方: **境目の手前から入って、カメラの前で跨がせる。**
+   * `next` の 0.94倍（＝前の単位で 9400）から 1.06倍（＝後の単位で 1.06）へ
+   * 一定時間で動かすと、表示は 9400不可思議 → 9700 → 9999 → 1.00無量大数 →
+   * 1.06無量大数 と**桁が回り**、跨いだ瞬間に**単位名が書き換わる**。
+   * 3人が挙げた (a) 答えが早すぎる (b) 答えの後が静止 (c) 桁が回らない が、
+   * **1つの出来事で同時に片づきます**（動いている最中が答えの前、跨いだ後も動く）。
+   *
+   * **速さは主張しない**（指示11）。跨ぐのに 1.6秒かけるだけで、
+   * 帯・キャプション・ナレーションのどれも生産速度に触れません。
+   * ゲームの生産をそのまま撮っているのではなく、**単位が変わる瞬間を見せるための
+   * 早送り**なので、画面外の速さを語らないこと。
+   *
+   * **見直す条件**: この形で出した本の swipeAt が 2.5 を超えなければ、
+   * (c) は主因ではなかったことになる（掴みで8回外したことになるので、
+   * そのときは尺・本編・題材へ移ること）。
+   */
+  // **跨ぐ時刻は、尺の真ん中ではなく後ろ寄りに置く**（`cross`、既定 0.7）。
+  // 3人が独立に挙げた4点のうち (a) は「問いの0.5秒後に答えが出る ——
+  // 考える時間が物理的にゼロ」で、fix も3人一致で
+  // 「答えの単位のまま持たせ、その間ずっと下位の桁を回し、**ナレーションが
+  // 問い終わった直後に**書き換える」だった。等速で跨ぐと 1.3秒で答えが出て、
+  // **ナレーションの問いが終わる前**に答えが画面に出ます（`unitsho` が 1.5 で
+  // 落ちた理由として台帳に書いてあるもの）。
+  // → 跨ぐ前を長く（桁が回っている＝空白ではない）、跨いだ後も動かして終わる。
+  const RAMP_LO = 0.90, RAMP_HI = 1.06, RAMP_MS = 2600, RAMP_CROSS = 0.7;
+  const rampBounds = spec => {
+    const base = D(spec.next);
+    return {
+      lo: base.mul(spec.rampLo == null ? RAMP_LO : spec.rampLo),
+      hi: base.mul(spec.rampHi == null ? RAMP_HI : spec.rampHi),
+      loF: spec.rampLo == null ? RAMP_LO : spec.rampLo,
+      hiF: spec.rampHi == null ? RAMP_HI : spec.rampHi,
+      ms: spec.rampMs == null ? RAMP_MS : spec.rampMs,
+      cross: spec.cross == null ? RAMP_CROSS : spec.cross,
+    };
+  };
+  /**
+   * **桁が回りきったときの幅で、先に文字の大きさを決める**（2026-08-11 夜）。
+   *
+   * 単位名だけが変わる形（`1.00恒河沙`）は短いので 128px で収まっていた。
+   * **桁が回ると `9999 .99恒河沙` まで伸びる**ので、同じ 128px では入らない。
+   * 途中で縮めると文字が動いて読みにくいので、**撮り始める前に最悪形で合わせる。**
+   * 収まらないまま返した場合は `counterMeasure` が溢れとして止めます
+   * （縮めすぎも `minCharShare` で止まるので、両側から挟まれている）。
+   */
+  const counterFit = (spec, el) => {
+    // **最悪形は跨ぐ前と跨いだ後の両方にある。**（2026-08-11 深夜、外部レビュアーが
+    // 見つけた）最初は跨ぐ前（`9999 .99` ＋ 前の単位）だけで合わせていて、
+    // `unitkaro`（火炉→空幽世）が **128px のまま通り、跨いだ直後の
+    // 「1.01015空幽世」が画面の左右からはみ出した。** レビュアーは
+    // 「いちばん見せたい1フレームだけが読めない／崩れたアプリに見える」と書いて
+    // 2.5秒でスワイプした。`fmtCookieCount` は 10未満で小数5桁を出すので、
+    // **跨いだ直後のほうが長くなる段がある**（前の単位が2文字・後が3文字のとき）。
+    // `counterMeasure` は prep / 前 / 後の3点しか見ず、**その3点はどれも短い**
+    // （`9000火炉` と `1 .06空幽世`）ので、溢れる区間を1つも含んでいなかった。
+    // → **検査の窓が判断の起きる時刻を含んでいるか**（台帳の一般化）の再発。
+    // ここは両方を測って長いほうに合わせる。
+    const samples = ['9999 .99' + (spec.from || ''), '1 .00000' + (spec.to || '')];
+    const keep = el.textContent;
+    let fs = parseFloat(getComputedStyle(el).fontSize) || 128;
+    const floor = (spec.minCharShare == null ? 0.08 : spec.minCharShare) * (window.innerWidth || 1080);
+    let over = false, worst = '';
+    for (const sample of samples) {
+      el.textContent = sample;
+      for (let i = 0; i < 40 && el.scrollWidth > el.clientWidth && fs > floor; i++) {
+        fs = Math.max(floor, fs - 4);
+        el.style.setProperty('font-size', fs + 'px', 'important');
+      }
+      if (el.scrollWidth > el.clientWidth + 2) { over = true; worst = sample; }
+    }
+    el.textContent = keep;
+    return { fs, over, sample: worst || samples.join(' / ') };
+  };
+  const rampSet = v => {
+    state.cookies = v;
+    if (state.runCookies.lt(v)) state.runCookies = v;
+    if (state.totalCookies.lt(v)) state.totalCookies = v;
+    try { updateTopOnly(); } catch (e) {}
+  };
+  // **開始も終了も自分で置く。** 途中で止まった take が「跨いだ」と報告されない
+  // よう、終わりは補間ではなく `hi` そのものを入れて止める。
+  window.__revealRamp = spec => {
+    const p = counterParts();
+    if (!p) return 'カウンターが無い(#cookies)';
+    if (window.__rampTimer) { clearInterval(window.__rampTimer); window.__rampTimer = 0; }
+    const b = rampBounds(spec);
+    const base = D(spec.next);
+    const t0 = Date.now();
+    rampSet(b.lo);
+    const first = (p.el.textContent || '').trim();
+    // **跨ぐ前の表示に、後の単位が入っていないこと。** 入っていたら
+    // 「跨いだ」は最初から成立していて、出来事は撮れません。
+    if (spec.to && first.includes(spec.to)) return `跨ぐ前から後の単位が在る: 「${first}」`;
+    window.__rampTimer = setInterval(() => {
+      const t = Math.min(1, (Date.now() - t0) / b.ms);
+      if (t >= 1) {
+        clearInterval(window.__rampTimer);
+        window.__rampTimer = 0;
+        rampSet(b.hi);
+        return;
+      }
+      // 跨ぐ手前と跨いだ後で速さを分ける。**跨ぐ時刻を `cross` で決める**ため。
+      const f = t < b.cross
+        ? b.loF + (1 - b.loF) * (t / b.cross)
+        : 1 + (b.hiF - 1) * ((t - b.cross) / (1 - b.cross));
+      rampSet(base.mul(f));
+    }, 40);
+    return `ok 「${first}」から ${b.ms}ms で跨ぐ`;
+  };
+
   window.__revealPrep = spec => {
     if (spec && spec.act === 'counter') {
       const got = window.__counterStar(spec);
       if (!String(got).startsWith('ok')) return got;
-      if (spec.at) {
+      // 桁送りする回は、**境目の手前**から始める（`at` ではなく `next` の 0.94倍）。
+      // `at` は境目ちょうどなので、そこから始めると 1.00000 が 1.6秒張り付く。
+      const ramping = spec.ramp !== false;
+      if (ramping) {
+        const fit = counterFit(spec, counterParts().el);
+        if (fit.over) {
+          return `桁が回りきると入らない大きさ: 「${fit.sample}」が ${Math.round(fit.fs)}px でも溢れる`;
+        }
+        const b = rampBounds(spec);
+        state.cookies = b.lo;
+        state.runCookies = b.lo;
+        state.totalCookies = b.lo;
+      } else if (spec.at) {
         state.cookies = D(spec.at);
         state.runCookies = D(spec.at);
         state.totalCookies = D(spec.at);

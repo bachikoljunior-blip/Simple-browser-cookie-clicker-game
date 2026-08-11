@@ -973,6 +973,56 @@ if (VARIANT.hook.zoom) {
 // **検査は前と後の両方を見る。** 後だけ見ると、最初から在った行を「現れた」と
 // 報告する take が通る —— 今日それと同じ形で1回外している
 // （`monsters.length` の減少で合格して、倒れる瞬間が1フレームも無かった）。
+// **段の境目を、桁を回しながら跨ぐ**（`hook.reveal.ramp`、2026-08-11 夜）。
+// 中身と根拠は overlay.js の `__revealRamp`。ここでは「跨ぎ終わるまで待つ」だけ
+// やる —— 待たずに `__revealAfter` を呼ぶと、まだ前の単位が出ているので落ちます。
+// **返り値を捨てないこと**（指示7の5つ目の形）: 跨ぐ前から後の単位が在った回は
+// `__revealRamp` が理由を返すので、それを見ずに進むと
+// 「何も起きていない take」が「跨いだ」として通ります。
+// **跨いでいる間、クッキーを叩き続ける**（`hook.reveal.tap`、既定 true）。
+//
+// 2026-08-11 夜、桁送りの1本目を外部レビューに出したら 1.5秒で落ちた。理由の1位が
+// 「t0.3 / t0.8 / t1.5 の**背景がピクセル単位で完全に同一**。動くのは中央の数字
+// テキストだけで、動画ではなく数字を差し替えたスライドショーに見える」。
+// 2位が「**クッキーが一度も叩かれず、クリッカーだと最後まで分からない**」——
+// これは3人が独立に挙げた4点のうちの (d) で、**4人目**にあたります。
+// `fix` も「掴みの全区間でクッキーを連打させろ」でした。
+//
+// 桁送りは page 側の setInterval なので、待つ代わりに叩けば**同じ尺のまま**
+// 画面が動きます。叩くのは実際にクッキーが増える操作なので（`play.html` の
+// タップ処理）、**画面に映っていないことを主張してはいません**（指示11）。
+// ただし**増える速さは主張しない** —— 帯もキャプションもナレーションも
+// 速度に触れていないことを、切り口を足すたびに確かめること。
+//
+// **見直す条件**: 叩きを入れた本の swipeAt が 2.5 を超えなければ、
+// (d) は主因ではなかったことになる。
+async function rampOrJump(spec) {
+  if (spec.ramp === false) { await grant(spec.next); return; }
+  const got = await ev(a => window.__revealRamp(a), spec);
+  console.log(`  桁送り: ${got}`);
+  if (typeof got !== 'string' || !got.startsWith('ok')) {
+    throw new Error(`桁送りが成立していない（${got}）。`);
+  }
+  const ms = (spec.rampMs == null ? 2600 : spec.rampMs) + 120;
+  if (spec.tap === false) { await wait(ms); return; }
+  // **回数ではなく締切で数える。** 最初は `tapBurst(..., ms/260, 200)` と
+  // 回数で書いて、**掴みが 4.9秒から 8.7秒に伸びました** —— 1タップの実費は
+  // 200ms の間隔ではなく 500ms 前後で、回数から尺を見積もると外れます。
+  // 桁送りは page 側の setInterval なので、**叩きが長引いたぶんだけ
+  // 「跨ぎ終わった後に叩き続ける区間」が伸びる**（＝答えの後の静止の変種）。
+  // → 締切まで叩いて、締切で止める。実費が変わっても尺は変わりません。
+  // **返り値を捨てない**（指示7の5つ目の形）——`tapBurst` は箱が取れないと
+  // `no box:` と印字して false を返すだけなので、見なければ
+  // 「1回も叩いていない take」が黙って通ります。
+  const deadline = Date.now() + ms;
+  let taps = 0;
+  while (Date.now() < deadline) {
+    const ok = await tapBurst('#cookie', 1, 40);
+    if (!ok) throw new Error('桁送りの間、クッキーを叩けなかった（#cookie が取れない）。');
+    taps++;
+  }
+  console.log(`  桁送りの間のタップ: ${taps}回 / ${ms}ms`);
+}
 if (REVEAL) {
   const before = await ev(a => window.__revealBefore(a), REVEAL);
   console.log(`  前→後（前）: ${before}`);
@@ -982,7 +1032,11 @@ if (REVEAL) {
   // **前は短く。** 1本目の take は前を 500ms 取っていて、タップが 1.5〜2.0秒、
   // 行が入れ替わるのが 2.7秒だった —— レビュアーが指を動かすのは 1.2〜2.5秒なので、
   // **出来事がその窓の後ろ端に落ちていた。** 前の行は1フレーム読めれば足りる。
-  await wait(280);
+  // 桁送りの回はここを短く。**跨ぐ前の 0.9倍から始まって最初の 1.8秒は
+  // ずっと前の単位のまま**なので、「前」を見せる時間は ramp 自身が持っています。
+  // ここで 280 待つと、そのぶん**最初の1秒の動きが減る** ——
+  // 実際、レンダリングが重い回に `最初の1s 0.15`（下限 0.5 未満）が出ました。
+  await wait(REVEAL.act === 'counter' && REVEAL.ramp !== false ? 100 : 280);
   if (REVEAL.act === 'counter') {
     // 単位が書き換わるのは、所持数がその桁に届いたとき。押す物は無いので
     // 出来事は grant のほうで起こす（`bodyBeyond` が前からやっている操作で、
@@ -990,7 +1044,7 @@ if (REVEAL) {
     // **画面で読めることは `__revealAfter` が文字列で見る** ——
     // 状態の変化は見える出来事ではない、を1回踏んでいるので。
     if (!REVEAL.next) throw new Error('counter の reveal に next（後の所持数）が無い。');
-    await grant(REVEAL.next);
+    await rampOrJump(REVEAL);
   } else {
     // **返り値を捨てない**（指示7の5つ目の形）。`tapEl` は箱が取れないと
     // `no box:` と印字して false を返すだけで、呼ぶ側が見なければ
@@ -998,7 +1052,11 @@ if (REVEAL) {
     const tapped = await tapEl(`#research [data-id="${REVEAL.id}"]`);
     if (!tapped) throw new Error(`前の行をタップできなかった（${REVEAL.id}）。`);
   }
-  await wait(650);   // 列が組み替わり、後の行が読める間
+  // 列が組み替わり、後の行が読める間。**桁送りの回は 650 待たない** ——
+  // ramp は最後の値まで動かしきって終わるので、ここでの待ちは
+  // そのまま「答えの後の静止」（3人が独立に挙げた (b)）になります。
+  // 組み替わりを待つ必要があるのは研究カードのほうだけ。
+  await wait(REVEAL.act === 'counter' && REVEAL.ramp !== false ? 180 : 650);
   const after = await ev(a => window.__revealAfter(a), REVEAL);
   console.log(`  前→後（後）: ${after}`);
   if (typeof after !== 'string' || !after.startsWith('ok')) {
@@ -1034,7 +1092,25 @@ if (REVEAL) {
     // **短いほうに倒す** —— 前の段の take で「答えの後が静止」と書かれたのは
     // 止まっている時間が長いからで、ここを伸ばすと同じ穴を自分で掘り直します。
     await wait(step.hold ?? 420);
-    await grant(step.next);
+    // 続きの段も同じ形で跨ぐ。**1段目だけ桁が回って2段目が飛ぶと、
+    // 同じ画面で2つの別々の見え方をすることになる**（レビュアーはそれを
+    // 「1回目は増えたのに2回目は瞬間移動した」と読む）。
+    //
+    // **ただし段と段の継ぎ目は、まだ飛びます**（2026-08-11、承知のうえで残した）。
+    // 1段目は `next×1.06` で終わり、2段目は `next×0.94`（＝1段上の 9400）から
+    // 始まるので、**単位は同じまま数字だけが 1.06 → 9400 に飛ぶ**フレームが
+    // 継ぎ目に1つ入ります。段は10の4乗ごとなので、そこを線形で繋ぐと
+    // 継ぎ目の直後が一瞬でぼやけて読めなくなり、直すなら対数補間で
+    // 鎖全体を1本の桁送りにする必要がある。**`then` を使う切り口はいま
+    // `unitnayu` 1本だけで、それは既に予約に入っている**ので、
+    // この回では継ぎ目を直さずに残します。
+    // **見直す条件**: `then` を使う本をもう1本作るなら、そのとき対数補間にすること。
+    const stepSpec = {
+      ...step, act: 'counter', from: prevTo, to: step.to,
+      ramp: step.ramp ?? REVEAL.ramp, rampMs: step.rampMs ?? REVEAL.rampMs,
+      rampLo: step.rampLo ?? REVEAL.rampLo, rampHi: step.rampHi ?? REVEAL.rampHi,
+    };
+    await rampOrJump(stepSpec);
     await wait(650);
     const spec = { act: 'counter', from: prevTo, to: step.to, minCharShare: REVEAL.minCharShare };
     const got = await ev(a => window.__revealAfter(a), spec);
@@ -1346,6 +1422,17 @@ const starCounter = async () => {
 };
 
 async function bodyBeyond() {
+  // **フラッシュより前にも置く**（2026-08-11 夜。安全側の重ね掛け）。
+  // 桁送りの1本目の外部レビュアーが「t5.5 の**白フラッシュ越しに
+  // 4181.99穣（10の28乗）が読める**。恒河沙→阿僧祇の直後に28桁戻っていて、
+  // 話が後退して見える」と書いた。下の grant は画面を作り直した**後**に
+  // 効くので、**作り直している最中の1〜2フレーム**は覆えていません。
+  // フラッシュは半透明なので、そこが読めてしまう。
+  // **これは推測に基づく重ね掛けです** —— 穣がどこから来るのかは特定して
+  // いません（`toPlayScreen` / `setPlayFullscreen` のどちらかが挟む中間状態）。
+  // **見直す条件**: 次の take の t5.5 を開いて、まだ穣が読めるなら
+  // 原因は grant の位置ではないので、そのときに特定すること。
+  await grant('1e68');
   await flash();
   await top(null);
   await toPlayScreen();
