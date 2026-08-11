@@ -567,6 +567,18 @@ window.__promoInstall = function () {
     return `ok 「${first}」から ${b.ms}ms で跨ぐ`;
   };
 
+  // 桁送りのために止めた生産を戻す。**本体は設備の台数を映す画面を開くことが
+  // ある**（研究・設備の一覧）ので、0台のまま本体に入ると、掴みで見せた規模と
+  // 食い違った画面が出ます（指示11）。director が掴みを撮り終えた所で呼びます。
+  window.__revealRestore = () => {
+    const was = window.__revealUpgradesWas;
+    if (!was) return 'ok 止めていない';
+    UPGRADES.forEach(u => { if (was[u.id] != null) state.upgrades[u.id] = was[u.id]; });
+    window.__revealUpgradesWas = null;
+    try { updateTopOnly(); } catch (e) {}
+    return 'ok 生産を戻した';
+  };
+
   window.__revealPrep = spec => {
     if (spec && spec.act === 'counter') {
       const got = window.__counterStar(spec);
@@ -580,6 +592,29 @@ window.__promoInstall = function () {
           return `桁が回りきると入らない大きさ: 「${fit.sample}」が ${Math.round(fit.fs)}px でも溢れる`;
         }
         const b = rampBounds(spec);
+        // **置いてから撮り始めるまでに、ゲート自身の生産が走ります。**
+        // `setLateGame` は毎秒およそ 6e38 を出すので、段が高いうちは誤差ですが、
+        // **低い段では置いた数が撮影までに何桁も飛びます** ——
+        // 兆(1e12) に置いた回は `__revealBefore` の時点で **18.1217澗**(1e37) でした。
+        // 台帳が「使えるのは 正(1e40) 以上」と書いていた下限は、これが理由です。
+        //
+        // 桁送りは `__revealRamp` が毎tick 値を書くので、**桁送りの最中は生産が
+        // 何であっても関係ありません。** 効いているのは「置いてから桁送りが
+        // 始まるまで」だけ。だから**そこだけ止めれば下限は消えます。**
+        // 止め方は設備の台数を0にすること（`__revealRestore` で戻す）。
+        // これで **兆・京という、視聴者が実際に知っている単位**が撮れます。
+        //
+        // **見直す条件**: 台数0でも毎秒 4.7e13 ほど出ます（直送収入など、
+        // `currentCps()` に入らない経路が `earn()` で足しているため —— 式から
+        // 見積もった速さは実測と7桁ずれました）。**1e12 より下の段を撮るなら、
+        // その残りが効いてくるので、そこで測り直すこと。**
+        if (!window.__revealUpgradesWas) {
+          window.__revealUpgradesWas = {};
+          UPGRADES.forEach(u => {
+            window.__revealUpgradesWas[u.id] = state.upgrades[u.id];
+            state.upgrades[u.id] = 0;
+          });
+        }
         state.cookies = b.lo;
         state.runCookies = b.lo;
         state.totalCookies = b.lo;

@@ -1284,6 +1284,19 @@ mark('scene3');
 // day only helps if the videos differ; in short mode the body is most of the
 // video, so a second body is what makes a second daily post something other than
 // a near-duplicate. Full mode always plays every beat, so this only selects.
+// 桁送りのために止めた生産を、**掴みを撮り終えてから**戻す（冪等。低い段でだけ
+// 止めています）。**止めたまま本体に入ると設備の一覧が0台で並ぶ**ので、掴みが
+// 見せた規模と食い違った画面になります（指示11）。
+//
+// **戻す場所は reveal の直後ではありません。** そこで戻すと、`setLateGame` の
+// 生産（毎秒 6e38）が再開して、**`hook.expect` が見る頃には単位が別物**になります
+// —— 実測で 7.00064京 まで撮れていたのに expect が「京が画面のどこにも無い」で
+// 落ちました。掴みの検査もキャプションも、答えの単位のままでないと成り立たない。
+// **返り値は捨てない**（指示7の5つ目の形）。
+const restored = await ev(() => window.__revealRestore());
+if (typeof restored !== 'string' || !restored.startsWith('ok')) {
+  throw new Error(`桁送りで止めた生産を戻せなかった（${restored}）。`);
+}
 const BODY = process.env.PROMO_BODY || 'hunt';
 // `--body a+b+c` で本体を並べられる（2026-08-10 夕に足した）。
 //
