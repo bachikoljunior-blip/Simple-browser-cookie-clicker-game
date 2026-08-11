@@ -37,6 +37,36 @@ if [ -z "$branch" ]; then
     | while read -r b; do git merge-base --is-ancestor "$b" HEAD 2>/dev/null && echo "$b"; done)
   [ "$(echo "$branch" | wc -w)" = 1 ] || branch=''
 fi
+# **detached なら、その場で枝に戻す**（2026-08-11 に足した）。
+#
+# なぜ: 上の見つけ方は「HEAD が枝 ref の子孫か」で探しますが、**枝 ref のほうが
+# 取り残されると子孫ではなくなる** —— この日は枝 ref が origin に対して
+# ahead 50/behind 50 で、HEAD（origin の1つ先）とは無関係な位置に居ました。
+# 結果 branch='' になり、preflight は毎回 `? ← ズレている` とだけ出し、
+# **`snapshot.mjs` の views.jsonl 自動コミットは「detached HEAD, 枝を特定できない」で
+# 静かに落ち続けていました。** 実測が記録されないまま運転だけ回る形です。
+#
+# 直し方は、**枝 ref ではなく origin の ref を基準にする**こと。
+# origin/<枝> が HEAD の祖先なら、その枝は HEAD へ進めてよい（早送りなので何も失わない）。
+# **印字ではなく実際に戻します**（指示7。「detached です」と出すだけの警告は、
+# 読む人が居ない前提の設計では何もしていないのと同じ）。
+#
+# **見直す条件**: HEAD が origin の子孫でない状況（別の枝を見に行った等）では
+# 何もしません。そこまで自動で直すと、意図した checkout を巻き戻す side effect が
+# 出るので、その場合は今までどおり `?` を出して人／次の回の判断に渡します。
+if [ -z "$branch" ]; then
+  for r in $(git for-each-ref --format='%(refname:short)' refs/remotes/origin 2>/dev/null); do
+    case "$r" in origin/HEAD) continue ;; esac
+    if git merge-base --is-ancestor "$r" HEAD 2>/dev/null; then
+      b=${r#origin/}
+      if git checkout -q -B "$b" HEAD 2>/dev/null; then
+        branch=$b
+        echo "git 枝      : detached だったので $b に戻しました（origin/$b は HEAD の祖先）"
+      fi
+      break
+    fi
+  done
+fi
 head=$(git rev-parse --short HEAD 2>/dev/null || echo '?')
 [ -n "$branch" ] && git fetch -q origin "$branch" 2>/dev/null
 remote=$(git rev-parse --short "origin/$branch" 2>/dev/null || echo '?')

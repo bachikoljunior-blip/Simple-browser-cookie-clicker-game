@@ -534,5 +534,41 @@
       "--at",
       "2026-08-17T12:30:00Z"
     ]
+  },
+  {
+    "at": "2026-08-11T03:26:58.392Z",
+    "cut": "unitkei",
+    "videoId": "nKKm9nxWKOk",
+    "privacy": "private",
+    "publishAt": "2026-08-17T09:30:00.000Z",
+    "title": "“兆”の次の単位、分かりますか【放置ゲー】",
+    "commit": "203b73509ee65d74dbb4f74d53402bbf4b87af2c+dirty",
+    "argv": [
+      "--cut",
+      "unitkei",
+      "--length",
+      "short",
+      "--public",
+      "--at",
+      "2026-08-17T18:30:00+09:00"
+    ]
+  },
+  {
+    "at": "2026-08-11T03:34:51.065Z",
+    "cut": "unitgai",
+    "videoId": "MNKVnzQCD1Q",
+    "privacy": "private",
+    "publishAt": "2026-08-18T03:30:00.000Z",
+    "title": "“京”の次の単位、分かりますか【放置ゲー】",
+    "commit": "203b73509ee65d74dbb4f74d53402bbf4b87af2c+dirty",
+    "argv": [
+      "--cut",
+      "unitgai",
+      "--length",
+      "short",
+      "--public",
+      "--at",
+      "2026-08-18T12:30:00+09:00"
+    ]
   }
 ]
