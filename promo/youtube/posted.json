@@ -426,5 +426,59 @@
       "--at",
       "2026-08-17T03:30:00Z"
     ]
+  },
+  {
+    "at": "2026-08-11T01:16:59.550Z",
+    "cut": "unitkyoku",
+    "videoId": "9-mcZ4McbI0",
+    "privacy": "private",
+    "publishAt": "2026-08-12T09:30:00.000Z",
+    "title": "“載”の次の単位、分かりますか【放置ゲー】",
+    "commit": "d63ceda0eaaeb3dadfa42919f29de0c78f812914+dirty",
+    "argv": [
+      "--cut",
+      "unitkyoku",
+      "--length",
+      "short",
+      "--public",
+      "--at",
+      "2026-08-12T09:30:00Z"
+    ]
+  },
+  {
+    "at": "2026-08-11T01:18:09.633Z",
+    "cut": "unitfushi",
+    "videoId": "exaSinFRreM",
+    "privacy": "private",
+    "publishAt": "2026-08-13T21:30:00.000Z",
+    "title": "“那由他”の次の単位、分かりますか【放置ゲー】",
+    "commit": "d63ceda0eaaeb3dadfa42919f29de0c78f812914+dirty",
+    "argv": [
+      "--cut",
+      "unitfushi",
+      "--length",
+      "short",
+      "--public",
+      "--at",
+      "2026-08-13T21:30:00Z"
+    ]
+  },
+  {
+    "at": "2026-08-11T01:19:22.492Z",
+    "cut": "unitmuryo",
+    "videoId": "MKhow5b2Ex4",
+    "privacy": "private",
+    "publishAt": "2026-08-14T21:30:00.000Z",
+    "title": "日本語の数の単位、最後は何だと思いますか【放置ゲー】",
+    "commit": "d63ceda0eaaeb3dadfa42919f29de0c78f812914+dirty",
+    "argv": [
+      "--cut",
+      "unitmuryo",
+      "--length",
+      "short",
+      "--public",
+      "--at",
+      "2026-08-14T21:30:00Z"
+    ]
   }
 ]
