@@ -570,5 +570,59 @@
       "--at",
       "2026-08-18T12:30:00+09:00"
     ]
+  },
+  {
+    "at": "2026-08-12T03:36:22.170Z",
+    "cut": "prestige",
+    "videoId": "AHuDxSfZ0kg",
+    "privacy": "private",
+    "publishAt": "2026-08-16T12:30:00.000Z",
+    "title": "転生1回目のねだん、当てられますか【放置ゲー】",
+    "commit": "852aa4d625fd72090910ba313d520244b5ab7ea5+dirty",
+    "argv": [
+      "--cut",
+      "prestige",
+      "--length",
+      "short",
+      "--public",
+      "--at",
+      "2026-08-16T21:30:00+09:00"
+    ]
+  },
+  {
+    "at": "2026-08-12T03:38:00.540Z",
+    "cut": "tree",
+    "videoId": "7TeJKJUlZ3I",
+    "privacy": "private",
+    "publishAt": "2026-08-17T09:30:00.000Z",
+    "title": "放置ゲーのスキルツリーが71ノードある",
+    "commit": "852aa4d625fd72090910ba313d520244b5ab7ea5+dirty",
+    "argv": [
+      "--cut",
+      "tree",
+      "--length",
+      "short",
+      "--public",
+      "--at",
+      "2026-08-17T18:30:00+09:00"
+    ]
+  },
+  {
+    "at": "2026-08-12T03:39:24.717Z",
+    "cut": "facilities",
+    "videoId": "6Iu6P4gUMKQ",
+    "privacy": "private",
+    "publishAt": "2026-08-18T00:30:00.000Z",
+    "title": "クッキーを焼く設備、最後は何だと思いますか【放置ゲー】",
+    "commit": "852aa4d625fd72090910ba313d520244b5ab7ea5+dirty",
+    "argv": [
+      "--cut",
+      "facilities",
+      "--length",
+      "short",
+      "--public",
+      "--at",
+      "2026-08-18T09:30:00+09:00"
+    ]
   }
 ]

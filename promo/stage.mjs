@@ -229,13 +229,62 @@ export async function openStage({ width, height, fps = 20, quality = 95,
   // Changing the screen clears the caption: setting up the next one takes long
   // enough that the previous line would otherwise sit over it for the best part
   // of a second, describing something no longer there.
+  // **`toggleTabPageFullscreen` は名前のとおりトグルです**（play.html:16117 の
+  // 1行目が `if (pageFullscreenId === targetId) { closeTabPageFullscreen(); return; }`）。
+  // ここは長らく「開く」つもりでそれを素で呼んでいたので、**同じタブを2回開くと
+  // 2回目が閉じていました。**
+  //
+  // 2026-08-12、`prestige` の本体で実際に踏みました。`bodyPrestige` は
+  // 「1回目=500万」を撮ってから `state.prestigeRuns` を115にして
+  // `showTab('prestigeTab', true)` をもう一度呼びます ——— **その2回目が転生パネルを
+  // 閉じ**、「116回目は 1000劫火極 ＝ 10の131乗」という3行のキャプションが
+  // **素のクッキー畑の上に乗った take** が出来上がっていました。根拠の数字は画面の
+  // どこにも無い。**指示11 そのもの**で、外部レビュアーが「今この字は何の話?」の形で
+  // 見つけました（レビュアー自身は別の理由を挙げていて、フレームを開いて分かった）。
+  //
+  // **要求した状態にする**（トグルではなく設定）。`pageFullscreenId` は play.html の
+  // グローバルなので、いま全画面かどうかはページ側で読めます。
+  //
+  // **そのうえで、開いたことを確かめて開いていなければ止める**（指示7 ——
+  // 印字するだけの検査は仕組みではない）。RUNBOOK §3-1 が2か所で
+  // 「本体のキャプションと画面の食い違いを見ている検査は1つもない」と書いていて、
+  // ここがその最初の1つです。**全画面を要求した回だけ見ます** ——— 非全画面は
+  // 「パネルと遊び場を半分ずつ」なので、映っている面積の下限をここでは決められない。
+  //
+  // **見直す条件**: 意図して「開いているタブをもう一度呼んで閉じる」使い方が
+  // 出てきたら、`showTab(id, false)` か `closeTabPageFullscreen()` を使うこと。
+  // この関数はもう閉じません。
   const showTab = async (id, full) => {
     await cap([]);
-    await ev(([tabId, f]) => {
+    const got = await ev(([tabId, f]) => {
       switchTab(tabId);
-      if (f) toggleTabPageFullscreen(tabId);
-      else closeTabPageFullscreen();
+      if (f) {
+        // 既に全画面ならもう一度呼ばない（呼ぶと閉じる）
+        if (typeof pageFullscreenId === 'undefined' || pageFullscreenId !== tabId) {
+          toggleTabPageFullscreen(tabId);
+        }
+      } else {
+        closeTabPageFullscreen();
+      }
+      if (!f) return 'ok';
+      const el = document.getElementById(tabId);
+      if (!el) return `そんなタブは無い(${tabId})`;
+      if (typeof pageFullscreenId !== 'undefined' && pageFullscreenId !== tabId) {
+        return `全画面にならなかった(pageFullscreenId=${String(pageFullscreenId)})`;
+      }
+      if (!el.classList.contains('pageFullscreen')) return '全画面のクラスが付いていない';
+      const r = el.getBoundingClientRect();
+      const share = (r.height * r.width) / (innerHeight * innerWidth || 1);
+      // 全画面のパネルが画面の3割も占めていないなら、それは開いていません。
+      // 0.3 は「半々のレイアウト(約0.5)より下、閉じている(0)より上」に置いた線で、
+      // 実測ではなく境界です。**この幅に落ちる take が出たら数字ではなく take を見ること。**
+      if (!(share >= 0.3)) return `開いているが小さい(画面の${(share * 100).toFixed(0)}%)`;
+      return 'ok';
     }, [id, !!full]);
+    if (got !== 'ok') {
+      throw new Error(`タブを開けていない: ${id} —— ${got}。`
+        + 'この状態でキャプションを乗せると、根拠の無い主張になります(指示11)。');
+    }
   };
 
   // The play area either shares the frame with a tab panel or takes the whole of
