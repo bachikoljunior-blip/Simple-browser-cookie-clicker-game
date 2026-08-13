@@ -49,7 +49,7 @@ const PLAY_URL = 'https://cookiestrateger.com/play.html';
  */
 export const SUB_CTA_MARK = 'チャンネル登録';
 export const SUB_CTA_LINE =
-  '■ このゲームの中身を1本ずつ出しています。チャンネル登録で次の回が届きます。';
+  '■ このゲームの答え合わせを1本ずつ投稿中。次の問題を逃さないようチャンネル登録。';
 
 /**
  * The call to action every description carries.
@@ -84,32 +84,18 @@ export const SUB_CTA_LINE =
  * viewer who taps a URL, gets nothing, and concludes the test is closed.
  */
 const cta = ({ groupUrl, optInUrl, contact }) => `
-▶ ブラウザ版をいますぐ無料で遊べます（インストール不要・iPhone でも遊べます）
+${SUB_CTA_LINE}
+■ この問題、答えられましたか？「当たった」「外れた」をコメントで教えてください。
+■ 次に見たい仕組みもコメントへ。
+
+▶ ブラウザ版をいますぐ無料で遊べます（インストール不要・iPhoneでも可）
 ${PLAY_URL}
 
-■ テスターを募集しています（Android専用・無料）
-
-※ 下のURLがタップできない場合は、チャンネルの概要欄にリンクがあります。
-
-Google Play で公開するのに、14日間のクローズドテストが必要です。
-その期間つきあってくださる方を探しています。
-※ テストへの参加は Android 端末のみです。iPhone / iPad の方は上のブラウザ版をどうぞ。
-
-【お願いすること】
-・14日間、アンインストールせずに置いておく
-・ときどき起動して遊ぶ
-・不具合や気になった点があれば教えてください
-
-【参加手順】※ ①を飛ばすと②で弾かれます
-① テスターグループに参加する
-${groupUrl}
-② 「テストに参加」を押す
-${optInUrl}
-③ 表示されたリンクからインストール
-
-${contact ? `うまくいかないときは ${contact} まで。` : 'うまくいかないときはコメントで教えてください。'}
-
-${SUB_CTA_LINE}`;
+■ Androidテスト参加
+① テスターグループ: ${groupUrl}
+② テスト参加: ${optInUrl}
+${contact ? `問い合わせ: ${contact}` : ''}
+`;
 
 export const VARIANTS = [
   {
