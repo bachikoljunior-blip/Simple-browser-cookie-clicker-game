@@ -1718,10 +1718,10 @@ await cap([]);
 // 描画されるので、開設まもないチャンネルではそこだけが実際に踏める導線になる。
 // 説明欄にも同じURLは載せている(コピーはできるので)が、案内はしない。
 await ev(() => window.__end(
-  'クッキーストラテジャー',
-  // 「14日間」と「基本プレイ無料」が隣り合っていると、14日間だけ無料と読める。
-  '基本プレイ無料・<u>Android専用</u>（iPhone不可）<br>Google Play 公開に必要なテスターを募集中<br>14日間 入れたまま ＋ ときどき起動',
-  '参加リンクは<em>チャンネル概要欄</em>に',
+  '答え、当たりましたか？',
+  // 広告収益化までは、ゲームへの送客より視聴者との継続関係を優先する。
+  '答えを見ずに当てた人は<br><em>「当たった」</em>とコメント',
+  '次に見たい仕組みもコメントへ',
   // 2026-08-11 に足した4つ目の欄。**20本のあいだ、ここは空欄だった。**
   //
   // 何を確かめたか: `grep -rn 'チャンネル登録' promo/` が0件。説明欄の `cta()` にも、
@@ -1743,11 +1743,11 @@ await ev(() => window.__end(
   // （フレームを開いて見つけた。`verify()` も動き検査も通っている）。
   // 折れたのは**この一行でいちばん大事な語**で、`zoom` factor 6 が
   // 「読めなさを1つ消して、壊れて見えるを1つ作った」のと同じ形。
-  'この放置ゲーを1本ずつ出しています<br>→ <em>チャンネル登録</em>'));
+  '続きの答え合わせは<br>→ <em>チャンネル登録</em>'));
 // Mark where the card *appears*. Marking the end of the beat put the cue past
 // the last frame — the card was on screen for 3.9s with nothing spoken over it.
 mark('cta');
-if (SHORT) cues.push({ mark: 'cta', at: 0.10, text: 'アンドロイドのテスター募集中。リンクはチャンネル概要欄に。' });
+if (SHORT) cues.push({ mark: 'cta', at: 0.10, text: '答えが当たったらコメント。続きはチャンネル登録。' });
 await shot('cta');
 // The card is the payload, so it gets room: long enough for the line to finish
 // with margin and for the terms to be read. In short mode that is a third of the
