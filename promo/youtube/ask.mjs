@@ -45,9 +45,9 @@ const ASKED = path.join(HERE, 'asked.json');
  * 深層 27箇所 / 実績研究 7097行〜）。実在しないものを選ばせたら指示11。
  */
 export const ASK = [
-  'この放置ゲー、次はどこを見せましょうか。',
-  'まだ動画にしていないところから3つ選ぶと ①金クッキー ②深層領域 ③実績研究。',
-  'コメントに番号を書いてもらえたら、いちばん多かったものを次に作ります。',
+  'この放置ゲー、次に見たいのはどれですか？ ',
+  '①金クッキー ②深層領域 ③実績研究。 ',
+  '番号だけでもコメントで教えてください。今後の動画企画に反映します。',
 ].join('');
 
 const load = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return []; } };
@@ -92,7 +92,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (given.length) targets = given;
   else {
     const seen = new Set();
-    targets = load(POSTED).map(p => p.videoId).filter(id => id && !seen.has(id) && seen.add(id) && !done.has(id));
+    targets = [...load(POSTED)].reverse().map(p => p.videoId)
+      .filter(id => id && !seen.has(id) && seen.add(id) && !done.has(id));
   }
 
   const status = await alive(targets);
