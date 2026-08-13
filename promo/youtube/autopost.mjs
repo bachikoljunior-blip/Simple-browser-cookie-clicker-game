@@ -84,6 +84,7 @@ async function history() {
     (perCut[cut.id] ||= []).push({
       ...v,
       avgViewPercent: s?.avgViewPercent ?? null,
+      subscribersGained: s?.subscribersGained ?? 0,
       views: s?.views ?? v.views,
       viewsPerDay: (s?.views ?? v.views) / age,
     });
@@ -119,13 +120,21 @@ function pickCut(perCut, mine) {
     const rows = perCut[v.id].filter(r => r.avgViewPercent !== null);
     const retention = rows.reduce((a, r) => a + r.avgViewPercent, 0) / rows.length;
     const perDay = rows.reduce((a, r) => a + r.viewsPerDay, 0) / rows.length;
-    return { v, retention, perDay, n: rows.length };
-  }).sort((a, b) => (b.retention - a.retention) || (b.perDay - a.perDay));
+    const views = rows.reduce((a, r) => a + (r.views || 0), 0);
+    const subscribers = rows.reduce((a, r) => a + (r.subscribersGained || 0), 0);
+    // Until YPP is reached, an extra subscriber is more valuable than another
+    // low-intent view. A small prior prevents one tiny sample from winning forever.
+    const subsPerThousand = 1000 * (subscribers + 0.5) / (views + 500);
+    return { v, retention, perDay, views, subscribers, subsPerThousand, n: rows.length };
+  }).sort((a, b) =>
+    (b.subsPerThousand - a.subsPerThousand) ||
+    (b.retention - a.retention) ||
+    (b.perDay - a.perDay));
 
-  console.log('\n--- 切り口ごとの成績 (28日) ---');
+  console.log('\n--- YPP到達を優先した切り口成績 (28日) ---');
   scored.forEach(s => console.log(
-    `  ${s.v.id.padEnd(10)} 平均視聴率 ${s.retention.toFixed(1)}%  ` +
-    `1日あたり ${s.perDay.toFixed(1)}回  (${s.n}本)`));
+    `  ${s.v.id.padEnd(10)} 登録 ${s.subscribers}/${s.views}回  ` +
+    `補正後 ${s.subsPerThousand.toFixed(2)}/千回  維持 ${s.retention.toFixed(1)}%  (${s.n}本)`));
 
   // Mostly exploit, but keep testing: a cut that lost once may have lost to the
   // hour it went up rather than to the hook.
@@ -133,7 +142,7 @@ function pickCut(perCut, mine) {
   const least = [...scored].sort((a, b) => a.n - b.n)[0];
   return explore
     ? { cut: least.v, why: `試行（最も本数が少ない: ${least.n}本）` }
-    : { cut: scored[0].v, why: `平均視聴率が最良 (${scored[0].retention.toFixed(1)}%)` };
+    : { cut: scored[0].v, why: `登録転換を優先（補正後 ${scored[0].subsPerThousand.toFixed(2)}/千回、維持 ${scored[0].retention.toFixed(1)}%）` };
 }
 
 /**
