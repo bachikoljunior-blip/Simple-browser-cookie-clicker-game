@@ -203,7 +203,7 @@ function metadata(topic) {
       'このチャンネルでは、放置ゲームの設計を実際の画面と数字で解説しています。\n' +
       '次に見たい仕組みをコメントしてください。続きはチャンネル登録で。\n\n' +
       `無料ブラウザ版（iPhone・Android対応／インストール不要）\n${PLAY_URL}\n\n` +
-      `${tags.slice(0, 3).map(t => '#' + t.replace(/\\s+/g, '')).join(' ')}\n\n` +
+      `${tags.slice(0, 3).map(t => '#' + t.replace(/\s+/g, '')).join(' ')}\n\n` +
       MARK(topic.id),
     tags,
     privacy,
