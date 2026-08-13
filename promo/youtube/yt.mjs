@@ -408,7 +408,7 @@ export async function videoStats(days = 28) {
     startDate: ymd(start), endDate: ymd(end),
     metrics: 'engagedViews,views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,likes,subscribersGained',
     dimensions: 'video',
-    sort: '-engagedViews',
+    sort: '-views',
     maxResults: '50',
   });
   const r = await api(`${ANALYTICS_API}?${q}`);
