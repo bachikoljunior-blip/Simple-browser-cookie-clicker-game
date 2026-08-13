@@ -1,8 +1,5 @@
-// RETIRED 2026-08-04 — do not run this. It publishes 1920x1080, which cannot
-// enter the Shorts feed, and the two videos it published have one view between
-// them. See the header of director-wide.mjs. The daily second slot now renders
-// a second vertical Short through autopost.mjs instead.
-//
+// Weekly search-led long-form run. Shorts bring discovery; these explainers
+// target valid public watch time and answer durable game-design searches.
 // One scheduled run for the landscape explainers.
 //
 //   node autopost-long.mjs              render and upload
@@ -20,14 +17,13 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { TOPICS, MARK } from '../topics.mjs';
-import { describe } from '../variants.mjs';
 import { buildThumbnail } from '../thumbnail.mjs';
 import { videoStats, channelVideos, channel, upload, credentials, retention, setThumbnail } from './yt.mjs';
 
 const PROMO = path.resolve(import.meta.dirname, '..');
 const MP4 = path.join(PROMO, 'cookie_strateger_long.mp4');
 const LOG = path.join(PROMO, 'youtube', 'posted-long.json');
-const TESTER = path.join(PROMO, 'youtube', 'tester.json');
+const PLAY_URL = 'https://cookiestrateger.com/play.html';
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
 const topicAt = args.indexOf('--topic');
@@ -48,27 +44,6 @@ if (publishAt && Date.parse(publishAt) <= Date.now()) {
 const readLog = () => (fs.existsSync(LOG) ? JSON.parse(fs.readFileSync(LOG, 'utf8')) : []);
 const run = (cmd, cmdArgs, env = {}) =>
   execFileSync(cmd, cmdArgs, { cwd: PROMO, stdio: 'inherit', env: { ...process.env, ...env } });
-
-/**
- * Where a viewer who wants to test actually lands. Shared with the Shorts run
- * and checked the same way: the video says the links are in the description, so
- * they have to be real before anything is published.
- */
-function testerLinks() {
-  const t = JSON.parse(fs.readFileSync(TESTER, 'utf8'));
-  const links = {
-    groupUrl: (process.env.YT_TESTER_GROUP_URL || t.groupUrl || '').trim(),
-    optInUrl: (process.env.YT_TESTER_OPTIN_URL || t.optInUrl || '').trim(),
-    contact: (process.env.YT_TESTER_CONTACT || t.contact || '').trim(),
-  };
-  const bad = ['groupUrl', 'optInUrl'].filter(k => !/^https?:\/\/\S+$/.test(links[k]));
-  if (bad.length) {
-    throw new Error(`tester links not set: ${bad.join(', ')}.\n` +
-      `The video says the join links are in the description, so it must not be ` +
-      `published without them.\nFill them in ${path.relative(PROMO, TESTER)}.`);
-  }
-  return links;
-}
 
 // --- what is on the channel, rebuilt every run --------------------------------
 async function history() {
@@ -92,8 +67,10 @@ async function history() {
     (perTopic[t.id] ||= []).push({
       ...v,
       avgViewPercent: s?.avgViewPercent ?? null,
+      estimatedMinutesWatched: s?.estimatedMinutesWatched ?? 0,
       views: s?.views ?? v.views,
       viewsPerDay: (s?.views ?? v.views) / age,
+      watchMinutesPerDay: (s?.estimatedMinutesWatched ?? 0) / age,
     });
   }
   console.log(`チャンネルの動画 ${videos.length}本 / うち解説 ${mine.length}本`);
@@ -102,10 +79,10 @@ async function history() {
 }
 
 /**
- * Retention is the score. Unlike a Shorts cut, a topic is not interchangeable
- * with the others — a viewer who came for the skill tree did not want the
- * workshop — so a topic that does badly is evidence about the subject, not just
- * about the hook, and it is worth a second showing before being written off.
+ * Total watched minutes per day is the primary score. The YPP long-form gate is
+ * valid public watch hours, so percentage retention by itself is misleading: a
+ * short video can win on percentage while contributing fewer minutes. This is a
+ * close Analytics proxy, not YouTube Studio's final "valid public watch hours".
  */
 function pickTopic(perTopic, mine) {
   if (forced) {
@@ -124,24 +101,34 @@ function pickTopic(perTopic, mine) {
 
   const scored = TOPICS.map(x => {
     const rows = perTopic[x.id].filter(r => r.avgViewPercent !== null);
+    const n = rows.length;
     return {
       x,
-      keep: rows.reduce((a, r) => a + r.avgViewPercent, 0) / rows.length,
-      perDay: rows.reduce((a, r) => a + r.viewsPerDay, 0) / rows.length,
-      n: rows.length,
+      keep: n ? rows.reduce((a, r) => a + r.avgViewPercent, 0) / n : 0,
+      perDay: n ? rows.reduce((a, r) => a + r.viewsPerDay, 0) / n : 0,
+      watchMinutesPerDay: n
+        ? rows.reduce((a, r) => a + r.watchMinutesPerDay, 0) / n : 0,
+      n,
     };
-  }).sort((a, b) => (b.keep - a.keep) || (b.perDay - a.perDay));
+  }).sort((a, b) =>
+    (b.watchMinutesPerDay - a.watchMinutesPerDay) ||
+    (b.perDay - a.perDay) ||
+    (b.keep - a.keep));
 
-  console.log('\n--- 題材ごとの成績 (28日) ---');
+  console.log('\n--- YPP長尺視聴時間を優先した題材成績 (28日) ---');
   scored.forEach(s => console.log(
-    `  ${s.x.id.padEnd(10)} 平均視聴率 ${s.keep.toFixed(1)}%  ` +
-    `1日あたり ${s.perDay.toFixed(1)}回  (${s.n}本)`));
+    `  ${s.x.id.padEnd(10)} 視聴 ${s.watchMinutesPerDay.toFixed(1)}分/日  ` +
+    `再生 ${s.perDay.toFixed(1)}回/日  維持 ${s.keep.toFixed(1)}%  (${s.n}本)`));
 
-  const explore = Math.random() < 0.3;
-  const least = [...scored].sort((a, b) => a.n - b.n)[0];
+  // Most weeks use the strongest watch-time topic; one in five explores the
+  // least-tested subject so search demand can surface instead of being assumed.
+  const explore = Math.random() < 0.2;
+  const least = [...scored].sort((a, b) => (a.n - b.n) ||
+    (a.watchMinutesPerDay - b.watchMinutesPerDay))[0];
   return explore
     ? { topic: least.x, why: `試行（最も本数が少ない: ${least.n}本）` }
-    : { topic: scored[0].x, why: `平均視聴率が最良 (${scored[0].keep.toFixed(1)}%)` };
+    : { topic: scored[0].x, why:
+      `YPP長尺視聴時間proxyが最良 (${scored[0].watchMinutesPerDay.toFixed(1)}分/日)` };
 }
 
 /**
@@ -207,14 +194,17 @@ function verify(file) {
   console.log(`checks passed: ${dur.toFixed(1)}s, ${v.width}x${v.height}, ${a.codec_name} audio`);
 }
 
-function metadata(topic, links) {
+function metadata(topic) {
   const tags = topic.tags.slice(0, 12);
   return {
     title: topic.title.slice(0, 100),
-    // describe() holds the one copy of the recruitment terms, shared with the
-    // Shorts run — six topics with their own copy would drift, and a drifted
-    // copy is a viewer being told a different deal than the one waiting.
-    description: `${describe(topic, links)}\n\n${tags.map(t => '#' + t).join(' ')}\n\n${MARK(topic.id)}`,
+    description:
+      `${topic.description}\n\n` +
+      'このチャンネルでは、放置ゲームの設計を実際の画面と数字で解説しています。\n' +
+      '次に見たい仕組みをコメントしてください。続きはチャンネル登録で。\n\n' +
+      `無料ブラウザ版（iPhone・Android対応／インストール不要）\n${PLAY_URL}\n\n` +
+      `${tags.slice(0, 3).map(t => '#' + t.replace(/\\s+/g, '')).join(' ')}\n\n` +
+      MARK(topic.id),
     tags,
     privacy,
     publishAt,
@@ -222,7 +212,6 @@ function metadata(topic, links) {
 }
 
 // --- go ---------------------------------------------------------------------------
-const links = testerLinks();
 const { perTopic, mine } = await history();
 await reportRetention(mine);
 
@@ -230,7 +219,7 @@ const { topic, why } = pickTopic(perTopic, mine);
 console.log(`\n選んだ題材: "${topic.id}" — ${why}`);
 
 const file = render(topic);
-const meta = metadata(topic, links);
+const meta = metadata(topic);
 console.log(`\ntitle: ${meta.title}\nprivacy: ${meta.privacy}` +
   (publishAt ? `\n公開予定: ${publishAt}` : '') + `\nfile: ` +
   `${(fs.statSync(file).size / 1e6).toFixed(1)}MB`);
@@ -252,6 +241,9 @@ try {
 verify(file);
 
 const c = await channel();
+if (c.title !== 'クッキーストラテジャー') {
+  throw new Error(`誤投稿防止: 接続先は「${c.title}」`);
+}
 const res = await upload(file, meta);
 console.log(`\nuploaded to ${c.title}: ${res.url} ` +
   (res.publishAt ? `(${res.publishAt} に公開予定)` : `(${res.privacy})`));
