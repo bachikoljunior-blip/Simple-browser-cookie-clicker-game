@@ -86,7 +86,9 @@ async function history() {
       avgViewPercent: s?.avgViewPercent ?? null,
       subscribersGained: s?.subscribersGained ?? 0,
       views: s?.views ?? v.views,
-      viewsPerDay: (s?.views ?? v.views) / age,
+      engagedViews: s?.engagedViews ?? null,
+      engagedViewsPerDay: s?.engagedViews == null ? null : s.engagedViews / age,
+      rawViewsPerDay: (s?.views ?? v.views) / age,
     });
   }
   // Nothing of ours is up yet, or none of it has numbers worth ranking on.
@@ -119,27 +121,39 @@ function pickCut(perCut, mine) {
   const scored = VARIANTS.map(v => {
     const rows = perCut[v.id].filter(r => r.avgViewPercent !== null);
     const retention = rows.reduce((a, r) => a + r.avgViewPercent, 0) / rows.length;
-    const perDay = rows.reduce((a, r) => a + r.viewsPerDay, 0) / rows.length;
-    const views = rows.reduce((a, r) => a + (r.views || 0), 0);
+    const engagedRows = rows.filter(r => r.engagedViewsPerDay !== null);
+    const engagedPerDay = engagedRows.length
+      ? engagedRows.reduce((a, r) => a + r.engagedViewsPerDay, 0) / engagedRows.length
+      : null;
+    const rawPerDay = rows.reduce((a, r) => a + r.rawViewsPerDay, 0) / rows.length;
+    const rawViews = rows.reduce((a, r) => a + (r.views || 0), 0);
+    const engagedViews = rows.reduce((a, r) => a + (r.engagedViews || 0), 0);
     const subscribers = rows.reduce((a, r) => a + (r.subscribersGained || 0), 0);
-    // Until YPP is reached, an extra subscriber is more valuable than another
-    // low-intent view. A small prior prevents one tiny sample from winning forever.
-    const subsPerThousand = 1000 * (subscribers + 0.5) / (views + 500);
-    return { v, retention, perDay, views, subscribers, subsPerThousand, n: rows.length };
+    const denominator = engagedViews || rawViews;
+    const subsPerThousand = 1000 * (subscribers + 0.5) / (denominator + 500);
+    return { v, retention, engagedPerDay, rawPerDay, rawViews, engagedViews,
+      subscribers, subsPerThousand, n: rows.length };
   });
   // Ad revenue sharing requires 10M valid Shorts views in 90 days as well
   // as 1,000 subscribers. At the channel's observed conversion, the view gate
   // is much farther away, so reach is the binding constraint. Subscriber
   // conversion remains the first tie-breaker and the CTA keeps testing it.
-  scored.sort((a, b) =>
-    (b.perDay - a.perDay) ||
-    (b.subsPerThousand - a.subsPerThousand) ||
-    (b.retention - a.retention));
+  scored.sort((a, b) => {
+    // YPP and Shorts revenue share use engaged views. Raw starts/replays are a
+    // fallback operational signal only when Analytics has not supplied the
+    // qualified denominator yet.
+    const ae = a.engagedPerDay, be = b.engagedPerDay;
+    if (ae !== null || be !== null) return ((be ?? -1) - (ae ?? -1)) ||
+      (b.subsPerThousand - a.subsPerThousand) || (b.retention - a.retention);
+    return (b.rawPerDay - a.rawPerDay) ||
+      (b.subsPerThousand - a.subsPerThousand) || (b.retention - a.retention);
+  });
 
   console.log('\n--- YPP到達を優先した切り口成績 (28日) ---');
   scored.forEach(s => console.log(
-    `  ${s.v.id.padEnd(10)} 登録 ${s.subscribers}/${s.views}回  ` +
-    `補正後 ${s.subsPerThousand.toFixed(2)}/千回  維持 ${s.retention.toFixed(1)}%  (${s.n}本)`));
+    `  ${s.v.id.padEnd(10)} 有効視聴 ${s.engagedViews} / 総再生 ${s.rawViews}  ` +
+    `登録 ${s.subscribers}  補正後 ${s.subsPerThousand.toFixed(2)}/千有効視聴  ` +
+    `維持 ${s.retention.toFixed(1)}%  (${s.n}本)`));
 
   // Mostly exploit, but keep testing: a cut that lost once may have lost to the
   // hour it went up rather than to the hook.
@@ -148,7 +162,7 @@ function pickCut(perCut, mine) {
   return explore
     ? { cut: least.v, why: `試行（最も本数が少ない: ${least.n}本）` }
     : { cut: scored[0].v, why:
-      `広告分配の拘束条件である再生到達を優先（${scored[0].perDay.toFixed(1)}回/日、登録補正 ${scored[0].subsPerThousand.toFixed(2)}/千回）` };
+      `広告分配の拘束条件である有効視聴を優先（${scored[0].engagedPerDay === null ? '総再生proxy ' + scored[0].rawPerDay.toFixed(1) : scored[0].engagedPerDay.toFixed(1)}回/日、登録補正 ${scored[0].subsPerThousand.toFixed(2)}/千）` };
 }
 
 /**
