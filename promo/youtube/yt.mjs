@@ -426,6 +426,12 @@ export async function videoStats(days = 28) {
     publishedAt: byId[r.video]?.snippet?.publishedAt || null,
     description: byId[r.video]?.snippet?.description || '',
     views: r.views,
+    // Keep the watch-time metric that the query already paid for. Long-form
+    // ranking uses this as the closest API-visible proxy for valid public watch
+    // hours; average percentage alone rewards short videos even when they add
+    // fewer total minutes toward YPP.
+    estimatedMinutesWatched:
+      Math.round(Number(r.estimatedMinutesWatched || 0) * 10) / 10,
     avgViewSeconds: Math.round(r.averageViewDuration || 0),
     avgViewPercent: Math.round((r.averageViewPercentage || 0) * 10) / 10,
     likes: r.likes,
