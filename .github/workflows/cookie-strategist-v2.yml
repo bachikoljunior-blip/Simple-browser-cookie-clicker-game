@@ -10,11 +10,6 @@ on:
         required: false
         default: false
         type: boolean
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/cookie-strategist-v2.yml'
-
 concurrency:
   group: cookie-strategist-v2
   cancel-in-progress: false
@@ -125,6 +120,29 @@ jobs:
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
         run: node youtube/diag.mjs
 
+      - name: 公開済み動画に参加コメントを置く
+        if: steps.gate.outcome == 'success'
+        continue-on-error: true
+        working-directory: promo
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+        run: node youtube/ask.mjs --pending --limit=3
+
+      - name: 参加コメント履歴を保存
+        if: steps.gate.outcome == 'success'
+        run: |
+          if [ -z "$(git status --porcelain -- promo/youtube/asked.json)" ]; then
+            echo "新しい参加コメントなし"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add promo/youtube/asked.json
+          git commit -m "参加コメント履歴を更新"
+          git push origin "HEAD:${PROMO_REF}"
+
       - name: 動画生成環境を準備
         if: steps.gate.outputs.post == 'true'
         run: |
@@ -153,7 +171,7 @@ jobs:
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
           PROMO_AUTONOMOUS_QA: '1'
-          PROMO_LENGTH: full
+          PROMO_LENGTH: short
         run: node youtube/autopost.mjs --public
 
       - name: 投稿履歴を保存
