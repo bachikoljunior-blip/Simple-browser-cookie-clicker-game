@@ -406,9 +406,9 @@ export async function videoStats(days = 28) {
   const q = new URLSearchParams({
     ids: 'channel==MINE',
     startDate: ymd(start), endDate: ymd(end),
-    metrics: 'views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,likes,subscribersGained',
+    metrics: 'engagedViews,views,estimatedMinutesWatched,averageViewDuration,averageViewPercentage,likes,subscribersGained',
     dimensions: 'video',
-    sort: '-views',
+    sort: '-engagedViews',
     maxResults: '50',
   });
   const r = await api(`${ANALYTICS_API}?${q}`);
@@ -425,7 +425,11 @@ export async function videoStats(days = 28) {
     title: byId[r.video]?.snippet?.title || '(unavailable)',
     publishedAt: byId[r.video]?.snippet?.publishedAt || null,
     description: byId[r.video]?.snippet?.description || '',
-    views: r.views,
+    views: Number(r.views || 0),
+    // Since 2025-03-31, raw Shorts views count starts/replays while YPP and
+    // Shorts revenue sharing use engaged views. Keep both and never label the
+    // raw counter as qualified YPP progress.
+    engagedViews: Number(r.engagedViews || 0),
     // Keep the watch-time metric that the query already paid for. Long-form
     // ranking uses this as the closest API-visible proxy for valid public watch
     // hours; average percentage alone rewards short videos even when they add
@@ -437,6 +441,50 @@ export async function videoStats(days = 28) {
     likes: r.likes,
     subscribersGained: r.subscribersGained,
   }));
+}
+
+/**
+ * API-visible YPP progress proxies. These use the same definitions as closely
+ * as the public Analytics API permits: engaged Shorts-feed views over 90 days,
+ * and VOD watch time excluding advertising over 365 days. Studio's Earn tab
+ * remains authoritative because privacy, deletion and invalid-traffic
+ * adjustments are not fully exposed here.
+ */
+export async function yppProgress() {
+  const query = async (days, metrics) => {
+    const end = new Date();
+    const start = new Date(end.getTime() - (days - 1) * 86400_000);
+    const q = new URLSearchParams({
+      ids: 'channel==MINE',
+      startDate: ymd(start), endDate: ymd(end),
+      metrics,
+      dimensions: 'creatorContentType,insightTrafficSourceType',
+    });
+    const r = await api(`${ANALYTICS_API}?${q}`);
+    const cols = (r.columnHeaders || []).map(h => h.name);
+    return (r.rows || []).map(row => Object.fromEntries(cols.map((name, i) => [name, row[i]])));
+  };
+  const [shortRows, longRows, lag, c] = await Promise.all([
+    query(90, 'engagedViews,views'),
+    query(365, 'estimatedMinutesWatched'),
+    analyticsLag(45),
+    channel(),
+  ]);
+  const qualifiedShortsViewsProxy = shortRows
+    .filter(r => r.creatorContentType === 'SHORTS' &&
+      r.insightTrafficSourceType === 'SHORTS')
+    .reduce((n, r) => n + Number(r.engagedViews || 0), 0);
+  const qualifiedWatchHoursProxyLowerBound = longRows
+    .filter(r => r.creatorContentType === 'VIDEO_ON_DEMAND' &&
+      r.insightTrafficSourceType !== 'ADVERTISING')
+    .reduce((n, r) => n + Number(r.estimatedMinutesWatched || 0), 0) / 60;
+  return {
+    subscribers: c.subscribers,
+    qualifiedShortsViewsProxy,
+    qualifiedWatchHoursProxyLowerBound,
+    analyticsLatestDay: lag.latest,
+    analyticsLagDays: lag.days,
+  };
 }
 
 /**
