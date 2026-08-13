@@ -1,0 +1,243 @@
+name: クッキーストラテジャー長尺収益運用
+
+on:
+  schedule:
+    - cron: '0 5 * * 0'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: '公開する（オフなら非公開canary）'
+        required: false
+        default: false
+        type: boolean
+      force:
+        description: '6日間隔と予約確認を無視する'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: cookie-strategist-revenue
+  cancel-in-progress: false
+
+env:
+  PROMO_REF: automation/cookie-strategist-revenue-v3
+
+jobs:
+  analyze-create-publish-long:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - name: 長尺コードを取得
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PROMO_REF }}
+          fetch-depth: 0
+
+      - name: Node.jsを準備
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 認証・チャンネル・長尺間隔を確認
+        id: gate
+        working-directory: promo
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          FORCE: ${{ inputs.force || 'false' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in YT_CLIENT_ID YT_CLIENT_SECRET YT_REFRESH_TOKEN; do
+            if [ -z "${!name:-}" ]; then missing+=("$name"); fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::YouTube認証情報が未設定: ${missing[*]}"
+            exit 1
+          fi
+
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { accessToken, channel, channelVideos, grantedScopes } from './youtube/yt.mjs';
+
+          const c = await channel();
+          if (c.title !== 'クッキーストラテジャー') {
+            throw new Error(`誤投稿防止: 接続先は「${c.title}」`);
+          }
+          const scopes = await grantedScopes();
+          const has = suffix => scopes.some(s => s.endsWith('/' + suffix));
+          if (!(has('youtube.upload') || has('youtube.force-ssl') || has('youtube'))) {
+            throw new Error('OAuthにYouTube投稿権限がありません');
+          }
+          if (!(has('yt-analytics.readonly') || has('yt-analytics-monetary.readonly'))) {
+            throw new Error('OAuthにYouTube Analytics読取権限がありません');
+          }
+
+          const videos = await channelVideos(50);
+          const longIds = new Set(videos
+            .filter(v => /#topic-[a-z0-9-]+/i.test(v.description || ''))
+            .map(v => v.id));
+          const ids = [...longIds];
+          let items = [];
+          if (ids.length) {
+            const q = new URLSearchParams({
+              part: 'status,snippet',
+              id: ids.join(','),
+              maxResults: '50',
+            });
+            const res = await fetch('https://www.googleapis.com/youtube/v3/videos?' + q, {
+              headers: { authorization: `Bearer ${await accessToken()}` },
+            });
+            if (!res.ok) throw new Error(`長尺状態の確認に失敗: ${res.status} ${await res.text()}`);
+            items = (await res.json()).items || [];
+          }
+
+          const now = Date.now();
+          const future = items.filter(v =>
+            v.status?.publishAt && Date.parse(v.status.publishAt) > now);
+          const recent = items.filter(v =>
+            v.status?.privacyStatus === 'public' &&
+            Date.parse(v.snippet?.publishedAt || 0) > now - 6 * 86400_000);
+          const force = process.env.FORCE === 'true';
+          const shouldPost = force || (future.length === 0 && recent.length === 0);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `post=${shouldPost}\n`);
+          console.log(`対象: ${c.title} / 登録者 ${c.subscribers} / 総再生 ${c.views}`);
+          console.log(`長尺の将来予約 ${future.length}本 / 直近6日公開 ${recent.length}本`);
+          console.log(shouldPost
+            ? '判定: 長尺の実績を分析して1本作ります'
+            : '判定: 重複と量産を避けるため今回は作りません');
+          NODE
+
+      - name: 動画生成環境を準備
+        if: steps.gate.outputs.post == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg open-jtalk \
+            open-jtalk-mecab-naist-jdic hts-voice-nitech-jp-atr503-m001
+          npm ci --omit=dev || npm install --no-audit --no-fund
+          npm install --no-save playwright-core
+          npx playwright install --with-deps chromium
+
+      - name: ゲームを収録可能にする
+        if: steps.gate.outputs.post == 'true'
+        run: |
+          python3 -m http.server 8765 >/tmp/cookie-long-server.log 2>&1 &
+          for _ in $(seq 1 20); do
+            curl -sf -o /dev/null http://localhost:8765/play.html && break
+            sleep 0.5
+          done
+          curl -sf -o /dev/null http://localhost:8765/play.html
+
+      - name: 分析結果から検索向け長尺を作って投稿
+        if: steps.gate.outputs.post == 'true'
+        working-directory: promo
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          PROMO_TTS: local
+          PUBLISH: ${{ github.event_name == 'schedule' || inputs.publish }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          if [ "$PUBLISH" = 'true' ]; then args+=(--public); fi
+          node youtube/autopost-long.mjs "${args[@]}"
+          git diff --quiet -- youtube/posted-long.json && {
+            echo '::error::投稿履歴が更新されていません'
+            exit 1
+          }
+          jq '.[-1]' youtube/posted-long.json > "$RUNNER_TEMP/new-long-post.json"
+          video_id="$(jq -r '.videoId // empty' "$RUNNER_TEMP/new-long-post.json")"
+          [ -n "$video_id" ] || {
+            echo '::error::投稿した動画IDを取得できません'
+            exit 1
+          }
+
+          if [ "$PUBLISH" = 'true' ]; then
+            VIDEO_ID="$video_id" node --input-type=module <<'NODE'
+            import { accessToken } from './youtube/yt.mjs';
+            const q = new URLSearchParams({ part: 'status,snippet', id: process.env.VIDEO_ID });
+            const res = await fetch('https://www.googleapis.com/youtube/v3/videos?' + q, {
+              headers: { authorization: `Bearer ${await accessToken()}` },
+            });
+            if (!res.ok) throw new Error(`公開確認失敗: ${res.status} ${await res.text()}`);
+            const v = (await res.json()).items?.[0];
+            if (v?.status?.privacyStatus !== 'public') {
+              throw new Error(`公開確認失敗: ${v?.status?.privacyStatus || '動画なし'}`);
+            }
+            console.log(`公開確認OK: ${v.snippet.title} / ${process.env.VIDEO_ID}`);
+            NODE
+          fi
+
+      - name: 長尺投稿履歴を競合なしで保存
+        if: steps.gate.outputs.post == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          video_id="$(jq -r '.videoId' "$RUNNER_TEMP/new-long-post.json")"
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com
+          '
+          for attempt in 1 2 3; do
+            git fetch origin "+refs/heads/${PROMO_REF}:refs/remotes/origin/${PROMO_REF}"
+            git checkout --detach "origin/${PROMO_REF}"
+            node --input-type=module <<'NODE'
+            import fs from 'node:fs';
+            const file = 'promo/youtube/posted-long.json';
+            const rows = JSON.parse(fs.readFileSync(file, 'utf8'));
+            const add = JSON.parse(fs.readFileSync(
+              process.env.RUNNER_TEMP + '/new-long-post.json', 'utf8'));
+            if (!rows.some(x => x.videoId === add.videoId)) rows.push(add);
+            fs.writeFileSync(file, JSON.stringify(rows, null, 2) + '\n');
+            NODE
+            if git diff --quiet -- promo/youtube/posted-long.json; then
+              echo "履歴には既に ${video_id} があります"
+              exit 0
+            fi
+            git add promo/youtube/posted-long.json
+            git commit -m "長尺投稿履歴を更新: ${video_id}"
+            if git push origin "HEAD:refs/heads/${PROMO_REF}"; then exit 0; fi
+            sleep $((attempt * 5))
+          done
+          echo '::error::動画は投稿済みですが履歴保存が3回競合しました'
+          exit 1
+
+      - name: 成功時に長尺停止通知を閉じる
+        if: success() && steps.gate.outputs.post == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue list --repo "${{ github.repository }}" --state open \
+            --search '"[長尺自動投稿停止] クッキーストラテジャー" in:title' \
+            --json number --jq '.[].number' |
+          while read -r number; do
+            [ -z "$number" ] && continue
+            gh issue close "$number" --repo "${{ github.repository }}" \
+              --comment "長尺の自動投稿が正常に完了したため閉じます。"
+          done
+
+      - name: 失敗時に長尺停止通知を残す
+        if: failure()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title='[長尺自動投稿停止] クッキーストラテジャー'
+          number="$(gh issue list --repo "${{ github.repository }}" --state open \
+            --search "\"$title\" in:title" --json number --jq '.[0].number // empty')"
+          body="長尺の分析・生成・投稿に失敗しました。ログ: $RUN_URL"
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --repo "${{ github.repository }}" --body "$body"
+          else
+            gh issue create --repo "${{ github.repository }}" --title "$title" --body "$body"
+          fi
