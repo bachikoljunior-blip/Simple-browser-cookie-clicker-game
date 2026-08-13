@@ -16,7 +16,7 @@
 // stays in the list saying why — 削除しないこと: a removed row is a gap that
 // stops being visible, which is how the analytics dismissal survived five days.
 import { videoStats, trafficSources, trafficDetail, retention, byHour, channel,
-  channelVideos, accessToken } from './yt.mjs';
+  yppProgress, accessToken } from './yt.mjs';
 
 const LABEL = {
   SHORTS: 'Shortsフィード', YT_SEARCH: '検索', SUBSCRIBER: '登録者フィード',
@@ -147,22 +147,18 @@ if (stats.length) {
 
 // YPP progress uses API-visible proxies. YouTube Studio's Earn tab is the final
 // source for "valid public watch hours" and "valid public Shorts views"; those
-// qualified counters are not exposed as Analytics API metrics.
+// counters include adjustments the Analytics API does not expose.
 try {
-  const [year, ninety, videos, ch] = await Promise.all([
-    videoStats(365), videoStats(90), channelVideos(50), channel(),
-  ]);
-  const publicIds = new Set(videos.filter(v => v.privacy === 'public').map(v => v.id));
-  const long = year.filter(v => publicIds.has(v.id) && /#topic-[a-z0-9-]+/i.test(v.description || ''));
-  const shorts = ninety.filter(v => publicIds.has(v.id) && /#cut-[a-z0-9-]+/i.test(v.description || ''));
-  const longHours = long.reduce((n, v) => n + Number(v.estimatedMinutesWatched || 0), 0) / 60;
-  const shortViews = shorts.reduce((n, v) => n + Number(v.views || 0), 0);
+  const p = await yppProgress();
   const after2027 = Date.now() >= Date.parse('2027-02-01T00:00:00Z');
   const watchGoal = after2027 ? 8000 : 4000;
   const shortGoal = after2027 ? 20_000_000 : 10_000_000;
-  row('YPP長尺', `${longHours.toFixed(1)}時間/365日 proxy（目標 ${watchGoal.toLocaleString()}、公開解説 ${long.length}本）`);
-  row('YPP短尺', `${shortViews.toLocaleString()}回/90日 proxy（目標 ${shortGoal.toLocaleString()}）`);
-  row('YPP登録', `${ch.subscribers.toLocaleString()}人（広告分配目標 1,000）`);
+  row('YPP長尺', `${p.qualifiedWatchHoursProxyLowerBound.toFixed(1)}時間/365日 下限proxy（目標 ${watchGoal.toLocaleString()}）`);
+  row('YPP短尺', `${p.qualifiedShortsViewsProxy.toLocaleString()}有効視聴/90日 proxy（目標 ${shortGoal.toLocaleString()}）`);
+  row('YPP登録', `${p.subscribers.toLocaleString()}人（広告分配目標 1,000）`);
+  row('分析遅延', p.analyticsLatestDay
+    ? `最新 ${p.analyticsLatestDay}（約${p.analyticsLagDays}日遅れ）`
+    : 'Analytics未反映');
 } catch (e) { gap('YPP進捗', String(e.message || e).slice(0, 40)); }
 
 try {
