@@ -127,13 +127,14 @@ function pickCut(perCut, mine) {
     const subsPerThousand = 1000 * (subscribers + 0.5) / (views + 500);
     return { v, retention, perDay, views, subscribers, subsPerThousand, n: rows.length };
   });
-  const hasSubscriberSignal = scored.some(s => s.subscribers > 0);
-  scored.sort((a, b) => hasSubscriberSignal
-    ? (b.subsPerThousand - a.subsPerThousand) ||
-      (b.perDay - a.perDay) ||
-      (b.retention - a.retention)
-    : (b.perDay - a.perDay) ||
-      (b.retention - a.retention));
+  // Ad revenue sharing requires 10M valid Shorts views in 90 days as well
+  // as 1,000 subscribers. At the channel's observed conversion, the view gate
+  // is much farther away, so reach is the binding constraint. Subscriber
+  // conversion remains the first tie-breaker and the CTA keeps testing it.
+  scored.sort((a, b) =>
+    (b.perDay - a.perDay) ||
+    (b.subsPerThousand - a.subsPerThousand) ||
+    (b.retention - a.retention));
 
   console.log('\n--- YPP到達を優先した切り口成績 (28日) ---');
   scored.forEach(s => console.log(
@@ -142,13 +143,12 @@ function pickCut(perCut, mine) {
 
   // Mostly exploit, but keep testing: a cut that lost once may have lost to the
   // hour it went up rather than to the hook.
-  const explore = Math.random() < 0.3;
+  const explore = Math.random() < 0.2;
   const least = [...scored].sort((a, b) => a.n - b.n)[0];
   return explore
     ? { cut: least.v, why: `試行（最も本数が少ない: ${least.n}本）` }
-    : { cut: scored[0].v, why: hasSubscriberSignal
-      ? `登録転換を優先（補正後 ${scored[0].subsPerThousand.toFixed(2)}/千回、維持 ${scored[0].retention.toFixed(1)}%）`
-      : `登録実績がまだ0のため到達数を優先（${scored[0].perDay.toFixed(1)}回/日、維持 ${scored[0].retention.toFixed(1)}%）` };
+    : { cut: scored[0].v, why:
+      `広告分配の拘束条件である再生到達を優先（${scored[0].perDay.toFixed(1)}回/日、登録補正 ${scored[0].subsPerThousand.toFixed(2)}/千回）` };
 }
 
 /**
