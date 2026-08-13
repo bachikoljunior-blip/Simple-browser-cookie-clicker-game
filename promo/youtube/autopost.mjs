@@ -126,10 +126,14 @@ function pickCut(perCut, mine) {
     // low-intent view. A small prior prevents one tiny sample from winning forever.
     const subsPerThousand = 1000 * (subscribers + 0.5) / (views + 500);
     return { v, retention, perDay, views, subscribers, subsPerThousand, n: rows.length };
-  }).sort((a, b) =>
-    (b.subsPerThousand - a.subsPerThousand) ||
-    (b.retention - a.retention) ||
-    (b.perDay - a.perDay));
+  });
+  const hasSubscriberSignal = scored.some(s => s.subscribers > 0);
+  scored.sort((a, b) => hasSubscriberSignal
+    ? (b.subsPerThousand - a.subsPerThousand) ||
+      (b.perDay - a.perDay) ||
+      (b.retention - a.retention)
+    : (b.perDay - a.perDay) ||
+      (b.retention - a.retention));
 
   console.log('\n--- YPP到達を優先した切り口成績 (28日) ---');
   scored.forEach(s => console.log(
@@ -142,7 +146,9 @@ function pickCut(perCut, mine) {
   const least = [...scored].sort((a, b) => a.n - b.n)[0];
   return explore
     ? { cut: least.v, why: `試行（最も本数が少ない: ${least.n}本）` }
-    : { cut: scored[0].v, why: `登録転換を優先（補正後 ${scored[0].subsPerThousand.toFixed(2)}/千回、維持 ${scored[0].retention.toFixed(1)}%）` };
+    : { cut: scored[0].v, why: hasSubscriberSignal
+      ? `登録転換を優先（補正後 ${scored[0].subsPerThousand.toFixed(2)}/千回、維持 ${scored[0].retention.toFixed(1)}%）`
+      : `登録実績がまだ0のため到達数を優先（${scored[0].perDay.toFixed(1)}回/日、維持 ${scored[0].retention.toFixed(1)}%）` };
 }
 
 /**
