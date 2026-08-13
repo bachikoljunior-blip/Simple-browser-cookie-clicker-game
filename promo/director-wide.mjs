@@ -1,16 +1,8 @@
-// RETIRED 2026-08-04 — do not use this to publish.
+// Records one search-led long-form explainer for クッキーストラテジャー.
 //
-// It writes 1920x1080, and YouTube only admits square or vertical video to the
-// Shorts feed. Both videos it produced redirect /shorts/<id> to /watch: they
-// were never in the feed at all, and they have one view between them, against
-// 208 and 768 for vertical uploads from the same channel in the same days. The
-// duration was never the problem — 1m44s is inside the three-minute limit — so
-// nothing about the writing or the pacing would have rescued them.
-//
-// Kept because the staging logic here is sound and a vertical topic renderer
-// would start from it. Publishing from it is the mistake; reading it is not.
-//
-// Records one long-form explainer for クッキーストラテジャー.
+// Landscape videos do not enter the Shorts feed. That is intentional here:
+// Shorts supply discovery, while this format targets durable search traffic and
+// valid public watch-time toward the long-form YPP route.
 //   PROMO_TOPIC=quota node director-wide.mjs         -> video/frames at 1920x1080
 //   PROMO_TOPIC=quota node director-wide.mjs shots   -> stills, no capture
 //
@@ -108,16 +100,15 @@ for (let i = 0; i < beats.length; i++) {
 await flash('stamp');
 await cap([]);
 await top(null);
-// Same wording as the Shorts end card, and for the same reasons: the terms have
-// to match what the channel asks of testers, "Android専用" is not the same
-// sentence as "iPhone不可", and the links are only tappable on the channel page
-// until the channel earns advanced features.
+// A long-form viewer came for an explanation, so the close asks for the next
+// explanation instead of switching to an unrelated tester-recruitment funnel.
 await ev(() => window.__end(
-  'クッキーストラテジャー',
-  '基本プレイ無料・<u>Android専用</u>（iPhone不可）<br>Google Play 公開に必要なテスターを募集中<br>14日間 入れたまま ＋ ときどき起動',
-  '参加リンクは<em>チャンネル概要欄</em>に'));
+  '放置ゲームの設計を公開中',
+  '次に深掘りしてほしい仕組みを<br><u>コメント</u>で教えてください',
+  '続きは<em>チャンネル登録</em>で'));
 mark('cta');
-narration.push({ mark: 'cta', at: 0.4, text: 'アンドロイドのテスター募集中。リンクはチャンネル概要欄に。' });
+narration.push({ mark: 'cta', at: 0.4,
+  text: '次に深掘りしてほしい仕組みをコメントで教えてください。続きはチャンネル登録で。' });
 await shot('cta');
 await wait(6000);
 mark('total');
