@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PROMO_REF: automation/cookie-strategist-v2
+  PROMO_REF: automation/cookie-strategist-revenue-v3
 
 jobs:
   analyze-create-publish:
